@@ -1,0 +1,25 @@
+# 환경변수 (절대 커밋 금지)
+.env
+.env.local
+
+# 데이터 볼륨
+volumes/db/
+volumes/storage/
+
+# IDE
+.idea/
+.vscode/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Java build output
+services/api/target/
+services/api/.gradle/
+services/api/build/
+
+# Node
+services/web/node_modules/
+services/web/dist/
+services/web/build/
