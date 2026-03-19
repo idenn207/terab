@@ -18,6 +18,7 @@ Thumbs.db
 services/api/target/
 services/api/.gradle/
 services/api/build/
+services/api/bin/
 
 # Node
 services/web/node_modules/
