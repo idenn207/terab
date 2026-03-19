@@ -1,0 +1,18 @@
+# @WebMvcTest 슬라이스 테스트용 설정
+# DB 불필요 (서비스는 @MockBean으로 대체)
+spring:
+  flyway:
+    enabled: false
+  jpa:
+    hibernate:
+      ddl-auto: none
+
+jwt:
+  secret: test-secret-key-that-is-at-least-256-bits-long-for-hs256-algorithm
+  expiration-ms: 3600000
+
+minio:
+  endpoint: http://localhost:9000
+  access-key: test
+  secret-key: test
+  bucket: test-bucket

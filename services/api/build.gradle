@@ -47,8 +47,54 @@ dependencies {
     // 테스트
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testImplementation 'org.springframework.security:spring-security-test'
+
+    // Testcontainers
+    testImplementation 'org.testcontainers:testcontainers:1.19.8'
+    testImplementation 'org.testcontainers:junit-jupiter:1.19.8'
+    testImplementation 'org.testcontainers:postgresql:1.19.8'
+
+    // Lombok 테스트 지원
+    testCompileOnly 'org.projectlombok:lombok'
+    testAnnotationProcessor 'org.projectlombok:lombok'
 }
 
+// =============================================================================
+// 테스트 소스셋 및 태스크 설정
+// =============================================================================
+
+// Integration Test 소스셋 (src/intTest)
+sourceSets {
+    intTest {
+        java.srcDir 'src/intTest/java'
+        resources.srcDir 'src/intTest/resources'
+        compileClasspath += sourceSets.main.output + sourceSets.test.output
+        runtimeClasspath += sourceSets.main.output + sourceSets.test.output
+    }
+}
+
+configurations {
+    intTestImplementation.extendsFrom testImplementation
+    intTestRuntimeOnly.extendsFrom testRuntimeOnly
+    intTestCompileOnly.extendsFrom testCompileOnly
+    intTestAnnotationProcessor.extendsFrom testAnnotationProcessor
+}
+
+// Unit + Slice 테스트: ./gradlew test
 tasks.named('test') {
     useJUnitPlatform()
+    maxParallelForks = Runtime.runtime.availableProcessors().intdiv(2) ?: 1
+}
+
+// Integration 테스트: ./gradlew integrationTest
+tasks.register('integrationTest', Test) {
+    description = 'Runs integration tests with Testcontainers.'
+    group = 'verification'
+    testClassesDirs = sourceSets.intTest.output.classesDirs
+    classpath = sourceSets.intTest.runtimeClasspath
+    useJUnitPlatform()
+}
+
+// ./gradlew check 시 integration 테스트도 포함
+tasks.named('check') {
+    dependsOn tasks.named('integrationTest')
 }
