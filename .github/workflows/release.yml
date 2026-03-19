@@ -76,4 +76,5 @@ jobs:
         with:
           tag_name: ${{ steps.new_version.outputs.version }}
           name: ${{ steps.new_version.outputs.version }}
-          generate_release_notes: true
+          body: ${{ github.event.pull_request.body }}
+          # generate_release_notes: true
