@@ -1,0 +1,69 @@
+name: PR Auto Labeler
+
+on:
+  pull_request:
+    types: [opened, synchronize]
+    branches: [master]
+
+jobs:
+  label:
+    name: Auto Label PR
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: 커밋 프리픽스 기반 라벨 부여
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { data: commits } = await github.rest.pulls.listCommits({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: context.issue.number,
+            });
+
+            const prefixToLabel = {
+              'feat':     'enhancement',
+              'fix':      'bug',
+              'chore':    'chore',
+              'docs':     'documentation',
+              'refactor': 'refactor',
+              'test':     'test',
+              'ci':       'ci',
+              'perf':     'performance',
+              'style':    'style',
+              'build':    'build',
+            };
+
+            const labels = new Set();
+
+            for (const commit of commits) {
+              const message = commit.commit.message.split('\n')[0];
+              const match = message.match(/^(\w+)(\(.+\))?!?:/);
+              if (match) {
+                const prefix = match[1];
+                if (prefixToLabel[prefix]) {
+                  labels.add(prefixToLabel[prefix]);
+                }
+                if (message.includes('!:') || message.toLowerCase().includes('breaking')) {
+                  labels.add('breaking-change');
+                }
+              }
+            }
+
+            if (labels.size > 0) {
+              await github.rest.issues.addLabels({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                labels: [...labels],
+              });
+              console.log(`Labels added: ${[...labels].join(', ')}`);
+            } else {
+              console.log('No matching commit prefixes found');
+            }
