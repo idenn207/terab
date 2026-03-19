@@ -47,7 +47,6 @@ dependencies {
     // 테스트
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testImplementation 'org.springframework.security:spring-security-test'
-    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 
     // Testcontainers
     testImplementation 'org.testcontainers:testcontainers:1.19.8'
@@ -84,10 +83,6 @@ configurations {
 tasks.named('test') {
     useJUnitPlatform()
     maxParallelForks = Runtime.runtime.availableProcessors().intdiv(2) ?: 1
-    // 템플릿 파일은 테스트 실행 대상에서 제외
-    exclude '**/_*Template*'
-    // 실행 가능한 테스트가 없어도 실패하지 않도록 설정 (Gradle 9.0 호환)
-    filter.failOnNoMatchingTests = false
 }
 
 // Integration 테스트: ./gradlew integrationTest
@@ -97,11 +92,6 @@ tasks.register('integrationTest', Test) {
     testClassesDirs = sourceSets.intTest.output.classesDirs
     classpath = sourceSets.intTest.runtimeClasspath
     useJUnitPlatform()
-}
-
-// intTest 리소스 복사 시 중복 파일 허용 (main/test output 포함으로 인한 충돌 방지)
-tasks.named('processIntTestResources') {
-    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 }
 
 // ./gradlew check 시 integration 테스트도 포함
