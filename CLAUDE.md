@@ -6,13 +6,13 @@ NAS 전용 커스텀 클라우드 스토리지 서비스 (오픈소스).
 
 ## 인프라
 
-| 레이어 | 기술 |
-| ------ | ---- |
-| Backend | Spring Boot 3.3 (Java 21, Gradle) |
-| Frontend | React 19 (TypeScript, Vite) |
-| Storage | MinIO (S3 호환) |
-| Database | PostgreSQL 16 |
-| Infra | Docker Compose, Nginx (리버스 프록시) |
+| 레이어   | 기술                                  |
+| -------- | ------------------------------------- |
+| Backend  | Spring Boot 3.3 (Java 21, Gradle)     |
+| Frontend | React 19 (TypeScript, Vite)           |
+| Storage  | MinIO (S3 호환)                       |
+| Database | PostgreSQL 16                         |
+| Infra    | Docker Compose, Nginx (리버스 프록시) |
 
 ### 디렉토리 구조
 
@@ -23,54 +23,46 @@ nas-drive/
 │   ├── web/          # React 프론트엔드
 │   └── nginx/        # Nginx 설정
 ├── volumes/          # Docker 볼륨 (DB, 스토리지)
+├── Makefile                  # 빌드/실행 단축 명령
 ├── docker-compose.yml        # 운영 (전체 서비스)
 └── docker-compose.local.yml  # 로컬 개발 (DB + MinIO만)
 ```
 
 ## 빌드 & 실행
 
+프로젝트 루트의 `Makefile`을 통해 모든 명령을 실행합니다.
+
 ### 로컬 개발 환경
 
 ```bash
-# 인프라 (DB + MinIO) 실행
-docker-compose -f docker-compose.local.yml up -d
-
-# 백엔드 실행
-cd services/api && ./gradlew bootRun
-
-# 프론트엔드 실행
-cd services/web && npm run dev
+make infra          # 인프라 (DB + MinIO) 실행
+make infra-down     # 인프라 중지
+make api            # 백엔드 실행 (.env.local 자동 로드)
+make web            # 프론트엔드 실행
 ```
 
 ### 운영 환경
 
 ```bash
-docker-compose -f docker-compose.yml up -d
+make up             # 전체 서비스 실행
+make down           # 전체 서비스 중지
 ```
 
 ### 테스트
 
 ```bash
-# 백엔드 단위 + Slice 테스트
-cd services/api && ./gradlew test
-
-# 백엔드 통합 테스트 (Testcontainers)
-cd services/api && ./gradlew integrationTest
-
-# 백엔드 전체 (unit + integration)
-cd services/api && ./gradlew check
-
-# 프론트엔드 테스트
-cd services/web && npm test
-
-# 프론트엔드 워치 모드
-cd services/web && npm run test:watch
+make test                # 전체 테스트 (백엔드 + 프론트엔드)
+make test-api            # 백엔드 전체 (unit + integration)
+make test-api-unit       # 백엔드 단위 + Slice 테스트
+make test-api-integration  # 백엔드 통합 테스트 (Testcontainers)
+make test-web            # 프론트엔드 테스트
 ```
 
 ## 코딩 규칙
 
 ### 공통
 
+- 파일 생성 시 줄바꿈은 **CRLF** 방식 사용
 - 커밋 메시지: **Conventional Commits** 준수 (`feat:`, `fix:`, `refactor:`, `test:`, `docs:`, `chore:`)
 - 라이브러리/프레임워크 문법이 불확실할 때는 **Context7 플러그인**으로 최신 공식 문서를 조회하여 확인
 - Claude가 실수하거나 개발 완료/수정사항이 생겼을 때 **CLAUDE.md도 함께 업데이트**
@@ -79,6 +71,8 @@ cd services/web && npm run test:watch
 ### Frontend (React/TypeScript)
 
 - 린터/포매터: **ESLint + Prettier**
+- 코드 작성 시 세미콜론(`;`)을 **반드시** 사용
+- 코드 작성/수정 전 **Prettier · ESLint 설정 파일을 검토**하여 현재 규칙에 맞게 작성
 - 테스트: Vitest + React Testing Library
 - 패키지 매니저: npm
 - 디렉토리 구조: _미정 (추후 확정)_
