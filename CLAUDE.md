@@ -124,6 +124,13 @@ hotfix/*  ──→ dev ──→ PR ──→ master
 - 모든 변경은 반드시 `dev` 브랜치를 거쳐 `master`로 PR
 - hotfix도 예외 없이 `dev`를 경유
 
+### PR 프로세스
+
+- PR 생성 시 `.claude/rules/pr-process.md`의 워크플로우를 **반드시** 순서대로 따를 것
+- PR 본문은 `.github/PULL_REQUEST_TEMPLATE.md` 템플릿 구조를 준수
+- 라벨은 `.github/release.yml` 카테고리와 연동 — 커밋 프리픽스 기반으로 자동 매핑
+- 머지 방식: **Squash merge** 권장
+
 ### 배포
 
 - **현재**: 로컬 Docker Desktop 개발 서버
