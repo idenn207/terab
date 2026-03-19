@@ -24,7 +24,8 @@ nas-drive/
 │   └── nginx/        # Nginx 설정
 ├── volumes/          # Docker 볼륨 (DB, 스토리지)
 ├── Makefile                  # 빌드/실행 단축 명령
-├── docker-compose.yml        # 운영 (전체 서비스)
+├── docker-compose.yml        # 기본 서비스 정의 (build 기반)
+├── docker-compose.prod.yml   # 운영 오버라이드 (ghcr.io 이미지)
 └── docker-compose.local.yml  # 로컬 개발 (DB + MinIO만)
 ```
 
@@ -44,7 +45,7 @@ make web            # 프론트엔드 실행
 ### 운영 환경
 
 ```bash
-make up             # 전체 서비스 실행
+make up             # 전체 서비스 실행 (ghcr.io 이미지 + Watchtower)
 make down           # 전체 서비스 중지
 ```
 
@@ -106,6 +107,23 @@ make test-web            # 프론트엔드 테스트
 
 - Markdown 린터: markdownlint
 
+## 운영 파일 네이밍 규칙
+
+접미사 없음 = 운영(prod), `.local` = 로컬 개발.
+
+| 파일 | 용도 | 설명 |
+| ---- | ---- | ---- |
+| `docker-compose.yml` | 공통 | 전체 서비스 정의 (build 기반) |
+| `docker-compose.prod.yml` | 운영 | ghcr.io 이미지 오버라이드 (`-f`로 스택) |
+| `docker-compose.local.yml` | 로컬 | DB + MinIO만 실행 |
+| `.env` | 운영 | 운영 환경변수 |
+| `.env.local` | 로컬 | 로컬 환경변수 |
+| `application.yml` | 공통 | Spring Boot 기본 설정 |
+| `application-local.yml` | 로컬 | 로컬 프로필 오버라이드 |
+
+- 운영 전용 오버라이드가 필요한 경우에만 `.prod` 접미사 사용 (현재 docker-compose만 해당)
+- 새 설정 파일 추가 시 위 패턴을 따를 것
+
 ## 환경변수
 
 - `.env` 파일에 평문 비밀값 직접 기록 금지
@@ -133,13 +151,16 @@ hotfix/*  ──→ dev ──→ PR ──→ master
 
 ### 배포
 
-- **현재**: 로컬 Docker Desktop 개발 서버
-- **Beta 이후**: NAS에 직접 배포 + 초기 설정
-- **이후**: GitHub Actions 자동 배포 (master 브랜치 변경 감지), 점진적 배포 방식
+- **로컬 개발**: Docker Desktop (`make infra` + `make api` + `make web`)
+- **운영(NAS)**: ghcr.io 이미지 + Watchtower 자동 배포 (`make up`)
 
 ### CI/CD
 
-- _추가 예정_
+- **Release** (`release.yml`): master PR 머지 시 semver 태그 자동 생성
+- **Build & Push** (`deploy.yml`): 태그 push 시 테스트 → Docker 빌드 → ghcr.io push → 오래된 이미지 정리
+- **NAS 배포**: Watchtower가 12시간 주기로 ghcr.io polling, 이미지 변경 감지 시 자동 배포
+- **즉시 배포**: NAS에서 `docker exec nas-watchtower /watchtower --run-once`
+- **롤백**: GitHub에서 Revert PR → master 머지 → 자동 빌드/배포
 
 ## 도메인 용어
 

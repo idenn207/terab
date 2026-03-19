@@ -1,19 +1,19 @@
 SHELL := C:/Program Files/Git/usr/bin/bash.exe
 .PHONY: infra infra-down api web test test-api test-web test-api-unit test-api-integration up down
 
-# ─── 운영 환경 (전체 서비스) ───────────────────────────────────────
+# ─── 운영 환경 (전체 서비스, ghcr.io 이미지) ─────────────────────
 up:
-	docker-compose up -d
+	docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
 
 down:
-	docker-compose down
+	docker compose -f docker-compose.yml -f docker-compose.prod.yml down
 
 # ─── 로컬 인프라 (DB + MinIO) ──────────────────────────────────────
 infra:
-	docker-compose -f docker-compose.local.yml up -d
+	docker compose -f docker-compose.local.yml up -d
 
 infra-down:
-	docker-compose -f docker-compose.local.yml down
+	docker compose -f docker-compose.local.yml down
 
 # ─── 백엔드 ────────────────────────────────────────────────────────
 api:
