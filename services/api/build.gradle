@@ -47,6 +47,7 @@ dependencies {
     // 테스트
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testImplementation 'org.springframework.security:spring-security-test'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 
     // Testcontainers
     testImplementation 'org.testcontainers:testcontainers:1.19.8'
@@ -83,6 +84,15 @@ configurations {
 tasks.named('test') {
     useJUnitPlatform()
     maxParallelForks = Runtime.runtime.availableProcessors().intdiv(2) ?: 1
+    // 템플릿 파일은 테스트 실행 대상에서 제외
+    exclude '**/_*Template*'
+    // 실행 가능한 테스트 클래스가 없으면 태스크 skip (Gradle 9.0 호환)
+    onlyIf {
+        !testClassesDirs.asFileTree.matching {
+            include '**/*Test.class', '**/*Tests.class'
+            exclude '**/_*Template*'
+        }.empty
+    }
 }
 
 // Integration 테스트: ./gradlew integrationTest
@@ -92,6 +102,20 @@ tasks.register('integrationTest', Test) {
     testClassesDirs = sourceSets.intTest.output.classesDirs
     classpath = sourceSets.intTest.runtimeClasspath
     useJUnitPlatform()
+    // 템플릿 파일은 테스트 실행 대상에서 제외
+    exclude '**/_*Template*'
+    // 실행 가능한 테스트 클래스가 없으면 태스크 skip (Gradle 9.0 호환)
+    onlyIf {
+        !testClassesDirs.asFileTree.matching {
+            include '**/*Test.class', '**/*Tests.class'
+            exclude '**/_*Template*'
+        }.empty
+    }
+}
+
+// intTest 리소스 복사 시 중복 파일 허용 (main/test output 포함으로 인한 충돌 방지)
+tasks.named('processIntTestResources') {
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 }
 
 // ./gradlew check 시 integration 테스트도 포함
