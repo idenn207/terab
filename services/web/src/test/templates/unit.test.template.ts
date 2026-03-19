@@ -10,26 +10,22 @@ describe('yourFunction', () => {
   it('should return expected result for valid input', () => {
     // Arrange
     // const input = 'test'
-
     // Act
     // const result = yourFunction(input)
-
     // Assert
     // expect(result).toBe('expected')
-  })
+  });
 
   it('should handle edge case', () => {
     // Arrange
-
     // Act
-
     // Assert
-  })
+  });
 
   it('should throw for invalid input', () => {
     // expect(() => yourFunction(null)).toThrow()
-  })
-})
+  });
+});
 
 // ──────────────────────────────────────────────────────────────
 // 커스텀 훅 테스트 예시 (renderHook 사용)
