@@ -85,6 +85,17 @@ make test-web            # 프론트엔드 테스트
 - 포매터: _미정 (추후 확정)_
 - 패키지 구조: _미정 (추후 확정)_
 
+### Notion 페이지 작성
+
+- 내용을 **먼저 정리하고 검토**한 뒤 Notion에 적용
+- 페이지 구조: `개요 → 변경 내용 → 관련 파일` 순서
+- Notion 마크다운 스펙 준수 (테이블은 `<table>` 태그, 실제 줄바꿈 사용)
+- 개발항목/마일스톤 생성 시 필수 항목이 누락되면 **먼저 사용자에게 확인**
+- 상세 규칙은 `.claude/rules/` 참조:
+  - `notion-content-style.md` — 콘텐츠 작성 스타일 및 절차
+  - `notion-dev-item.md` — 개발항목 필수/선택 항목
+  - `notion-milestone.md` — 마일스톤 필수/선택 항목
+
 ### 문서
 
 - Markdown 린터: markdownlint
