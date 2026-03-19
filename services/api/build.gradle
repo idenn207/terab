@@ -33,6 +33,9 @@ dependencies {
     // MinIO (S3 호환 파일 스토리지)
     implementation 'io.minio:minio:8.5.9'
 
+    // DevTools (로컬 개발 시 자동 재시작)
+    developmentOnly 'org.springframework.boot:spring-boot-devtools'
+
     // Lombok (보일러플레이트 제거)
     compileOnly 'org.projectlombok:lombok'
     annotationProcessor 'org.projectlombok:lombok'
