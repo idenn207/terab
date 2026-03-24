@@ -15,6 +15,13 @@ infra:
 infra-down:
 	docker compose -f docker-compose.local.yml down
 
+# ─── 빌드 ────────────────────────────────────────────────────
+build-web:
+	cd services/web && npm run build
+
+build-android:
+	cd services/web && npm run cap:sync
+
 # ─── 백엔드 ────────────────────────────────────────────────────────
 api:
 	set -a && source .env.local && set +a && cd services/api && ./gradlew bootRun --args='--spring.profiles.active=local'
@@ -22,6 +29,13 @@ api:
 # ─── 프론트엔드 ────────────────────────────────────────────────────
 web:
 	cd services/web && npm run dev
+
+# ─── 안드로이드 ────────────────────────────────────────────────────
+android:
+	cd services/web && npm run cap:android
+
+android-open:
+	cd services/web && npm cap open android
 
 # ─── 테스트 ────────────────────────────────────────────────────────
 test: test-api test-web
