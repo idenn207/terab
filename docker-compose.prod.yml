@@ -1,0 +1,9 @@
+# 프로덕션 오버라이드: ghcr.io 이미지 사용 (build 대신 image)
+# 사용법: docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+
+services:
+  api:
+    image: ghcr.io/${GITHUB_REPOSITORY_OWNER:-nasdrive}/nas-drive-api:latest
+
+  web:
+    image: ghcr.io/${GITHUB_REPOSITORY_OWNER:-nasdrive}/nas-drive-web:latest

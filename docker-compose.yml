@@ -63,6 +63,14 @@ services:
         condition: service_healthy
       minio:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    labels:
+      - "com.centurylinklabs.watchtower.enable=true"
     networks:
       - nas-net
 
@@ -73,6 +81,14 @@ services:
       dockerfile: Dockerfile
     container_name: nas-web
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:80/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    labels:
+      - "com.centurylinklabs.watchtower.enable=true"
     networks:
       - nas-net
 
@@ -88,6 +104,21 @@ services:
     depends_on:
       - api
       - web
+    networks:
+      - nas-net
+
+  # ─── Watchtower (자동 배포) ──────────────────────────────────────
+  watchtower:
+    image: containrrr/watchtower
+    container_name: nas-watchtower
+    restart: unless-stopped
+    environment:
+      WATCHTOWER_POLL_INTERVAL: 43200
+      WATCHTOWER_CLEANUP: "true"
+      WATCHTOWER_INCLUDE_STOPPED: "false"
+      WATCHTOWER_LABEL_ENABLE: "true"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
     networks:
       - nas-net
 
