@@ -26,6 +26,7 @@ Notion을 최종본으로 간주하여 로컬 파일을 갱신합니다.
 | `docs/planning/user-flow.md` | 유저/서비스 플로우 |
 | `docs/planning/information-architecture.md` | 정보 구조 (IA) |
 | `docs/planning/screen-spec.md` | 화면 명세 |
+| `docs/planning/figma-references.md` | Figma 참조 정보 |
 | `docs/planning/milestones.md` | 마일스톤 계획 |
 | `docs/planning/release-plan.md` | 릴리스 전략 |
 
