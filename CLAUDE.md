@@ -78,14 +78,6 @@ make test-web            # 프론트엔드 테스트
 - 패키지 매니저: npm
 - 디렉토리 구조: _미정 (추후 확정)_
 
-#### Figma MCP
-
-- Figma MCP가 localhost URL로 이미지/SVG 에셋을 반환하면 해당 URL을 직접 사용
-- 새 아이콘 패키지를 추가하지 않음 — 모든 에셋은 Figma 페이로드에 포함
-- localhost 소스가 제공된 경우 플레이스홀더를 생성하지 않음
-- 상세 가이드라인: `.claude/rules/figma-output.md` 참조
-- **MCP 설정 로딩 우선순위**: VSCode Claude Code 패널은 글로벌(`~/.claude/`)보다 프로젝트 수준(`./.claude/`)을 먼저 읽음. 글로벌에만 MCP 서버를 등록하면 프로젝트에서 `/mcp` 인식이 안 될 수 있음. 플러그인 기반 MCP가 안 보이면 OAuth 토큰 만료 또는 프로젝트 스코프 미적용을 확인할 것
-
 ### Backend (Spring Boot/Java)
 
 - DB 마이그레이션: Flyway (`src/main/resources/db/migration/`)

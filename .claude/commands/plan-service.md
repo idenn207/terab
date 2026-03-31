@@ -92,29 +92,14 @@ IT 서비스 기획과 개발 지식을 겸비한 전문가로서, 사용자와 
 
 ### 4단계: UX/UI 설계
 
-> `.claude/rules/figma-output.md` 가이드라인을 반드시 참조할 것.
-
-#### Figma MCP 연결 확인
-
-- `whoami` 도구로 Figma MCP 연결 상태 확인
-- 연결 성공 시 → Figma 기반 워크플로우, 실패 시 → 텍스트 기반 화면 명세
-
-#### Figma 기반 워크플로우 (MCP 연동 시)
-
-1. 기존 Figma 파일이 있는지 사용자에게 확인
-2. 와이어프레임/목업: `get_design_context`, `get_screenshot` 활용
-3. 유저 플로우 다이어그램: `generate_diagram`으로 Mermaid → FigJam 변환
-4. 디자인 변수 참조: `get_variable_defs`로 색상/간격/타이포 확인
-5. 사용자 검토 및 승인 후 확정
-
-#### 텍스트 기반 화면 명세 (MCP 미연동 시)
+#### 텍스트 기반 화면 명세
 
 1. `docs/planning/screen-spec.md`에 화면별 명세 작성
 2. 화면 개요, 레이아웃 구조, 구성 요소, 인터랙션, 반응형 동작 포함
 3. 사용자 검토 및 승인 후 확정
 
 - 화면별 구성 요소, 인터랙션, 상태 정의
-- **산출물**: Figma 파일 또는 `docs/planning/screen-spec.md`, `docs/planning/figma-references.md`
+- **산출물**: `docs/planning/screen-spec.md`, `docs/planning/figma-references.md`
 
 ### 5단계: 릴리스 계획
 
@@ -142,9 +127,6 @@ Notion은 이 프로젝트의 **모든 산출물을 관리하는 중앙 공간**
   - 릴리스 전략
 - **마일스톤** → 마일스톤 DB(`35b2ebc8e1a546439ee605c72dc6aa3a`)에 등록/수정
 - **개발항목** → 개발 항목 DB(`3c4689194a6c47a2adb174990771d10a`)에 등록/수정
-- **Figma 파일** → Notion 페이지에 embed (`figma-output.md` Notion 연동 절차 참조)
-- **FigJam 다이어그램** → Notion 페이지에 embed (아키텍처, 유저 플로우 등)
-- `.claude/rules/` 하위의 `notion-content-style.md`, `notion-dev-item.md`, `notion-milestone.md` 규칙을 **반드시** 준수
 - **산출물**: Notion 페이지 (기획 문서 전체 + 마일스톤 + 개발항목)
 
 ---
@@ -159,9 +141,9 @@ Notion은 이 프로젝트의 **모든 산출물을 관리하는 중앙 공간**
 
 ## 산출물 형식
 
-- **아키텍처 / 서비스 플로우** → Mermaid 다이어그램 (Figma MCP 연동 시 `generate_diagram`으로 FigJam 변환 가능)
+- **아키텍처 / 서비스 플로우** → Mermaid 다이어그램
 - **요구사항 정리** → Markdown 표
-- **UX/UI 설계** → Figma MCP 연동 시 Figma 파일, 미연동 시 텍스트 기반 화면 명세 (`figma-output.md` 참조)
+- **UX/UI 설계** → 텍스트 기반 화면 명세
 
 ## 산출물 목록
 
@@ -175,9 +157,7 @@ Notion은 이 프로젝트의 **모든 산출물을 관리하는 중앙 공간**
 | 유저/서비스 플로우      | `docs/planning/user-flow.md`                | NAS Drive 서비스 페이지 하위 | Mermaid                | 설계       |
 | 정보 구조 (IA)          | `docs/planning/information-architecture.md` | NAS Drive 서비스 페이지 하위 | Markdown               | 설계       |
 | 화면 명세               | `docs/planning/screen-spec.md`              | NAS Drive 서비스 페이지 하위 | Markdown (텍스트 폴백) | UX/UI      |
-| Figma 참조 정보         | `docs/planning/figma-references.md`         | —                            | Markdown               | UX/UI      |
 | FigJam 다이어그램       | —                                           | Notion embed (FigJam)        | FigJam                 | 설계/UX/UI |
 | 마일스톤 계획           | `docs/planning/milestones.md`               | 마일스톤 DB                  | Markdown 표            | 릴리스     |
 | 릴리스 전략             | `docs/planning/release-plan.md`             | NAS Drive 서비스 페이지 하위 | Markdown               | 릴리스     |
 | UX/UI 와이어프레임      | —                                           | Notion embed (Figma)         | Figma                  | UX/UI      |
-
