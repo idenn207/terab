@@ -200,6 +200,9 @@ Response: { accessToken, user: { id, username, nickname } }
 
 ### 신규/변경 파일
 
+`index.ts`는 **슬라이스 루트에만** 위치합니다 (세그먼트 내부에는 없음).
+외부 레이어는 슬라이스 루트의 `index.ts`를 통해서만 접근합니다.
+
 ```
 shared/
 ├── api/
@@ -207,6 +210,7 @@ shared/
 
 entities/
 ├── user/
+│   ├── index.ts               # export { useUserStore, type User, type UserRole, userApi }
 │   ├── api/
 │   │   └── userApi.ts         # GET /api/auth/me
 │   └── model/
@@ -215,6 +219,7 @@ entities/
 
 features/
 ├── login-by-credentials/
+│   ├── index.ts               # export { LoginForm, useLogin }
 │   ├── api/
 │   │   └── loginApi.ts        # POST /api/auth/login
 │   ├── model/
@@ -223,6 +228,7 @@ features/
 │       └── LoginForm.tsx
 
 ├── login-by-2fa/
+│   ├── index.ts               # export { TwoFactorWaiting, useTwoFactorSocket }
 │   ├── api/
 │   │   └── twoFactorApi.ts    # POST /api/auth/2fa/approve, resend, backup
 │   ├── model/
@@ -231,6 +237,7 @@ features/
 │       └── TwoFactorWaiting.tsx
 
 ├── logout/
+│   ├── index.ts               # export { useLogout }
 │   ├── api/
 │   │   └── logoutApi.ts
 │   └── model/
@@ -238,15 +245,17 @@ features/
 
 pages/
 ├── login/
+│   ├── index.ts               # export { LoginPage, TwoFALoginPage, BackupCodePage }
 │   └── ui/
-│       ├── LoginPage.tsx           # 기존 — LoginForm 조합
-│       ├── 2FALoginPage.tsx        # TwoFactorWaiting 조합으로 교체
-│       └── BackupCodePage.tsx      # /login/2fa/backup
+│       ├── LoginPage.tsx
+│       ├── 2FALoginPage.tsx
+│       └── BackupCodePage.tsx # /login/2fa/backup
 
 └── register/
+    ├── index.ts               # export { RegisterPage, BackupCodeIssuePage }
     └── ui/
-        ├── RegisterPage.tsx              # /register/:token
-        └── BackupCodeIssuePage.tsx       # /register/backup-codes
+        ├── RegisterPage.tsx         # /register/:token
+        └── BackupCodeIssuePage.tsx  # /register/backup-codes
 ```
 
 ### 라우팅 (app/providers/router/config.tsx)
