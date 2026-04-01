@@ -78,7 +78,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ${{ env.REGISTRY }}/${{ github.repository_owner }}/nas-drive-${{ matrix.service }}
+          images: ${{ env.REGISTRY }}/${{ github.repository_owner }}/terab-${{ matrix.service }}
           tags: |
             type=sha,prefix=sha-
             type=raw,value=latest
@@ -103,7 +103,7 @@ jobs:
       packages: write
     strategy:
       matrix:
-        package: [nas-drive-api, nas-drive-web]
+        package: [terab-api, terab-web]
 
     steps:
       - name: Delete old versions
@@ -113,3 +113,4 @@ jobs:
           package-type: container
           min-versions-to-keep: 10
           delete-only-untagged-versions: true
+
