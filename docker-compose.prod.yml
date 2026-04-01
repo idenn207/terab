@@ -7,3 +7,7 @@ services:
 
   web:
     image: ghcr.io/${GITHUB_REPOSITORY_OWNER:-terab}/terab-web:latest
+
+  nginx:
+    ports:
+      - '8080:80'

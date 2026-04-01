@@ -15,6 +15,9 @@ infra:
 infra-down:
 	docker compose -f docker-compose.local.yml down
 
+infra-reset:
+	rm -rf ./volumes/ && docker compose -f docker-compose.local.yml up -d
+
 # ─── 빌드 ────────────────────────────────────────────────────
 build-web:
 	cd services/web && npm run build
