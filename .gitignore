@@ -1,6 +1,7 @@
 # 환경변수 (절대 커밋 금지)
 .env
 .env.local
+.claude/*.local.*
 
 # 데이터 볼륨
 volumes/db/
@@ -24,3 +25,4 @@ services/api/bin/
 services/web/node_modules/
 services/web/dist/
 services/web/build/
+.superpowers/

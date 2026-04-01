@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
-    <string name="app_name">NAS Drive</string>
-    <string name="title_activity_main">NAS Drive</string>
+    <string name="app_name">Tera B</string>
+    <string name="title_activity_main">Tera B</string>
     <string name="package_name">com.skypark207.drive</string>
     <string name="custom_url_scheme">com.skypark207.drive</string>
 </resources>

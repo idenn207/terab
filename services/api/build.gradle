@@ -4,7 +4,7 @@ plugins {
     id 'java'
 }
 
-group = 'com.nasdrive'
+group = 'com.terab'
 version = '0.0.1-SNAPSHOT'
 
 java {
@@ -22,6 +22,7 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
     implementation 'org.springframework.boot:spring-boot-starter-security'
     implementation 'org.springframework.boot:spring-boot-starter-validation'
+    implementation 'org.springframework.boot:spring-boot-devtools'
 
     // PostgreSQL
     runtimeOnly 'org.postgresql:postgresql'

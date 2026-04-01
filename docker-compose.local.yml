@@ -7,7 +7,7 @@ services:
   # ─── PostgreSQL ─────────────────────────────────────────────────
   db:
     image: postgres:16-alpine
-    container_name: nas-db
+    container_name: dev-terab-db
     restart: unless-stopped
     environment:
       POSTGRES_DB: ${DB_NAME}
@@ -16,9 +16,9 @@ services:
     volumes:
       - ./volumes/db:/var/lib/postgresql/data
     ports:
-      - "5432:5432"
+      - '5432:5432'
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
+      test: ['CMD-SHELL', 'pg_isready -U ${DB_USER} -d ${DB_NAME}']
       interval: 10s
       timeout: 5s
       retries: 5
@@ -26,7 +26,7 @@ services:
   # ─── MinIO (S3 호환 오브젝트 스토리지) ──────────────────────────
   minio:
     image: minio/minio:latest
-    container_name: nas-storage
+    container_name: dev-terab-storage
     restart: unless-stopped
     command: server /data --console-address ":9001"
     environment:
@@ -35,10 +35,11 @@ services:
     volumes:
       - ./volumes/storage:/data
     ports:
-      - "9000:9000"
-      - "9001:9001"
+      - '9000:9000'
+      - '9001:9001'
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      test: ['CMD', 'curl', '-f', 'http://localhost:9000/minio/health/live']
       interval: 10s
       timeout: 5s
       retries: 5
+
