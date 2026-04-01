@@ -3,7 +3,7 @@
 
 services:
   api:
-    image: ghcr.io/${GITHUB_REPOSITORY_OWNER:-nasdrive}/nas-drive-api:latest
+    image: ghcr.io/${GITHUB_REPOSITORY_OWNER:-terab}/terab-api:latest
 
   web:
-    image: ghcr.io/${GITHUB_REPOSITORY_OWNER:-nasdrive}/nas-drive-web:latest
+    image: ghcr.io/${GITHUB_REPOSITORY_OWNER:-terab}/terab-web:latest
