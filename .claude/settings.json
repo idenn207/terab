@@ -1,13 +1,12 @@
 {
   "$schema": "https://json.schemastore.org/claude-code-settings.json",
-  "enabledPlugins": {
-    "figma@claude-plugins-official": true
-  },
-  "autoUpdatesChannel": "latest",
-  "effortLevel": "medium",
-  "model": "opusplan",
-  "outputStyle": "Learning",
   "env": {
     "ENABLE_TOOL_SEARCH": "auto:3"
-  }
+  },
+  "model": "opusplan",
+  "enabledPlugins": {},
+  "outputStyle": "Learning",
+  "effortLevel": "medium",
+  "autoUpdatesChannel": "latest"
 }
+
