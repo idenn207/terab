@@ -1,22 +1,31 @@
 SHELL := C:/Program Files/Git/usr/bin/bash.exe
-.PHONY: infra infra-down api web test test-api test-web test-api-unit test-api-integration up down
+.PHONY: up down dev-up dev-down infra infra-down infra-reset api web test test-api test-web test-api-unit test-api-integration
+
+LOCAL := docker compose -f docker-compose.yml -f docker-compose.local.yml
 
 # ─── 운영 환경 (전체 서비스, ghcr.io 이미지) ─────────────────────
 up:
-	docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+	docker compose up -d
 
 down:
-	docker compose -f docker-compose.yml -f docker-compose.prod.yml down
+	docker compose down
 
-# ─── 로컬 인프라 (DB + MinIO) ──────────────────────────────────────
+# ─── 개발 환경 (전체 서비스, 로컬 빌드) ──────────────────────────
+dev-up:
+	$(LOCAL) up -d
+
+dev-down:
+	$(LOCAL) down
+
+# ─── 로컬 인프라 (DB + MinIO만) ───────────────────────────────────
 infra:
-	docker compose -f docker-compose.local.yml up -d
+	$(LOCAL) up -d db minio
 
 infra-down:
-	docker compose -f docker-compose.local.yml down
+	$(LOCAL) stop db minio
 
 infra-reset:
-	rm -rf ./volumes/ && docker compose -f docker-compose.local.yml up -d
+	rm -rf ./volumes/ && $(LOCAL) up -d db minio
 
 # ─── 빌드 ────────────────────────────────────────────────────
 build-web:
