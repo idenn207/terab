@@ -1,0 +1,132 @@
+# Docker Swarm 프로덕션 스택
+# 사용법: docker stack deploy -c docker-stack.yml terab --with-registry-auth
+# docker-compose.yml은 로컬 개발용으로 유지
+
+services:
+  # ─── PostgreSQL ───────────────────────────────────────────────
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - ${DB_DATA_PATH}:/var/lib/postgresql/data
+    networks:
+      - terab-net
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ${DB_USER} -d ${DB_NAME}']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    deploy:
+      replicas: 1
+      placement:
+        constraints:
+          - node.role == manager
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+
+  # ─── MinIO (S3 호환 오브젝트 스토리지) ───────────────────────
+  minio:
+    image: minio/minio:latest
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_PASSWORD}
+    volumes:
+      - ${MINIO_DATA_PATH}:/data
+    ports:
+      - '9001:9001'
+    networks:
+      - terab-net
+    healthcheck:
+      test: ['CMD', 'curl', '-f', 'http://localhost:9000/minio/health/live']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+
+  # ─── Spring Boot API ──────────────────────────────────────────
+  api:
+    image: ghcr.io/idenn207/terab-api:latest
+    environment:
+      DB_URL: jdbc:postgresql://db:5432/${DB_NAME}
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+      MINIO_ENDPOINT: http://minio:9000
+      MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY}
+      MINIO_SECRET_KEY: ${MINIO_SECRET_KEY}
+      MINIO_BUCKET: ${MINIO_BUCKET}
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_EXPIRATION_MS: ${JWT_EXPIRATION_MS}
+    networks:
+      - terab-net
+    healthcheck:
+      test: ['CMD', 'curl', '-f', 'http://localhost:8080/actuator/health']
+      interval: 15s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    deploy:
+      replicas: 3
+      update_config:
+        order: start-first
+        parallelism: 1
+        failure_action: rollback
+        delay: 10s
+        monitor: 30s
+      rollback_config:
+        order: start-first
+        parallelism: 1
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+
+  # ─── React Frontend ───────────────────────────────────────────
+  web:
+    image: ghcr.io/idenn207/terab-web:latest
+    networks:
+      - terab-net
+    healthcheck:
+      test: ['CMD', 'curl', '-f', 'http://localhost:80/']
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    deploy:
+      replicas: 2
+      update_config:
+        order: start-first
+        parallelism: 1
+        failure_action: rollback
+        delay: 10s
+        monitor: 20s
+      rollback_config:
+        order: start-first
+      restart_policy:
+        condition: on-failure
+
+  # ─── Nginx (리버스 프록시) ─────────────────────────────────────
+  nginx:
+    image: nginx:alpine
+    ports:
+      - '8080:80'
+    volumes:
+      - ${NGINX_CONF_PATH}:/etc/nginx/nginx.conf:ro
+    networks:
+      - terab-net
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+
+networks:
+  terab-net:
+    driver: overlay
