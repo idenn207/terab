@@ -79,17 +79,17 @@ services:
       interval: 15s
       timeout: 10s
       retries: 3
-      start_period: 60s
+      start_period: 120s
     deploy:
       replicas: 3
       update_config:
-        order: start-first
+        order: stop-first
         parallelism: 1
         failure_action: rollback
         delay: 10s
         monitor: 120s
       rollback_config:
-        order: start-first
+        order: stop-first
         parallelism: 1
       restart_policy:
         condition: on-failure
@@ -179,6 +179,7 @@ volumes:
 networks:
   terab-net:
     driver: overlay
+    attachable: true
 
 secrets:
   terab_db_password:

@@ -130,6 +130,7 @@ jobs:
         run: |
           docker service update \
             --image ghcr.io/idenn207/terab-api:latest \
+            --health-start-period 120s \
             --with-registry-auth \
             --force \
             terab_api
