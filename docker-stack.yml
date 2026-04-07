@@ -1,5 +1,5 @@
 # Docker Swarm 프로덕션 스택
-# 사용법: docker stack deploy -c docker-stack.yml terab --with-registry-auth
+# 사용법: ./scripts/check-secrets.sh && docker stack deploy -c docker-stack.yml terab --with-registry-auth
 # 로컬 개발: docker-compose.local.yml 사용
 
 services:
@@ -7,15 +7,17 @@ services:
   db:
     image: postgres:16-alpine
     environment:
-      POSTGRES_DB: ${DB_NAME}
-      POSTGRES_USER: ${DB_USER}
-      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: terab_db
+      POSTGRES_USER: terab_user
+      POSTGRES_PASSWORD_FILE: /run/secrets/terab_db_password
+    secrets:
+      - terab_db_password
     volumes:
-      - ${DB_DATA_PATH}:/var/lib/postgresql/data
+      - /volume2/docker/terab/volumes/db:/var/lib/postgresql/data
     networks:
       - terab-net
     healthcheck:
-      test: ['CMD-SHELL', 'pg_isready -U ${DB_USER} -d ${DB_NAME}']
+      test: ['CMD-SHELL', 'pg_isready -U terab_user -d terab_db']
       interval: 10s
       timeout: 5s
       retries: 5
@@ -34,10 +36,12 @@ services:
     image: minio/minio:latest
     command: server /data --console-address ":9001"
     environment:
-      MINIO_ROOT_USER: ${MINIO_USER}
-      MINIO_ROOT_PASSWORD: ${MINIO_PASSWORD}
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD_FILE: /run/secrets/terab_minio_password
+    secrets:
+      - terab_minio_password
     volumes:
-      - ${MINIO_DATA_PATH}:/data
+      - /volume1/storage:/data
     ports:
       - '9001:9001'
     networks:
@@ -56,15 +60,18 @@ services:
   api:
     image: ghcr.io/idenn207/terab-api:latest
     environment:
-      DB_URL: jdbc:postgresql://db:5432/${DB_NAME}
-      DB_USER: ${DB_USER}
-      DB_PASSWORD: ${DB_PASSWORD}
+      DB_URL: jdbc:postgresql://db:5432/terab_db
+      DB_USER: terab_user
       MINIO_ENDPOINT: http://minio:9000
-      MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY}
-      MINIO_SECRET_KEY: ${MINIO_SECRET_KEY}
-      MINIO_BUCKET: ${MINIO_BUCKET}
-      JWT_SECRET: ${JWT_SECRET}
-      JWT_EXPIRATION_MS: ${JWT_EXPIRATION_MS}
+      MINIO_ACCESS_KEY: minioadmin
+      MINIO_BUCKET: terab-files
+      JWT_EXPIRATION_MS: 86400000
+      # DB_PASSWORD, MINIO_SECRET_KEY, JWT_SECRET 은
+      # docker-entrypoint.sh가 /run/secrets/ 에서 읽어 주입
+    secrets:
+      - terab_db_password
+      - terab_minio_password
+      - terab_jwt_secret
     networks:
       - terab-net
     healthcheck:
@@ -119,7 +126,7 @@ services:
     ports:
       - '8080:80'
     volumes:
-      - ${NGINX_CONF_PATH}:/etc/nginx/nginx.conf:ro
+      - /volume2/docker/terab/services/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
     networks:
       - terab-net
     healthcheck:
@@ -172,3 +179,11 @@ volumes:
 networks:
   terab-net:
     driver: overlay
+
+secrets:
+  terab_db_password:
+    external: true
+  terab_minio_password:
+    external: true
+  terab_jwt_secret:
+    external: true
