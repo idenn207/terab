@@ -136,11 +136,13 @@ jobs:
             docker service update \
               --image ghcr.io/idenn207/terab-api:latest \
               --with-registry-auth \
+              --force \
               terab_api
 
             # web rolling update
             docker service update \
               --image ghcr.io/idenn207/terab-web:latest \
               --with-registry-auth \
+              --force \
               terab_web
 
