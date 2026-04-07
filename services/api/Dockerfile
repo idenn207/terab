@@ -26,6 +26,10 @@ RUN apk add --no-cache bash
 COPY wait-for-it.sh /usr/local/bin/wait-for-it.sh
 RUN chmod +x /usr/local/bin/wait-for-it.sh
 
+# Docker Secrets entrypoint wrapper
+COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
+RUN chmod +x /usr/local/bin/docker-entrypoint.sh
+
 # 보안: non-root 사용자로 실행
 RUN addgroup -S appgroup && adduser -S appuser -G appgroup
 USER appuser
@@ -34,5 +38,4 @@ COPY --from=builder /app/build/libs/*.jar app.jar
 
 EXPOSE 8080
 
-# DB TCP 포트 열릴 때까지 대기 후 앱 기동 (최대 60초)
-ENTRYPOINT ["wait-for-it.sh", "db:5432", "--timeout=60", "--", "java", "-jar", "app.jar"]
+ENTRYPOINT ["docker-entrypoint.sh"]
