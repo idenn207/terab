@@ -143,7 +143,7 @@ services:
   # ─── Portainer CE (컨테이너 모니터링 UI) ─────────────────────────
   portainer:
     image: portainer/portainer-ce:latest
-    command: -H tcp://tasks.portainer_agent:9001 --tlsskip-verify
+    command: -H tcp://tasks.portainer_agent:9001 --tlsskipverify
     ports:
       - '9443:9443'
     volumes:

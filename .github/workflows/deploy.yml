@@ -120,6 +120,9 @@ jobs:
     needs: [build-and-push]
     if: github.event_name == 'push'
     runs-on: ubuntu-latest
+    environment:
+      name: production-nas
+      url: https://nas
 
     steps:
       - name: Deploy api & web via SSH
@@ -145,4 +148,3 @@ jobs:
               --with-registry-auth \
               --force \
               terab_web
-
