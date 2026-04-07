@@ -130,6 +130,7 @@ jobs:
           key: ${{ secrets.NAS_SSH_KEY }}
           port: ${{ secrets.NAS_SSH_PORT }}
           script: |
+            set -e
             # api rolling update: start-first + health gate + auto rollback on failure
             # ghcr.io 인증은 NAS에 수동 등록된 자격증명 사용 (docker login ghcr.io)
             docker service update \
