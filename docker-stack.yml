@@ -80,7 +80,7 @@ services:
         parallelism: 1
         failure_action: rollback
         delay: 10s
-        monitor: 30s
+        monitor: 120s
       rollback_config:
         order: start-first
         parallelism: 1
@@ -122,6 +122,12 @@ services:
       - ${NGINX_CONF_PATH}:/etc/nginx/nginx.conf:ro
     networks:
       - terab-net
+    healthcheck:
+      test: ['CMD', 'curl', '-f', 'http://localhost/']
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
     deploy:
       replicas: 1
       restart_policy:
