@@ -5,7 +5,10 @@ spring:
     password: ${DB_PASSWORD}
     driver-class-name: org.postgresql.Driver
     hikari:
+      maximum-pool-size: 5             # 인스턴스당 최대 5개 (3 replicas × 5 = 15 total, PostgreSQL 100 한도 대비 여유)
+      minimum-idle: 2                  # 최소 유휴 연결 2개 (메모리 절약)
       connection-timeout: 30000        # 연결 획득 대기 최대 30초
+      keepalive-time: 60000            # 60초마다 연결 유효성 확인 (좀비 연결 방지)
       initialization-fail-timeout: -1  # 시작 시 DB 없어도 앱 종료 안 함
   jpa:
     hibernate:
