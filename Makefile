@@ -32,8 +32,8 @@ stack-update:
 		--image ghcr.io/idenn207/terab-api:latest \
 		--with-registry-auth \
 		--force \
-		terab_api
-	docker service update \
+		terab_api \
+	&& docker service update \
 		--image ghcr.io/idenn207/terab-web:latest \
 		--with-registry-auth \
 		--force \
