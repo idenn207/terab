@@ -11,8 +11,9 @@ for f in $REQUIRED_SECRET_FILES; do
   fi
 done
 
-export DB_PASSWORD=$(cat /run/secrets/terab_db_password)
-export MINIO_SECRET_KEY=$(cat /run/secrets/terab_minio_password)
-export JWT_SECRET=$(cat /run/secrets/terab_jwt_secret)
+DB_PASSWORD=$(cat /run/secrets/terab_db_password)
+MINIO_SECRET_KEY=$(cat /run/secrets/terab_minio_password)
+JWT_SECRET=$(cat /run/secrets/terab_jwt_secret)
+export DB_PASSWORD MINIO_SECRET_KEY JWT_SECRET
 
 exec wait-for-it.sh db:5432 --timeout=60 -- java -jar app.jar
