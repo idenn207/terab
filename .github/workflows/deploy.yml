@@ -115,36 +115,29 @@ jobs:
           delete-only-untagged-versions: true
 
   # ─── NAS 배포 (Swarm rolling update) ────────────────────────────
+  # NAS에 설치된 self-hosted runner가 job을 직접 실행 → SSH/포트 노출 불필요
   deploy:
     name: Deploy to NAS
     needs: [build-and-push]
     if: github.event_name == 'push'
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     environment:
       name: production-nas
       url: https://nas
 
     steps:
-      - name: Deploy api & web via SSH
-        uses: appleboy/ssh-action@v1.2.0
-        with:
-          host: ${{ secrets.NAS_HOST }}
-          username: ${{ secrets.NAS_USER }}
-          key: ${{ secrets.NAS_SSH_KEY }}
-          port: ${{ secrets.NAS_SSH_PORT }}
-          script: |
-            set -e
-            # api rolling update: start-first + health gate + auto rollback on failure
-            # ghcr.io 인증은 NAS에 수동 등록된 자격증명 사용 (docker login ghcr.io)
-            docker service update \
-              --image ghcr.io/idenn207/terab-api:latest \
-              --with-registry-auth \
-              --force \
-              terab_api
+      - name: Update api service
+        run: |
+          docker service update \
+            --image ghcr.io/idenn207/terab-api:latest \
+            --with-registry-auth \
+            --force \
+            terab_api
 
-            # web rolling update
-            docker service update \
-              --image ghcr.io/idenn207/terab-web:latest \
-              --with-registry-auth \
-              --force \
-              terab_web
+      - name: Update web service
+        run: |
+          docker service update \
+            --image ghcr.io/idenn207/terab-web:latest \
+            --with-registry-auth \
+            --force \
+            terab_web
