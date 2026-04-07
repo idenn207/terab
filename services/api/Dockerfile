@@ -19,6 +19,13 @@ FROM eclipse-temurin:21-jre-alpine
 
 WORKDIR /app
 
+# wait-for-it.sh: bash 필요 (Alpine 기본 미포함)
+RUN apk add --no-cache bash
+
+# root 권한으로 스크립트 설치 (USER 전환 전)
+COPY wait-for-it.sh /usr/local/bin/wait-for-it.sh
+RUN chmod +x /usr/local/bin/wait-for-it.sh
+
 # 보안: non-root 사용자로 실행
 RUN addgroup -S appgroup && adduser -S appuser -G appgroup
 USER appuser
@@ -27,4 +34,5 @@ COPY --from=builder /app/build/libs/*.jar app.jar
 
 EXPOSE 8080
 
-ENTRYPOINT ["java", "-jar", "app.jar"]
+# DB TCP 포트 열릴 때까지 대기 후 앱 기동 (최대 60초)
+ENTRYPOINT ["wait-for-it.sh", "db:5432", "--timeout=60", "--", "java", "-jar", "app.jar"]
