@@ -1,0 +1,7 @@
+# 텍스트 파일 기본: 저장소는 LF, Windows checkout은 CRLF
+* text=auto
+
+# 쉘 스크립트 및 실행 파일: 항상 LF (Linux 컨테이너 실행 필요)
+*.sh text eol=lf
+gradlew text eol=lf
+gradlew.bat text eol=crlf
