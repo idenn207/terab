@@ -1,21 +1,7 @@
 SHELL := C:/Program Files/Git/usr/bin/bash.exe
-.PHONY: up down dev-up dev-down infra infra-down infra-reset api web test test-api test-web test-api-unit test-api-integration
+.PHONY: infra infra-down infra-reset dev-up dev-down stack-deploy stack-rm stack-update build-web build-android api web android android-open test test-api test-api-unit test-api-integration test-web
 
-LOCAL := docker compose -f docker-compose.yml -f docker-compose.local.yml
-
-# ─── 운영 환경 (전체 서비스, ghcr.io 이미지) ─────────────────────
-up:
-	docker compose up -d
-
-down:
-	docker compose down
-
-# ─── 개발 환경 (전체 서비스, 로컬 빌드) ──────────────────────────
-dev-up:
-	$(LOCAL) up -d
-
-dev-down:
-	$(LOCAL) down
+LOCAL := docker compose -f docker-compose.local.yml
 
 # ─── 로컬 인프라 (DB + MinIO만) ───────────────────────────────────
 infra:
@@ -27,7 +13,33 @@ infra-down:
 infra-reset:
 	rm -rf ./volumes/ && $(LOCAL) up -d db minio
 
-# ─── 빌드 ────────────────────────────────────────────────────
+# ─── 개발 환경 (전체 서비스, 로컬 빌드) ──────────────────────────
+dev-up:
+	$(LOCAL) up -d
+
+dev-down:
+	$(LOCAL) down
+
+# ─── Docker Swarm 운영 환경 ────────────────────────────────────────
+stack-deploy:
+	docker stack deploy -c docker-stack.yml terab --with-registry-auth
+
+stack-rm:
+	docker stack rm terab
+
+stack-update:
+	docker service update \
+		--image ghcr.io/idenn207/terab-api:latest \
+		--with-registry-auth \
+		--force \
+		terab_api
+	docker service update \
+		--image ghcr.io/idenn207/terab-web:latest \
+		--with-registry-auth \
+		--force \
+		terab_web
+
+# ─── 빌드 ────────────────────────────────────────────────────────
 build-web:
 	cd services/web && npm run build
 
