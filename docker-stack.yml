@@ -1,6 +1,6 @@
 # Docker Swarm 프로덕션 스택
 # 사용법: docker stack deploy -c docker-stack.yml terab --with-registry-auth
-# docker-compose.yml은 로컬 개발용으로 유지
+# 로컬 개발: docker-compose.local.yml 사용
 
 services:
   # ─── PostgreSQL ───────────────────────────────────────────────
