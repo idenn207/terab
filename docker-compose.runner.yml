@@ -1,0 +1,37 @@
+# GitHub Actions Self-hosted Runner
+# 사용법: NAS SSH 접속 후 아래 명령 실행
+#
+#   docker compose -f docker-compose.runner.yml up -d
+#
+# 사전 준비:
+#   1. GitHub → terab repo → Settings → Actions → Runners → New self-hosted runner
+#   2. 페이지에 표시된 Registration Token 복사
+#   3. 아래 RUNNER_TOKEN 환경변수 설정:
+#      export RUNNER_TOKEN=<토큰>
+#      docker compose -f docker-compose.runner.yml up -d
+#
+# 또는 Classic PAT 사용:
+#   export ACCESS_TOKEN=<classic_pat>
+#   docker compose -f docker-compose.runner.yml up -d
+
+services:
+  github-runner:
+    image: myoung34/github-runner:latest
+    container_name: github-runner
+    restart: unless-stopped
+    environment:
+      REPO_URL: https://github.com/idenn207/terab
+      RUNNER_NAME: terab-nas-runner
+      LABELS: self-hosted,nas
+      EPHEMERAL: "false"
+      # Registration Token (1시간 유효, 등록 후 만료되어도 runner는 계속 동작)
+      RUNNER_TOKEN: ${RUNNER_TOKEN:-}
+      # 또는 Classic PAT (scope: repo)
+      ACCESS_TOKEN: ${ACCESS_TOKEN:-}
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - runner_data:/home/runner
+    # terab 스택 네트워크 불필요 - GitHub에 아웃바운드 연결만 사용
+
+volumes:
+  runner_data:
