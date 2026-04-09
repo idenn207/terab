@@ -34,19 +34,26 @@ public class NotificationService {
 @RequiredArgsConstructor
 public class NotificationService {
 
+    private final FileRepository fileRepository;
     private final NotificationSender notificationSender;  // 별도 빈
 
     @Transactional
     public void processAndNotify(UUID fileId) {
-        process(fileId);
-        notificationSender.sendNotification(fileId);  // 프록시를 통한 호출
+        fileRepository.markAsProcessed(fileId);  // 메인 트랜잭션 내 처리
+        notificationSender.sendNotification(fileId);  // 프록시를 통한 호출 — REQUIRES_NEW 적용됨
     }
 }
 
 @Service
+@RequiredArgsConstructor
 public class NotificationSender {
+
+    private final NotificationRepository notificationRepository;
+
     @Transactional(propagation = Propagation.REQUIRES_NEW)
-    public void sendNotification(UUID fileId) { ... }
+    public void sendNotification(UUID fileId) {
+        notificationRepository.save(Notification.of(fileId));  // 독립 트랜잭션으로 커밋
+    }
 }
 ```
 
@@ -63,13 +70,17 @@ public class NotificationSender {
 ```java
 // ❌
 @Service
+@RequiredArgsConstructor
 public class FileService {
+
+    private final FileRepository fileRepository;
+
+    @Transactional  // readOnly=true 미설정 — 트랜잭션 종료 시 dirty checking 수행
     public FileResponse findById(UUID id) {
-        // @Transactional 없음 또는 readOnly 미설정 — dirty checking 수행
         File file = fileRepository.findById(id).orElseThrow(
             () -> new ApiException(ErrorCode.FILE_NOT_FOUND)
         );
-        return FileResponse.from(file);
+        return FileResponse.from(file);  // 조회만 하는데 스냅샷 비교 비용 낭비
     }
 }
 
@@ -115,7 +126,8 @@ public class AuthService {
         // Service가 HTTP 레이어에 직접 의존
         String ip = request.getRemoteAddr();
         String userAgent = request.getHeader("User-Agent");
-        // ...
+        // ... 비즈니스 로직
+        return new LoginResponse(/* token */);
     }
 }
 
@@ -139,6 +151,8 @@ public class AuthController {
 public class AuthService {
     public LoginResponse login(LoginRequest request, String clientIp) {
         // HTTP 독립 — 단위 테스트 용이
+        // clientIp는 String으로 전달받아 HTTP 의존성 없음
+        return new LoginResponse(/* token */);
     }
 }
 ```
