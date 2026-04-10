@@ -2,7 +2,8 @@
 .env
 .env.local
 .claude/*.local.*
-runner.env
+application.properties
+application-runner.properties
 
 # 데이터 볼륨
 volumes/db/
