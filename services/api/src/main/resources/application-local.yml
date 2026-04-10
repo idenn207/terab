@@ -1,6 +1,0 @@
-# 로컬 프로필: localhost URL 오버라이드 + 개발 편의 설정
-# 나머지 설정은 application.yml 을 상속합니다.
-
-spring:
-  jpa:
-    show-sql: true
