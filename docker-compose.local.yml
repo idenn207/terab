@@ -55,16 +55,10 @@ services:
       dockerfile: Dockerfile
     container_name: terab-api
     restart: on-failure
+    volumes:
+      - ./application-local.properties:/app/application.properties:ro
     environment:
-      DB_URL: jdbc:postgresql://db:5432/${DB_NAME}
-      DB_USER: ${DB_USER}
-      DB_PASSWORD: ${DB_PASSWORD}
-      MINIO_ENDPOINT: http://minio:9000
-      MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY}
-      MINIO_SECRET_KEY: ${MINIO_SECRET_KEY}
-      MINIO_BUCKET: ${MINIO_BUCKET}
-      JWT_SECRET: ${JWT_SECRET}
-      JWT_EXPIRATION_MS: ${JWT_EXPIRATION_MS}
+      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/terab_db
     depends_on:
       db:
         condition: service_healthy
