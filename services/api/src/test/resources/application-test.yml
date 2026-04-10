@@ -9,7 +9,8 @@ spring:
 
 jwt:
   secret: test-secret-key-that-is-at-least-256-bits-long-for-hs256-algorithm
-  expiration-ms: 3600000
+  access-token-expiration-ms: 900000
+  refresh-token-expiration-ms: 604800000
 
 minio:
   endpoint: http://localhost:9000
