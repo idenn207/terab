@@ -1,0 +1,9 @@
+spring:
+  jpa:
+    show-sql: true
+
+logging:
+  level:
+    root: info
+    '[com.terab.api]': warn
+
