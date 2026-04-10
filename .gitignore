@@ -22,6 +22,7 @@ services/api/target/
 services/api/.gradle/
 services/api/build/
 services/api/bin/
+services/api/src/main/resources/META-INF/
 
 # Node
 services/web/node_modules/
