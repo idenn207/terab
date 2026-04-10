@@ -14,10 +14,17 @@ spring:
 
 jwt:
   secret: integration-test-secret-key-at-least-256-bits-for-hs256-algorithm
-  expiration-ms: 3600000
+  access-token-expiration-ms: 900000
+  refresh-token-expiration-ms: 604800000
 
 minio:
   endpoint: overridden-by-testcontainers
   access-key: minioadmin
   secret-key: minioadmin
   bucket: test-bucket
+
+app:
+  owner:
+    username: owner
+    password: owner-test-password-123
+    nickname: Owner

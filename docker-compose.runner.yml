@@ -17,7 +17,7 @@ services:
     container_name: github-runner
     restart: unless-stopped
     env_file:
-      - runner.env
+      - application-runner.properties
     environment:
       REPO_URL: https://github.com/idenn207/terab
       RUNNER_NAME: terab-nas-runner
