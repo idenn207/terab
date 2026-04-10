@@ -59,19 +59,14 @@ services:
   # ─── Spring Boot API ──────────────────────────────────────────
   api:
     image: ghcr.io/idenn207/terab-api:latest
-    environment:
-      DB_URL: jdbc:postgresql://db:5432/terab_db
-      DB_USER: terab_user
-      MINIO_ENDPOINT: http://minio:9000
-      MINIO_ACCESS_KEY: minioadmin
-      MINIO_BUCKET: terab-files
-      JWT_EXPIRATION_MS: 86400000
-      # DB_PASSWORD, MINIO_SECRET_KEY, JWT_SECRET 은
-      # docker-entrypoint.sh가 /run/secrets/ 에서 읽어 주입
+    configs:
+      - source: api_properties
+        target: /app/application.properties
     secrets:
       - terab_db_password
       - terab_minio_password
       - terab_jwt_secret
+      - terab_owner_password
     networks:
       - terab-net
     healthcheck:
@@ -173,6 +168,10 @@ services:
       restart_policy:
         condition: on-failure
 
+configs:
+  api_properties:
+    external: true
+
 volumes:
   portainer_data:
 
@@ -187,4 +186,6 @@ secrets:
   terab_minio_password:
     external: true
   terab_jwt_secret:
+    external: true
+  terab_owner_password:
     external: true
