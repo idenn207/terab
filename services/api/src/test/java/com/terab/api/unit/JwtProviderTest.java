@@ -61,4 +61,17 @@ class JwtProviderTest {
       assertThatThrownBy(() -> jwtProvider.validateAndGetClaims(tampered)).isInstanceOf(JwtException.class);
     }
   }
+
+  @Nested
+  @DisplayName("generateRefreshToken")
+  class GenerateRefreshToken {
+
+    @Test
+    void should_contain_userId_as_subject() {
+      UUID userId = UUID.randomUUID();
+      String token = jwtProvider.generateRefreshToken(userId);
+      Claims claims = jwtProvider.validateAndGetClaims(token);
+      assertThat(claims.getSubject()).isEqualTo(userId.toString());
+    }
+  }
 }
