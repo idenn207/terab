@@ -58,7 +58,7 @@ build-android:
 # ─── 백엔드 ────────────────────────────────────────────────────────
 .PHONY: api
 api:
-	set -a && source .env.local && set +a && cd services/api && ./gradlew bootRun --args='--spring.profiles.active=local'
+	cd services/api && ./gradlew bootRun --args='--spring.profiles.active=local'
 
 # ─── 프론트엔드 ────────────────────────────────────────────────────
 .PHONY: web
