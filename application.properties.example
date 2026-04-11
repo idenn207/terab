@@ -1,0 +1,4 @@
+# application.properties.example -> configs.env.example + secrets.env.example 로 대체됨
+# 운영 배포: make setup (NAS에서 configs.env + secrets.env 준비 후 실행)
+#
+# 로컬 개발: make setup-local (local.env → services/api/application-local.properties 생성)

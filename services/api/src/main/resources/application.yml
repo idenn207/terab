@@ -1,8 +1,13 @@
 spring:
   config:
-    import: 'optional:configtree:/run/secrets/'
+    import:
+      - 'optional:configtree:/run/secrets/'
+      - 'optional:configtree:/run/configs/'
   datasource:
     driver-class-name: org.postgresql.Driver
+    url: ${db_url:}
+    username: ${db_user:}
+    password: ${terab_db_password:}
     hikari:
       maximum-pool-size: 5 # 인스턴스당 최대 5개 (3 replicas × 5 = 15 total, PostgreSQL 100 한도 대비 여유)
       minimum-idle: 2 # 최소 유휴 연결 2개 (메모리 절약)
@@ -14,9 +19,6 @@ spring:
       ddl-auto: validate
     show-sql: false
     open-in-view: true
-    # properties:
-    #   hibernate:
-    #     dialect: org.hibernate.dialect.PostgreSQLDialect
   flyway:
     enabled: true
     locations: classpath:db/migration
@@ -30,3 +32,19 @@ spring:
 server:
   port: 8080
 
+minio:
+  endpoint: ${minio_endpoint:}
+  access-key: ${minio_root_user:}
+  secret-key: ${terab_minio_password:}
+  bucket: ${minio_bucket:}
+
+jwt:
+  secret: ${terab_jwt_secret:}
+  access-token-expiration-ms: ${jwt_access_expiry_ms:900000}
+  refresh-token-expiration-ms: ${jwt_refresh_expiry_ms:604800000}
+
+app:
+  owner:
+    username: ${owner_username:owner}
+    nickname: ${owner_nickname:Owner}
+    password: ${terab_owner_password:}

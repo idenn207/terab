@@ -9,12 +9,9 @@ version = '0.0.1-SNAPSHOT'
 
 java {
     toolchain {
-        languageVersion = JavaLanguageVersion.of(25)
+        languageVersion = JavaLanguageVersion.of(21)
     }
 }
-
-// Lombok 1.18.40+ required for Java 25 annotation processing
-ext['lombok.version'] = '1.18.40'
 
 repositories {
     mavenCentral()

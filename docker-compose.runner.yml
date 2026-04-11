@@ -1,8 +1,8 @@
 # GitHub Actions Self-hosted Runner
 # 사용법: NAS SSH 접속 후 아래 명령 실행
 #
-#   cp runner.env.example runner.env   # 최초 1회
-#   vi runner.env                      # ACCESS_TOKEN 값 입력 후 저장
+#   cp application-runner.properties.example application-runner.properties  # 최초 1회
+#   vi application-runner.properties                                         # ACCESS_TOKEN 값 입력 후 저장
 #   docker compose -f docker-compose.runner.yml up -d
 #
 # ACCESS_TOKEN 발급:
