@@ -1,5 +1,5 @@
 package com.terab.api.auth.dto;
 
-public class UserResponse {
-  
-}
+import java.util.UUID;
+
+public record UserResponse(UUID id, String username, String nickname) {}
