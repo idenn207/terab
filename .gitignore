@@ -28,4 +28,7 @@ services/api/src/main/resources/META-INF/
 services/web/node_modules/
 services/web/dist/
 services/web/build/
+# rollup-plugin-visualizer
+services/web/stats.html
 .superpowers/
+
