@@ -12,22 +12,23 @@
 
 ## 파일 구조
 
-| 경로 | 상태 | 역할 |
-|------|------|------|
-| `scripts/check-secrets.sh` | 신규 | 배포 전 Swarm 시크릿 등록 여부 확인 |
-| `services/api/docker-entrypoint.sh` | 신규 | 시크릿 파일 검증 → env 변환 → 앱 기동 |
-| `services/api/Dockerfile` | 수정 | entrypoint wrapper 추가, ENTRYPOINT 교체 |
-| `docker-stack.yml` | 수정 | secrets 블록, `_FILE` env var, 경로 하드코딩 |
-| `.env` | 수정 | 시크릿 값 제거, 로컬 개발 전용 명시 |
+| 경로                                | 상태 | 역할                                         |
+| ----------------------------------- | ---- | -------------------------------------------- |
+| `scripts/check-secrets.sh`          | 신규 | 배포 전 Swarm 시크릿 등록 여부 확인          |
+| `services/api/docker-entrypoint.sh` | 신규 | 시크릿 파일 검증 → env 변환 → 앱 기동        |
+| `services/api/Dockerfile`           | 수정 | entrypoint wrapper 추가, ENTRYPOINT 교체     |
+| `docker-stack.yml`                  | 수정 | secrets 블록, `_FILE` env var, 경로 하드코딩 |
+| `.env`                              | 수정 | 시크릿 값 제거, 로컬 개발 전용 명시          |
 
 ---
 
 ### Task 1: 배포 전 시크릿 검증 스크립트
 
 **Files:**
+
 - Create: `scripts/check-secrets.sh`
 
-- [ ] **Step 1: 스크립트 파일 생성**
+- [x] **Step 1: 스크립트 파일 생성**
 
 ```bash
 #!/bin/bash
@@ -55,7 +56,7 @@ fi
 echo "모든 시크릿 확인 완료. 배포를 진행합니다."
 ```
 
-- [ ] **Step 2: 실행 권한 부여 및 문법 검증**
+- [x] **Step 2: 실행 권한 부여 및 문법 검증**
 
 ```bash
 chmod +x scripts/check-secrets.sh
@@ -64,7 +65,7 @@ bash -n scripts/check-secrets.sh
 
 Expected: 오류 없이 종료 (출력 없음)
 
-- [ ] **Step 3: 동작 검증 — 시크릿 미등록 시 오류 출력 확인**
+- [x] **Step 3: 동작 검증 — 시크릿 미등록 시 오류 출력 확인**
 
 ```bash
 # 존재하지 않는 시크릿 이름으로 임시 테스트
@@ -79,7 +80,7 @@ REQUIRED_SECRETS=("nonexistent_secret_xyz") bash -c '
 
 Expected: `PASS: 오류 감지됨 — nonexistent_secret_xyz`
 
-- [ ] **Step 4: 커밋**
+- [x] **Step 4: 커밋**
 
 ```bash
 git add scripts/check-secrets.sh
@@ -91,9 +92,10 @@ git commit -m "feat: 배포 전 Docker Swarm 시크릿 검증 스크립트 추�
 ### Task 2: API Entrypoint Wrapper 스크립트
 
 **Files:**
+
 - Create: `services/api/docker-entrypoint.sh`
 
-- [ ] **Step 1: 스크립트 파일 생성**
+- [x] **Step 1: 스크립트 파일 생성**
 
 ```sh
 #!/bin/sh
@@ -116,7 +118,7 @@ export JWT_SECRET=$(cat /run/secrets/terab_jwt_secret)
 exec wait-for-it.sh db:5432 --timeout=60 -- java -jar app.jar
 ```
 
-- [ ] **Step 2: 문법 검증**
+- [x] **Step 2: 문법 검증**
 
 ```bash
 bash -n services/api/docker-entrypoint.sh
@@ -124,7 +126,7 @@ bash -n services/api/docker-entrypoint.sh
 
 Expected: 오류 없이 종료
 
-- [ ] **Step 3: 시크릿 파일 미마운트 시 FATAL 출력 검증**
+- [x] **Step 3: 시크릿 파일 미마운트 시 FATAL 출력 검증**
 
 ```bash
 # /run/secrets 없는 환경에서 실행 시 에러 확인
@@ -139,7 +141,7 @@ sh -c '
 
 Expected: `PASS: FATAL 감지됨 — terab_db_password`
 
-- [ ] **Step 4: 커밋**
+- [x] **Step 4: 커밋**
 
 ```bash
 git add services/api/docker-entrypoint.sh
@@ -151,9 +153,11 @@ git commit -m "feat: API 컨테이너 Docker Secrets entrypoint wrapper 추가"
 ### Task 3: Dockerfile에 Entrypoint Wrapper 통합
 
 **Files:**
+
 - Modify: `services/api/Dockerfile`
 
 현재 Dockerfile (관련 부분):
+
 ```dockerfile
 RUN addgroup -S appgroup && adduser -S appuser -G appgroup
 USER appuser
@@ -165,7 +169,7 @@ EXPOSE 8080
 ENTRYPOINT ["wait-for-it.sh", "db:5432", "--timeout=60", "--", "java", "-jar", "app.jar"]
 ```
 
-- [ ] **Step 1: Dockerfile 수정 — wrapper 스크립트 추가 및 ENTRYPOINT 교체**
+- [x] **Step 1: Dockerfile 수정 — wrapper 스크립트 추가 및 ENTRYPOINT 교체**
 
 `RUN addgroup...` 줄 바로 위에 아래 두 줄을 추가하고, ENTRYPOINT를 교체한다:
 
@@ -197,7 +201,7 @@ EXPOSE 8080
 ENTRYPOINT ["docker-entrypoint.sh"]
 ```
 
-- [ ] **Step 2: Docker 이미지 빌드 검증**
+- [x] **Step 2: Docker 이미지 빌드 검증**
 
 ```bash
 cd services/api
@@ -206,7 +210,7 @@ docker build -t terab-api:secrets-test .
 
 Expected: `Successfully built` (빌드 오류 없음)
 
-- [ ] **Step 3: ENTRYPOINT 확인**
+- [x] **Step 3: ENTRYPOINT 확인**
 
 ```bash
 docker inspect terab-api:secrets-test --format '{{json .Config.Entrypoint}}'
@@ -214,7 +218,7 @@ docker inspect terab-api:secrets-test --format '{{json .Config.Entrypoint}}'
 
 Expected: `["docker-entrypoint.sh"]`
 
-- [ ] **Step 4: 시크릿 미마운트 시 컨테이너 즉시 종료 확인**
+- [x] **Step 4: 시크릿 미마운트 시 컨테이너 즉시 종료 확인**
 
 ```bash
 docker run --rm terab-api:secrets-test 2>&1 | head -5
@@ -222,7 +226,7 @@ docker run --rm terab-api:secrets-test 2>&1 | head -5
 
 Expected: `FATAL: Docker secret 'terab_db_password' is not mounted at /run/secrets/terab_db_password`
 
-- [ ] **Step 5: 커밋**
+- [x] **Step 5: 커밋**
 
 ```bash
 git add services/api/Dockerfile
@@ -234,9 +238,10 @@ git commit -m "feat: Dockerfile에 Docker Secrets entrypoint wrapper 통합"
 ### Task 4: docker-stack.yml 전면 수정
 
 **Files:**
+
 - Modify: `docker-stack.yml`
 
-- [ ] **Step 1: docker-stack.yml 전체를 아래 내용으로 교체**
+- [x] **Step 1: docker-stack.yml 전체를 아래 내용으로 교체**
 
 ```yaml
 # Docker Swarm 프로덕션 스택
@@ -430,7 +435,7 @@ secrets:
     external: true
 ```
 
-- [ ] **Step 2: YAML 문법 검증**
+- [x] **Step 2: YAML 문법 검증**
 
 ```bash
 docker stack config -c docker-stack.yml > /dev/null
@@ -438,7 +443,7 @@ docker stack config -c docker-stack.yml > /dev/null
 
 Expected: 오류 없이 종료 (`${}` 미치환 관련 오류 없음)
 
-- [ ] **Step 3: 커밋**
+- [x] **Step 3: 커밋**
 
 ```bash
 git add docker-stack.yml
@@ -450,9 +455,10 @@ git commit -m "feat: docker-stack.yml Docker Secrets 적용 및 경로 하드코
 ### Task 5: `.env` 정리 — 로컬 개발 전용 파일로 전환
 
 **Files:**
+
 - Modify: `.env`
 
-- [ ] **Step 1: `.env`에서 시크릿 값 제거 및 주석 추가**
+- [x] **Step 1: `.env`에서 시크릿 값 제거 및 주석 추가**
 
 `.env`를 아래 내용으로 교체한다 (시크릿 제거, 로컬 개발 전용 명시):
 
@@ -486,7 +492,7 @@ JWT_EXPIRATION_MS=86400000
 # JWT_SECRET=
 ```
 
-- [ ] **Step 2: 커밋**
+- [x] **Step 2: 커밋**
 
 ```bash
 git add .env
@@ -499,7 +505,7 @@ git commit -m "chore: .env 시크릿 제거, 로컬 개발 전용 파일로 전�
 
 > 이 Task는 NAS SSH 접속 후 실행한다.
 
-- [ ] **Step 1: NAS에서 Docker Secrets 등록**
+- [x] **Step 1: NAS에서 Docker Secrets 등록**
 
 `printf '%s'` 형식을 사용해야 `%`, `*`, `^` 등 특수문자가 안전하게 처리된다.  
 실제 값은 로컬 `.env` 파일(시크릿 주석 블록) 또는 비밀번호 관리자에서 확인한다.
@@ -511,17 +517,19 @@ printf '%s' '<JWT_SECRET 실제값>'     | docker secret create terab_jwt_secret
 ```
 
 Expected:
+
 ```
 <hash_id>   # 각각 생성된 시크릿 ID
 ```
 
-- [ ] **Step 2: 시크릿 등록 확인**
+- [x] **Step 2: 시크릿 등록 확인**
 
 ```bash
 docker secret ls
 ```
 
 Expected:
+
 ```
 ID          NAME                   DRIVER    CREATED         UPDATED
 <id>        terab_db_password                <time>          <time>
@@ -529,7 +537,7 @@ ID          NAME                   DRIVER    CREATED         UPDATED
 <id>        terab_jwt_secret                 <time>          <time>
 ```
 
-- [ ] **Step 3: 검증 스크립트 실행**
+- [x] **Step 3: 검증 스크립트 실행**
 
 ```bash
 ./scripts/check-secrets.sh
@@ -537,7 +545,7 @@ ID          NAME                   DRIVER    CREATED         UPDATED
 
 Expected: `모든 시크릿 확인 완료. 배포를 진행합니다.`
 
-- [ ] **Step 4: 스택 배포**
+- [x] **Step 4: 스택 배포**
 
 ```bash
 docker stack deploy -c docker-stack.yml terab --with-registry-auth
@@ -545,7 +553,7 @@ docker stack deploy -c docker-stack.yml terab --with-registry-auth
 
 Expected: volume 오류(`empty section between colons`) 없이 정상 배포
 
-- [ ] **Step 5: 서비스 상태 확인**
+- [x] **Step 5: 서비스 상태 확인**
 
 ```bash
 docker stack ps terab --no-trunc
@@ -553,17 +561,18 @@ docker stack ps terab --no-trunc
 
 Expected: 모든 서비스 `Running` 상태 (Preparing/Starting은 잠시 후 Running으로 전환)
 
-- [ ] **Step 6: API 헬스체크**
+- [x] **Step 6: API 헬스체크**
 
 ```bash
 docker service logs terab_api 2>&1 | grep -E "FATAL|Started|health"
 ```
 
 Expected:
+
 - `FATAL` 로그 없음
 - `Started TerabApplication` 또는 Spring Boot 기동 완료 로그 확인
 
-- [ ] **Step 7: 서비스별 헬스 검증**
+- [x] **Step 7: 서비스별 헬스 검증**
 
 ```bash
 # PostgreSQL
@@ -577,6 +586,7 @@ curl -sf http://localhost:9000/minio/health/live && echo "MinIO OK"
 ```
 
 Expected:
+
 ```
 /var/run/postgresql:5432 - accepting connections
 {"status":"UP",...}

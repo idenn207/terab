@@ -12,13 +12,13 @@
 
 ## 파일 구성
 
-| 파일 | 작업 |
-|---|---|
-| `services/api/src/main/resources/application.yml` | Flyway retry + HikariCP timeout 추가 |
-| `services/api/wait-for-it.sh` | 신규 생성 (TCP wait 스크립트) |
-| `services/api/Dockerfile` | bash 설치, wait-for-it.sh COPY, ENTRYPOINT 수정 |
-| `docker-stack.yml` | 신규 생성 (Swarm 프로덕션 스택) |
-| `.github/workflows/deploy.yml` | deploy job 추가, Watchtower 제거 |
+| 파일                                              | 작업                                            |
+| ------------------------------------------------- | ----------------------------------------------- |
+| `services/api/src/main/resources/application.yml` | Flyway retry + HikariCP timeout 추가            |
+| `services/api/wait-for-it.sh`                     | 신규 생성 (TCP wait 스크립트)                   |
+| `services/api/Dockerfile`                         | bash 설치, wait-for-it.sh COPY, ENTRYPOINT 수정 |
+| `docker-stack.yml`                                | 신규 생성 (Swarm 프로덕션 스택)                 |
+| `.github/workflows/deploy.yml`                    | deploy job 추가, Watchtower 제거                |
 
 `docker-compose.yml`은 로컬 개발용으로 변경하지 않는다.
 
@@ -27,9 +27,10 @@
 ## Task 1: API 기동 안정화 — application.yml
 
 **Files:**
+
 - Modify: `services/api/src/main/resources/application.yml`
 
-- [ ] **Step 1: 현재 설정 확인**
+- [x] **Step 1: 현재 설정 확인**
 
   ```bash
   cat services/api/src/main/resources/application.yml
@@ -37,7 +38,7 @@
 
   `spring.flyway` 섹션에 `connect-retries` 항목이 없고, `spring.datasource.hikari` 섹션이 없음을 확인한다.
 
-- [ ] **Step 2: Flyway retry + HikariCP 설정 추가**
+- [x] **Step 2: Flyway retry + HikariCP 설정 추가**
 
   `spring.flyway` 블록 하단과 `spring.datasource` 블록에 다음을 추가한다.
 
@@ -49,8 +50,8 @@
       password: ${DB_PASSWORD}
       driver-class-name: org.postgresql.Driver
       hikari:
-        connection-timeout: 30000        # 연결 획득 대기 최대 30초
-        initialization-fail-timeout: -1  # 시작 시 DB 없어도 앱 종료 안 함
+        connection-timeout: 30000 # 연결 획득 대기 최대 30초
+        initialization-fail-timeout: -1 # 시작 시 DB 없어도 앱 종료 안 함
     jpa:
       hibernate:
         ddl-auto: validate
@@ -61,7 +62,7 @@
     flyway:
       enabled: true
       locations: classpath:db/migration
-      connect-retries: 10          # 10회 재시도
+      connect-retries: 10 # 10회 재시도
       connect-retries-interval: 3s # 3초 간격 → 최대 30초 대기
     servlet:
       multipart:
@@ -69,7 +70,7 @@
         max-request-size: 10GB
   ```
 
-- [ ] **Step 3: 로컬 통합 테스트로 설정 검증**
+- [x] **Step 3: 로컬 통합 테스트로 설정 검증**
 
   ```bash
   cd services/api
@@ -78,7 +79,7 @@
 
   Expected: `BUILD SUCCESSFUL` — 기존 테스트가 깨지지 않음을 확인.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
   ```bash
   git add services/api/src/main/resources/application.yml
@@ -90,10 +91,11 @@
 ## Task 2: wait-for-it.sh 추가 + Dockerfile 수정
 
 **Files:**
+
 - Create: `services/api/wait-for-it.sh`
 - Modify: `services/api/Dockerfile`
 
-- [ ] **Step 1: wait-for-it.sh 생성**
+- [x] **Step 1: wait-for-it.sh 생성**
 
   `services/api/wait-for-it.sh` 파일을 생성한다.
 
@@ -200,9 +202,10 @@
   fi
   ```
 
-- [ ] **Step 2: Dockerfile 수정**
+- [x] **Step 2: Dockerfile 수정**
 
   현재:
+
   ```dockerfile
   FROM eclipse-temurin:21-jre-alpine
   WORKDIR /app
@@ -214,6 +217,7 @@
   ```
 
   다음으로 교체:
+
   ```dockerfile
   # ─── Stage 1: Build ─────────────────────────────────────────────
   FROM eclipse-temurin:21-jdk-alpine AS builder
@@ -256,7 +260,7 @@
 
   > **build context 확인**: GitHub Actions의 `context: ./services/api`와 로컬 `docker build services/api` 모두 `services/api/`가 build context. `wait-for-it.sh`과 `Dockerfile`이 같은 디렉터리에 있으므로 `COPY wait-for-it.sh`로 충분.
 
-- [ ] **Step 3: 로컬 Docker 빌드 검증**
+- [x] **Step 3: 로컬 Docker 빌드 검증**
 
   ```bash
   cd services/api
@@ -265,7 +269,7 @@
 
   Expected: `Successfully built ...` — 오류 없이 빌드 완료.
 
-- [ ] **Step 4: wait-for-it.sh 동작 확인**
+- [x] **Step 4: wait-for-it.sh 동작 확인**
 
   ```bash
   docker run --rm terab-api:local-test wait-for-it.sh --help
@@ -273,7 +277,7 @@
 
   Expected: 사용법 출력 후 종료 (앱은 DB 없으면 timeout 후 종료).
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
   ```bash
   git add services/api/wait-for-it.sh services/api/Dockerfile
@@ -285,9 +289,10 @@
 ## Task 3: docker-stack.yml 생성 (Docker Swarm 프로덕션 스택)
 
 **Files:**
+
 - Create: `docker-stack.yml`
 
-- [ ] **Step 1: docker-stack.yml 생성**
+- [x] **Step 1: docker-stack.yml 생성**
 
   프로젝트 루트에 `docker-stack.yml`을 생성한다.
 
@@ -370,11 +375,11 @@
       deploy:
         replicas: 3
         update_config:
-          order: start-first      # 새 replica 기동 후 old 종료
-          parallelism: 1          # 1개씩 순차 교체
+          order: start-first # 새 replica 기동 후 old 종료
+          parallelism: 1 # 1개씩 순차 교체
           failure_action: rollback
           delay: 10s
-          monitor: 30s            # 교체 후 30초간 헬스 모니터링
+          monitor: 30s # 교체 후 30초간 헬스 모니터링
         rollback_config:
           order: start-first
           parallelism: 1
@@ -423,10 +428,11 @@
 
   networks:
     terab-net:
-      driver: overlay   # Swarm 필수: bridge → overlay
+      driver: overlay # Swarm 필수: bridge → overlay
   ```
 
   > **주의사항:**
+  >
   > - `depends_on`은 Swarm에서 지원되지 않아 제거. 기동 순서는 Task 1, 2에서 구현한 Flyway retry + wait-for-it.sh가 처리.
   > - `container_name`은 Swarm이 자동 관리하므로 제거.
   > - 볼륨 경로는 상대경로 미지원 → `.env`에 절대경로로 지정 필요.
@@ -434,7 +440,7 @@
   > - 네트워크 드라이버 `bridge` → `overlay` 변경.
   > - Nginx upstream은 `server api:8080` 그대로 유지 — Swarm 내부 DNS가 3개 replica로 자동 분산.
 
-- [ ] **Step 2: .env 파일에 절대경로 확인**
+- [x] **Step 2: .env 파일에 절대경로 확인**
 
   NAS의 `.env` 파일에 아래 항목이 절대경로로 설정되어 있는지 확인한다:
 
@@ -446,11 +452,12 @@
   ```
 
   경로가 없으면 생성:
+
   ```bash
   mkdir -p /volume1/docker/terab/db /volume1/docker/terab/storage
   ```
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
   ```bash
   git add docker-stack.yml
@@ -462,65 +469,67 @@
 ## Task 4: GitHub Actions — SSH deploy job 추가
 
 **Files:**
+
 - Modify: `.github/workflows/deploy.yml`
 
-- [ ] **Step 1: GitHub Secrets 등록 확인**
+- [x] **Step 1: GitHub Secrets 등록 확인**
 
   GitHub 저장소 Settings → Secrets and variables → Actions에서 다음 4개를 추가한다:
 
-  | Secret 이름 | 값 |
-  |---|---|
-  | `NAS_HOST` | NAS의 외부 도메인 또는 IP (예: `skypark207.com`) |
-  | `NAS_USER` | SSH 사용자명 |
-  | `NAS_SSH_KEY` | SSH 개인키 전체 내용 (`-----BEGIN OPENSSH PRIVATE KEY-----` 포함) |
-  | `NAS_SSH_PORT` | SSH 커스텀 포트 번호 (예: `22222`) |
+  | Secret 이름    | 값                                                                |
+  | -------------- | ----------------------------------------------------------------- |
+  | `NAS_HOST`     | NAS의 외부 도메인 또는 IP (예: `skypark207.com`)                  |
+  | `NAS_USER`     | SSH 사용자명                                                      |
+  | `NAS_SSH_KEY`  | SSH 개인키 전체 내용 (`-----BEGIN OPENSSH PRIVATE KEY-----` 포함) |
+  | `NAS_SSH_PORT` | SSH 커스텀 포트 번호 (예: `22222`)                                |
 
-- [ ] **Step 2: deploy.yml에 deploy job 추가**
+- [x] **Step 2: deploy.yml에 deploy job 추가**
 
   현재 `.github/workflows/deploy.yml`의 `cleanup` job 다음에 추가:
 
   ```yaml
-    # ─── NAS 배포 (Swarm rolling update) ────────────────────────────
-    deploy:
-      name: Deploy to NAS
-      needs: [build-and-push]
-      if: github.event_name == 'push'
-      runs-on: ubuntu-latest
+  # ─── NAS 배포 (Swarm rolling update) ────────────────────────────
+  deploy:
+    name: Deploy to NAS
+    needs: [build-and-push]
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
 
-      steps:
-        - name: Deploy api & web via SSH
-          uses: appleboy/ssh-action@v1.2.0
-          with:
-            host: ${{ secrets.NAS_HOST }}
-            username: ${{ secrets.NAS_USER }}
-            key: ${{ secrets.NAS_SSH_KEY }}
-            port: ${{ secrets.NAS_SSH_PORT }}
-            script: |
-              # api rolling update: start-first + health gate
-              # ghcr.io 인증은 Task 5 Step 4에서 NAS에 수동 등록된 자격증명 사용
-              docker service update \
-                --image ghcr.io/idenn207/terab-api:latest \
-                --with-registry-auth \
-                terab_api
+    steps:
+      - name: Deploy api & web via SSH
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.NAS_HOST }}
+          username: ${{ secrets.NAS_USER }}
+          key: ${{ secrets.NAS_SSH_KEY }}
+          port: ${{ secrets.NAS_SSH_PORT }}
+          script: |
+            # api rolling update: start-first + health gate
+            # ghcr.io 인증은 Task 5 Step 4에서 NAS에 수동 등록된 자격증명 사용
+            docker service update \
+              --image ghcr.io/idenn207/terab-api:latest \
+              --with-registry-auth \
+              terab_api
 
-              # web rolling update
-              docker service update \
-                --image ghcr.io/idenn207/terab-web:latest \
-                --with-registry-auth \
-                terab_web
+            # web rolling update
+            docker service update \
+              --image ghcr.io/idenn207/terab-web:latest \
+              --with-registry-auth \
+              terab_web
   ```
 
   > `needs: [build-and-push]`로 matrix job (api + web 빌드) 양쪽이 완료된 후 배포 시작.
 
-- [ ] **Step 3: deploy.yml 전체 구조 확인**
+- [x] **Step 3: deploy.yml 전체 구조 확인**
 
   최종 job 순서가 다음인지 확인:
+
   ```
   test → build-and-push (matrix: api, web) → cleanup
                      └→ deploy
   ```
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
   ```bash
   git add .github/workflows/deploy.yml
@@ -533,15 +542,17 @@
 
 **Files:** NAS 서버에서 직접 실행 (코드 변경 없음)
 
-- [ ] **Step 1: SSH 보안 강화 (Synology DSM)**
+- [x] **Step 1: SSH 보안 강화 (Synology DSM)**
 
   NAS SSH 접속 후:
+
   ```bash
   # /etc/ssh/sshd_config 수정
   sudo vi /etc/ssh/sshd_config
   ```
 
   다음 항목 설정:
+
   ```
   PasswordAuthentication no
   PermitRootLogin no
@@ -553,15 +564,17 @@
   # 또는 Synology: sudo synoservice --restart sshd
   ```
 
-- [ ] **Step 2: SSH 공개키 등록**
+- [x] **Step 2: SSH 공개키 등록**
 
   GitHub Actions에서 사용할 SSH 키쌍 생성 (로컬 머신):
+
   ```bash
   ssh-keygen -t ed25519 -C "github-actions-deploy" -f ~/.ssh/terab_deploy
   cat ~/.ssh/terab_deploy.pub
   ```
 
   NAS에 공개키 등록:
+
   ```bash
   # NAS에서
   mkdir -p ~/.ssh && chmod 700 ~/.ssh
@@ -571,7 +584,7 @@
 
   `~/.ssh/terab_deploy` (개인키) 내용을 GitHub Secret `NAS_SSH_KEY`에 등록.
 
-- [ ] **Step 3: Docker Swarm 초기화**
+- [x] **Step 3: Docker Swarm 초기화**
 
   ```bash
   # NAS에서
@@ -579,33 +592,35 @@
   ```
 
   Expected:
+
   ```
   Swarm initialized: current node (xxxx) is now a manager.
   ```
 
-- [ ] **Step 4: ghcr.io 인증 등록**
+- [x] **Step 4: ghcr.io 인증 등록**
 
   ```bash
   docker login ghcr.io -u idenn207
   # 패스워드: GitHub Personal Access Token (read:packages 권한)
   ```
 
-- [ ] **Step 5: 기존 Compose 스택 종료**
+- [x] **Step 5: 기존 Compose 스택 종료**
 
   ```bash
   cd /volume1/docker/terab  # 또는 docker-compose.yml이 있는 경로
   docker compose down
   ```
 
-  Expected: 모든 terab-* 컨테이너 종료.
+  Expected: 모든 terab-\* 컨테이너 종료.
 
-- [ ] **Step 6: Swarm 스택 최초 배포**
+- [x] **Step 6: Swarm 스택 최초 배포**
 
   ```bash
   docker stack deploy -c docker-stack.yml terab --with-registry-auth
   ```
 
   Expected:
+
   ```
   Creating network terab_terab-net
   Creating service terab_db
@@ -615,7 +630,7 @@
   Creating service terab_nginx
   ```
 
-- [ ] **Step 7: 배포 상태 확인**
+- [x] **Step 7: 배포 상태 확인**
 
   ```bash
   # 서비스 목록 확인
@@ -623,6 +638,7 @@
   ```
 
   Expected (모두 REPLICAS 충족 시):
+
   ```
   ID      NAME          MODE         REPLICAS   IMAGE
   xxxx    terab_api     replicated   3/3        ghcr.io/idenn207/terab-api:latest
@@ -639,48 +655,53 @@
 
   Expected: 3개 모두 `Running` 상태.
 
-- [ ] **Step 8: 헬스 엔드포인트 확인**
+- [x] **Step 8: 헬스 엔드포인트 확인**
 
   ```bash
   curl -f http://localhost:8080/actuator/health
   ```
 
   Expected:
+
   ```json
-  {"status":"UP"}
+  { "status": "UP" }
   ```
 
 ---
 
 ## Task 6: 배포 파이프라인 End-to-End 검증
 
-- [ ] **Step 1: 코드 변경 후 master push**
+- [x] **Step 1: 코드 변경 후 master push**
 
   임의의 코드 변경(예: 주석 추가)을 master에 push한다:
+
   ```bash
   git commit --allow-empty -m "test: Swarm rolling deploy 검증"
   git push origin master
   ```
 
-- [ ] **Step 2: GitHub Actions 진행 확인**
+- [x] **Step 2: GitHub Actions 진행 확인**
 
   GitHub Actions 탭에서 다음 순서로 통과하는지 확인:
+
   ```
   test ✓ → build-and-push (api) ✓ → build-and-push (web) ✓ → deploy ✓
   ```
 
-- [ ] **Step 3: NAS에서 rolling update 관찰**
+- [x] **Step 3: NAS에서 rolling update 관찰**
 
   GitHub Actions deploy job이 실행되는 동안 NAS에서:
+
   ```bash
   watch -n 2 'docker service ps terab_api --format "table {{.Name}}\t{{.Image}}\t{{.CurrentState}}"'
   ```
 
   Expected: old replica들이 순차적으로 Shutdown → new replica들이 Running으로 전환.
 
-- [ ] **Step 4: 서비스 중단 없음 확인**
+- [x] **Step 4: 서비스 중단 없음 확인**
 
   배포 중 헬스 엔드포인트가 계속 응답하는지 확인:
+
   ```bash
   # 배포 중 다른 터미널에서
   while true; do curl -sf http://localhost:8080/actuator/health | grep -o '"status":"[^"]*"'; sleep 1; done
@@ -688,9 +709,10 @@
 
   Expected: 배포 전/중/후 `"status":"UP"` 연속 출력.
 
-- [ ] **Step 5: 롤백 동작 확인 (선택적)**
+- [x] **Step 5: 롤백 동작 확인 (선택적)**
 
   롤백이 필요한 상황을 시뮬레이션:
+
   ```bash
   # 수동 롤백
   docker service rollback terab_api
@@ -711,6 +733,7 @@
 ```
 
 예시 (`name` → `file_name` 변경):
+
 ```sql
 -- V10__expand_file_name.sql (1단계 배포)
 ALTER TABLE files ADD COLUMN file_name TEXT;
