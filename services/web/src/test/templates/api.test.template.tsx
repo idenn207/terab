@@ -4,7 +4,7 @@
 // │ 복사 후 파일명을 [Feature].test.tsx 로 변경하여 사용          │
 // └──────────────────────────────────────────────────────────────┘
 
-import { render, screen, waitFor } from '@testing-library/react';
+// import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { server } from '../mocks/server';

@@ -36,6 +36,7 @@ docs/guides/spring-boot-rest-api/
 ## Task 1: README.md — 전체 목차
 
 **Files:**
+
 - Create: `docs/guides/spring-boot-rest-api/README.md`
 
 - [x] **Step 1: README.md 생성**
@@ -47,13 +48,13 @@ docs/guides/spring-boot-rest-api/
 
 ## 레이어별 가이드
 
-| # | 파일 | 주요 내용 |
-|---|------|-----------|
-| 01 | [Controller Layer](./01-controller-layer.md) | 요청 매핑, 바인딩, 응답 제어, 예외 처리 |
-| 02 | [Service Layer](./02-service-layer.md) | 트랜잭션, Propagation, Isolation, AOP 원리 |
-| 03 | [JPA / Repository Layer](./03-jpa-repository-layer.md) | 엔티티, 연관관계, Lombok + JPA 패턴 |
-| 04 | [Security / Auth](./04-security-auth.md) | JWT 필터, RBAC, 권한 검증 어노테이션 |
-| 05 | [DB Migration](./05-db-migration.md) | Flyway, ddl-auto 옵션, 마이그레이션 원칙 |
+| #   | 파일                                                   | 주요 내용                                  |
+| --- | ------------------------------------------------------ | ------------------------------------------ |
+| 01  | [Controller Layer](./01-controller-layer.md)           | 요청 매핑, 바인딩, 응답 제어, 예외 처리    |
+| 02  | [Service Layer](./02-service-layer.md)                 | 트랜잭션, Propagation, Isolation, AOP 원리 |
+| 03  | [JPA / Repository Layer](./03-jpa-repository-layer.md) | 엔티티, 연관관계, Lombok + JPA 패턴        |
+| 04  | [Security / Auth](./04-security-auth.md)               | JWT 필터, RBAC, 권한 검증 어노테이션       |
+| 05  | [DB Migration](./05-db-migration.md)                   | Flyway, ddl-auto 옵션, 마이그레이션 원칙   |
 
 ## Quick Reference
 
@@ -67,15 +68,15 @@ docs/guides/spring-boot-rest-api/
 
 ## 프로젝트 컨벤션 (terab 기준)
 
-| 항목 | 컨벤션 |
-|------|--------|
-| PK 타입 | `UUID` — `@GeneratedValue(strategy = GenerationType.UUID)` |
-| Lombok 패턴 | `@Getter` + `@Builder` + `@NoArgsConstructor(access = PROTECTED)` + `@AllArgsConstructor` |
-| DTO 패턴 | `XxxRequest` / `XxxResponse` 분리 (Entity 직접 노출 금지) |
-| 예외 패턴 | `ApiException(ErrorCode)` → `GlobalExceptionHandler` (`@RestControllerAdvice`) |
-| 권한 형식 | `리소스:액션` (예: `file:read`, `user:manage`, `system:config`) |
-| 패키지 구조 | `{domain}/controller`, `{domain}/service`, `{domain}/repository`, `{domain}/domain`, `{domain}/dto` |
-| 기본 URL prefix | `/api/{domain}` (예: `/api/auth`, `/api/files`, `/api/users`) |
+| 항목            | 컨벤션                                                                                              |
+| --------------- | --------------------------------------------------------------------------------------------------- |
+| PK 타입         | `UUID` — `@GeneratedValue(strategy = GenerationType.UUID)`                                          |
+| Lombok 패턴     | `@Getter` + `@Builder` + `@NoArgsConstructor(access = PROTECTED)` + `@AllArgsConstructor`           |
+| DTO 패턴        | `XxxRequest` / `XxxResponse` 분리 (Entity 직접 노출 금지)                                           |
+| 예외 패턴       | `ApiException(ErrorCode)` → `GlobalExceptionHandler` (`@RestControllerAdvice`)                      |
+| 권한 형식       | `리소스:액션` (예: `file:read`, `user:manage`, `system:config`)                                     |
+| 패키지 구조     | `{domain}/controller`, `{domain}/service`, `{domain}/repository`, `{domain}/domain`, `{domain}/dto` |
+| 기본 URL prefix | `/api/{domain}` (예: `/api/auth`, `/api/files`, `/api/users`)                                       |
 ```
 
 - [x] **Step 2: 커밋**
@@ -90,40 +91,43 @@ git commit -m "docs: Spring Boot REST API 가이드 목차 파일 추가"
 ## Task 2: 01-controller-layer.md
 
 **Files:**
+
 - Create: `docs/guides/spring-boot-rest-api/01-controller-layer.md`
 
 - [x] **Step 1: 파일 생성**
 
-```markdown
+````markdown
 # Controller Layer
 
 > 요청 수신 → 파라미터 바인딩 → Service 위임 → 응답 반환. 비즈니스 로직은 절대 두지 않는다.
 
 ## 요약 테이블
 
-| 어노테이션/타입 | 중요도 | 역할 | 적용 위치 | 주의사항 |
-|---|---|---|---|---|
-| `@RestController` | ★★★ | HTTP 응답 자동 직렬화 | 클래스 | `@Controller`와 혼용 금지 |
-| `@RequestMapping` | ★★★ | 공통 URL prefix 설정 | 클래스 | 메서드 레벨 중복 정의 주의 |
-| `@GetMapping` | ★★★ | GET 요청 매핑 | 메서드 | — |
-| `@PostMapping` | ★★★ | POST 요청 매핑 | 메서드 | `@RequestBody` 필수 페어 |
-| `@PutMapping` | ★★☆ | 전체 리소스 교체 | 메서드 | PATCH와 용도 구분 |
-| `@PatchMapping` | ★★☆ | 부분 업데이트 | 메서드 | — |
-| `@DeleteMapping` | ★★☆ | 리소스 삭제 | 메서드 | — |
-| `@PathVariable` | ★★★ | URL 경로 변수 바인딩 | 파라미터 | 타입 불일치 시 400 |
-| `@RequestParam` | ★★☆ | 쿼리스트링 바인딩 | 파라미터 | `required` 기본값 `true` |
-| `@RequestBody` | ★★★ | JSON → 객체 역직렬화 | 파라미터 | Entity 직접 바인딩 금지 |
-| `@ResponseStatus` | ★★☆ | 응답 상태코드 고정 | 메서드 | `ResponseEntity`와 중복 주의 |
-| `ResponseEntity<T>` | ★★★ | 상태코드+헤더+바디 제어 | 반환타입 | `void` 대신 권장 |
+| 어노테이션/타입     | 중요도 | 역할                    | 적용 위치 | 주의사항                     |
+| ------------------- | ------ | ----------------------- | --------- | ---------------------------- |
+| `@RestController`   | ★★★    | HTTP 응답 자동 직렬화   | 클래스    | `@Controller`와 혼용 금지    |
+| `@RequestMapping`   | ★★★    | 공통 URL prefix 설정    | 클래스    | 메서드 레벨 중복 정의 주의   |
+| `@GetMapping`       | ★★★    | GET 요청 매핑           | 메서드    | —                            |
+| `@PostMapping`      | ★★★    | POST 요청 매핑          | 메서드    | `@RequestBody` 필수 페어     |
+| `@PutMapping`       | ★★☆    | 전체 리소스 교체        | 메서드    | PATCH와 용도 구분            |
+| `@PatchMapping`     | ★★☆    | 부분 업데이트           | 메서드    | —                            |
+| `@DeleteMapping`    | ★★☆    | 리소스 삭제             | 메서드    | —                            |
+| `@PathVariable`     | ★★★    | URL 경로 변수 바인딩    | 파라미터  | 타입 불일치 시 400           |
+| `@RequestParam`     | ★★☆    | 쿼리스트링 바인딩       | 파라미터  | `required` 기본값 `true`     |
+| `@RequestBody`      | ★★★    | JSON → 객체 역직렬화    | 파라미터  | Entity 직접 바인딩 금지      |
+| `@ResponseStatus`   | ★★☆    | 응답 상태코드 고정      | 메서드    | `ResponseEntity`와 중복 주의 |
+| `ResponseEntity<T>` | ★★★    | 상태코드+헤더+바디 제어 | 반환타입  | `void` 대신 권장             |
 
 ---
 
 ## @RestController
 
 ### 역할
+
 `@Controller` + `@ResponseBody`의 합성 어노테이션. 반환값을 HTTP 응답 바디에 JSON으로 직렬화한다.
 
 ### 내부 동작 원리
+
 `@ResponseBody`가 적용되면 `DispatcherServlet`이 `HandlerMethodReturnValueHandler` 체인을 통해
 `HttpMessageConverter` 목록을 순회하고, 요청의 `Accept` 헤더와 반환 타입에 맞는 컨버터를 선택한다.
 Spring Boot 기본 설정에서는 `MappingJackson2HttpMessageConverter`(Jackson)가 JSON 직렬화를 담당한다.
@@ -141,6 +145,7 @@ public class AuthController {
     }
 }
 ```
+````
 
 ```java
 // ❌ @Controller만 사용 — 반환값이 View 이름으로 해석됨 (Thymeleaf 등 없으면 오류)
@@ -155,13 +160,13 @@ public class AuthController { }
 
 `@RequestMapping(method = RequestMethod.GET)`의 축약형.
 
-| HTTP 메서드 | 어노테이션 | 의미 | 멱등성 | 요청 바디 |
-|---|---|---|---|---|
-| GET | `@GetMapping` | 조회 | O | X |
-| POST | `@PostMapping` | 생성 | X | O |
-| PUT | `@PutMapping` | 전체 교체 | O | O |
-| PATCH | `@PatchMapping` | 부분 수정 | X | O |
-| DELETE | `@DeleteMapping` | 삭제 | O | X |
+| HTTP 메서드 | 어노테이션       | 의미      | 멱등성 | 요청 바디 |
+| ----------- | ---------------- | --------- | ------ | --------- |
+| GET         | `@GetMapping`    | 조회      | O      | X         |
+| POST        | `@PostMapping`   | 생성      | X      | O         |
+| PUT         | `@PutMapping`    | 전체 교체 | O      | O         |
+| PATCH       | `@PatchMapping`  | 부분 수정 | X      | O         |
+| DELETE      | `@DeleteMapping` | 삭제      | O      | X         |
 
 ```java
 @RestController
@@ -261,16 +266,16 @@ return ResponseEntity.notFound().build();
 
 ### HTTP 상태코드 관례
 
-| 상황 | 코드 |
-|---|---|
-| 조회 성공 | 200 OK |
-| 생성 성공 | 201 Created |
-| 수정/삭제 성공 (바디 없음) | 204 No Content |
-| 유효성 검증 실패 | 400 Bad Request |
-| 인증 토큰 없음/만료 | 401 Unauthorized |
-| 권한 없음 | 403 Forbidden |
-| 리소스 없음 | 404 Not Found |
-| 중복 (이미 존재) | 409 Conflict |
+| 상황                       | 코드             |
+| -------------------------- | ---------------- |
+| 조회 성공                  | 200 OK           |
+| 생성 성공                  | 201 Created      |
+| 수정/삭제 성공 (바디 없음) | 204 No Content   |
+| 유효성 검증 실패           | 400 Bad Request  |
+| 인증 토큰 없음/만료        | 401 Unauthorized |
+| 권한 없음                  | 403 Forbidden    |
+| 리소스 없음                | 404 Not Found    |
+| 중복 (이미 존재)           | 409 Conflict     |
 
 ### @ResponseStatus vs ResponseEntity
 
@@ -332,41 +337,43 @@ public class GlobalExceptionHandler {
 ```
 
 > **동작 원리:** `@RestControllerAdvice`는 `@ControllerAdvice` + `@ResponseBody`의 합성. AOP가 아니라 `ExceptionHandlerExceptionResolver`가 예외를 가로채 처리한다.
-```
+
+````
 
 - [x] **Step 2: 커밋**
 
 ```bash
 git add docs/guides/spring-boot-rest-api/01-controller-layer.md
 git commit -m "docs: Controller Layer 가이드 추가"
-```
+````
 
 ---
 
 ## Task 3: 02-service-layer.md
 
 **Files:**
+
 - Create: `docs/guides/spring-boot-rest-api/02-service-layer.md`
 
 - [x] **Step 1: 파일 생성**
 
-```markdown
+````markdown
 # Service Layer
 
 > 비즈니스 로직의 유일한 위치. 트랜잭션 경계를 여기서 결정한다.
 
 ## 요약 테이블
 
-| 어노테이션/속성 | 중요도 | 역할 | 적용 위치 | 주의사항 |
-|---|---|---|---|---|
-| `@Service` | ★★★ | 빈 등록 + 레이어 명시 | 클래스 | — |
-| `@Transactional` | ★★★ | 트랜잭션 경계 설정 | 클래스/메서드 | self-invocation 함정 |
-| `readOnly=true` | ★★★ | 조회 전용 최적화 | 속성 | 쓰기 시도 시 예외 |
-| `Propagation.REQUIRED` | ★★☆ | 기존 트랜잭션 참여 (기본값) | 속성 | — |
-| `Propagation.REQUIRES_NEW` | ★☆☆ | 독립 트랜잭션 강제 생성 | 속성 | 중첩 커밋/롤백 독립 |
-| `rollbackFor` | ★★☆ | 롤백 대상 예외 명시 | 속성 | CheckedException 기본 미롤백 |
-| `Isolation.READ_COMMITTED` | ★★☆ | 커밋된 데이터만 읽기 (기본값) | 속성 | DB 기본값과 일치 여부 확인 |
-| `@Async` | ★☆☆ | 비동기 실행 | 메서드 | `@EnableAsync` 필수 |
+| 어노테이션/속성            | 중요도 | 역할                          | 적용 위치     | 주의사항                     |
+| -------------------------- | ------ | ----------------------------- | ------------- | ---------------------------- |
+| `@Service`                 | ★★★    | 빈 등록 + 레이어 명시         | 클래스        | —                            |
+| `@Transactional`           | ★★★    | 트랜잭션 경계 설정            | 클래스/메서드 | self-invocation 함정         |
+| `readOnly=true`            | ★★★    | 조회 전용 최적화              | 속성          | 쓰기 시도 시 예외            |
+| `Propagation.REQUIRED`     | ★★☆    | 기존 트랜잭션 참여 (기본값)   | 속성          | —                            |
+| `Propagation.REQUIRES_NEW` | ★☆☆    | 독립 트랜잭션 강제 생성       | 속성          | 중첩 커밋/롤백 독립          |
+| `rollbackFor`              | ★★☆    | 롤백 대상 예외 명시           | 속성          | CheckedException 기본 미롤백 |
+| `Isolation.READ_COMMITTED` | ★★☆    | 커밋된 데이터만 읽기 (기본값) | 속성          | DB 기본값과 일치 여부 확인   |
+| `@Async`                   | ★☆☆    | 비동기 실행                   | 메서드        | `@EnableAsync` 필수          |
 
 ---
 
@@ -383,6 +390,7 @@ public class AuthService {
     private final JwtProvider jwtProvider;
 }
 ```
+````
 
 ---
 
@@ -423,15 +431,15 @@ public class FileService {
 
 ### Propagation (전파 레벨)
 
-| 레벨 | 동작 | 사용 시점 |
-|---|---|---|
-| `REQUIRED` (기본값) | 트랜잭션 있으면 참여, 없으면 새로 시작 | 대부분의 경우 |
-| `REQUIRES_NEW` | 항상 새 트랜잭션 시작, 기존 트랜잭션 일시 중단 | 감사 로그처럼 독립 커밋 필요 시 |
-| `NESTED` | SavePoint 활용 중첩 트랜잭션 | 부분 롤백이 필요한 복잡한 처리 |
-| `SUPPORTS` | 트랜잭션 있으면 참여, 없으면 트랜잭션 없이 실행 | 읽기 전용 유틸 메서드 |
-| `NOT_SUPPORTED` | 트랜잭션 없이 실행, 기존 것 일시 중단 | 트랜잭션 불필요한 작업 강제 분리 |
-| `NEVER` | 트랜잭션 있으면 예외 발생 | 트랜잭션이 있으면 안 되는 작업 |
-| `MANDATORY` | 트랜잭션 없으면 예외 발생 | 반드시 트랜잭션 안에서만 호출해야 하는 메서드 |
+| 레벨                | 동작                                            | 사용 시점                                     |
+| ------------------- | ----------------------------------------------- | --------------------------------------------- |
+| `REQUIRED` (기본값) | 트랜잭션 있으면 참여, 없으면 새로 시작          | 대부분의 경우                                 |
+| `REQUIRES_NEW`      | 항상 새 트랜잭션 시작, 기존 트랜잭션 일시 중단  | 감사 로그처럼 독립 커밋 필요 시               |
+| `NESTED`            | SavePoint 활용 중첩 트랜잭션                    | 부분 롤백이 필요한 복잡한 처리                |
+| `SUPPORTS`          | 트랜잭션 있으면 참여, 없으면 트랜잭션 없이 실행 | 읽기 전용 유틸 메서드                         |
+| `NOT_SUPPORTED`     | 트랜잭션 없이 실행, 기존 것 일시 중단           | 트랜잭션 불필요한 작업 강제 분리              |
+| `NEVER`             | 트랜잭션 있으면 예외 발생                       | 트랜잭션이 있으면 안 되는 작업                |
+| `MANDATORY`         | 트랜잭션 없으면 예외 발생                       | 반드시 트랜잭션 안에서만 호출해야 하는 메서드 |
 
 ```java
 // REQUIRES_NEW 예시: 감사 로그는 메인 트랜잭션 롤백과 무관하게 기록
@@ -503,46 +511,48 @@ public CompletableFuture<Void> sendPushNotification(UUID userId, String message)
 ```
 
 > **주의:** `@Async`도 self-invocation 함정이 있다. 같은 클래스에서 호출하면 동기 실행된다.
-```
+
+````
 
 - [x] **Step 2: 커밋**
 
 ```bash
 git add docs/guides/spring-boot-rest-api/02-service-layer.md
 git commit -m "docs: Service Layer 가이드 추가"
-```
+````
 
 ---
 
 ## Task 4: 03-jpa-repository-layer.md
 
 **Files:**
+
 - Create: `docs/guides/spring-boot-rest-api/03-jpa-repository-layer.md`
 
 - [x] **Step 1: 파일 생성**
 
-```markdown
+````markdown
 # JPA / Repository Layer
 
 > 데이터 접근 계층. 엔티티 설계와 연관관계 매핑이 핵심이다.
 
 ## 요약 테이블
 
-| 어노테이션 | 중요도 | 역할 | 적용 위치 | 주의사항 |
-|---|---|---|---|---|
-| `@Entity` | ★★★ | JPA 엔티티 등록 | 클래스 | Lombok `@Data` 금지 |
-| `@Table` | ★★☆ | 테이블명/인덱스 명시 | 클래스 | 생략 시 클래스명 사용 |
-| `@Id` | ★★★ | PK 지정 | 필드 | 복합키는 `@EmbeddedId` |
-| `@GeneratedValue` | ★★★ | PK 자동생성 전략 | 필드 | UUID vs IDENTITY 선택 |
-| `@Column` | ★★★ | 컬럼 제약조건 명시 | 필드 | `nullable=false` 권장 |
-| `@OneToMany` | ★★★ | 1:N 관계 매핑 | 필드 | `FetchType.LAZY` 확인 |
-| `@ManyToOne` | ★★★ | N:1 관계 매핑 (연관관계 주인) | 필드 | `@JoinColumn` 필수 |
-| `@ManyToMany` | ★☆☆ | M:N (중간 엔티티 대체 권장) | 필드 | 실무 사용 지양 |
-| `@OneToOne` | ★★☆ | 1:1 관계 매핑 | 필드 | 지연로딩 별도 설정 필요 |
-| `@Embedded` | ★★☆ | 값 타입 임베딩 | 필드 | — |
-| `@Query` | ★★☆ | 커스텀 JPQL 작성 | 메서드 | 파라미터 바인딩 필수 |
-| `@EntityGraph` | ★★☆ | N+1 해결 fetch join 명시 | 메서드 | 복잡 쿼리엔 QueryDSL |
-| `@NoArgsConstructor(PROTECTED)` | ★★★ | JPA 기본 생성자 | 클래스 | `PUBLIC` 금지 |
+| 어노테이션                      | 중요도 | 역할                          | 적용 위치 | 주의사항                |
+| ------------------------------- | ------ | ----------------------------- | --------- | ----------------------- |
+| `@Entity`                       | ★★★    | JPA 엔티티 등록               | 클래스    | Lombok `@Data` 금지     |
+| `@Table`                        | ★★☆    | 테이블명/인덱스 명시          | 클래스    | 생략 시 클래스명 사용   |
+| `@Id`                           | ★★★    | PK 지정                       | 필드      | 복합키는 `@EmbeddedId`  |
+| `@GeneratedValue`               | ★★★    | PK 자동생성 전략              | 필드      | UUID vs IDENTITY 선택   |
+| `@Column`                       | ★★★    | 컬럼 제약조건 명시            | 필드      | `nullable=false` 권장   |
+| `@OneToMany`                    | ★★★    | 1:N 관계 매핑                 | 필드      | `FetchType.LAZY` 확인   |
+| `@ManyToOne`                    | ★★★    | N:1 관계 매핑 (연관관계 주인) | 필드      | `@JoinColumn` 필수      |
+| `@ManyToMany`                   | ★☆☆    | M:N (중간 엔티티 대체 권장)   | 필드      | 실무 사용 지양          |
+| `@OneToOne`                     | ★★☆    | 1:1 관계 매핑                 | 필드      | 지연로딩 별도 설정 필요 |
+| `@Embedded`                     | ★★☆    | 값 타입 임베딩                | 필드      | —                       |
+| `@Query`                        | ★★☆    | 커스텀 JPQL 작성              | 메서드    | 파라미터 바인딩 필수    |
+| `@EntityGraph`                  | ★★☆    | N+1 해결 fetch join 명시      | 메서드    | 복잡 쿼리엔 QueryDSL    |
+| `@NoArgsConstructor(PROTECTED)` | ★★★    | JPA 기본 생성자               | 클래스    | `PUBLIC` 금지           |
 
 ---
 
@@ -574,6 +584,7 @@ public class Permission {
     }
 }
 ```
+````
 
 **왜 `@NoArgsConstructor(access = PROTECTED)`인가?**
 JPA는 리플렉션으로 엔티티를 인스턴스화할 때 기본 생성자가 필요하다. `PROTECTED`로 설정하면
@@ -583,12 +594,12 @@ JPA는 리플렉션으로 엔티티를 인스턴스화할 때 기본 생성자�
 
 ## @GeneratedValue 전략
 
-| 전략 | 동작 | 장점 | 단점 |
-|---|---|---|---|
-| `IDENTITY` | DB auto-increment | 숫자 PK, 직관적 | 배치 INSERT 최적화 어려움 |
-| `SEQUENCE` | DB 시퀀스 사용 | 배치 INSERT 최적화 가능 | PostgreSQL 전용 설정 필요 |
-| `UUID` (Java 생성) | 애플리케이션에서 UUID 생성 | DB 독립적, IDOR 방어 | 인덱스 효율 다소 낮음 |
-| `AUTO` | DB 방언에 따라 자동 선택 | 편의성 | 예측 불가, 지양 |
+| 전략               | 동작                       | 장점                    | 단점                      |
+| ------------------ | -------------------------- | ----------------------- | ------------------------- |
+| `IDENTITY`         | DB auto-increment          | 숫자 PK, 직관적         | 배치 INSERT 최적화 어려움 |
+| `SEQUENCE`         | DB 시퀀스 사용             | 배치 INSERT 최적화 가능 | PostgreSQL 전용 설정 필요 |
+| `UUID` (Java 생성) | 애플리케이션에서 UUID 생성 | DB 독립적, IDOR 방어    | 인덱스 효율 다소 낮음     |
+| `AUTO`             | DB 방언에 따라 자동 선택   | 편의성                  | 예측 불가, 지양           |
 
 > terab은 보안(IDOR 방어)과 DB 독립성을 위해 `GenerationType.UUID` 사용.
 
@@ -621,10 +632,10 @@ public class UserRole {
 
 ### FetchType
 
-| 타입 | 동작 | 기본값 |
-|---|---|---|
-| `LAZY` | 실제 접근 시 쿼리 실행 | `@OneToMany`, `@ManyToMany` |
-| `EAGER` | 즉시 JOIN으로 함께 로딩 | `@ManyToOne`, `@OneToOne` |
+| 타입    | 동작                    | 기본값                      |
+| ------- | ----------------------- | --------------------------- |
+| `LAZY`  | 실제 접근 시 쿼리 실행  | `@OneToMany`, `@ManyToMany` |
+| `EAGER` | 즉시 JOIN으로 함께 로딩 | `@ManyToOne`, `@OneToOne`   |
 
 > **원칙:** 모든 연관관계는 `FetchType.LAZY`로 시작. 성능 문제 발생 시 `@EntityGraph`나 `fetch join`으로 최적화.
 
@@ -699,48 +710,50 @@ public interface UserRepository extends JpaRepository<User, UUID> {
 
 ## 영속성 컨텍스트 상태
 
-| 상태 | 설명 | 변경 감지 |
-|---|---|---|
-| `MANAGED` | 영속성 컨텍스트에 등록된 상태 | O (dirty checking) |
-| `DETACHED` | 트랜잭션 종료 후 분리된 상태 | X |
-| `REMOVED` | 삭제 예약 상태 | — |
-| `TRANSIENT` | `new`로 생성, 아직 저장 안 된 상태 | X |
+| 상태        | 설명                               | 변경 감지          |
+| ----------- | ---------------------------------- | ------------------ |
+| `MANAGED`   | 영속성 컨텍스트에 등록된 상태      | O (dirty checking) |
+| `DETACHED`  | 트랜잭션 종료 후 분리된 상태       | X                  |
+| `REMOVED`   | 삭제 예약 상태                     | —                  |
+| `TRANSIENT` | `new`로 생성, 아직 저장 안 된 상태 | X                  |
 
 > DETACHED 상태에서 연관관계를 접근하면 `LazyInitializationException` 발생. 트랜잭션 안에서 모든 연관 데이터 접근을 완료해야 한다.
-```
+
+````
 
 - [x] **Step 2: 커밋**
 
 ```bash
 git add docs/guides/spring-boot-rest-api/03-jpa-repository-layer.md
 git commit -m "docs: JPA Repository Layer 가이드 추가"
-```
+````
 
 ---
 
 ## Task 5: 04-security-auth.md
 
 **Files:**
+
 - Create: `docs/guides/spring-boot-rest-api/04-security-auth.md`
 
 - [x] **Step 1: 파일 생성**
 
-```markdown
+````markdown
 # Security / Auth Layer
 
 > JWT 기반 인증 + RBAC 권한 검증. terab은 `리소스:액션` 형식 권한 체계를 사용한다.
 
 ## 요약 테이블
 
-| 어노테이션/설정 | 중요도 | 역할 | 적용 위치 | 주의사항 |
-|---|---|---|---|---|
-| `@EnableWebSecurity` | ★★★ | Spring Security 활성화 | 클래스 | `SecurityConfig`에 1회만 |
-| `@SecurityFilterChain` | ★★★ | 필터 체인 빈 등록 | 메서드 | — |
-| `@EnableMethodSecurity` | ★★★ | 메서드 레벨 보안 활성화 | 클래스 | `@PreAuthorize` 사용 전제 조건 |
-| `@PreAuthorize` | ★★★ | 메서드 레벨 권한 검증 (SpEL) | 메서드 | `@EnableMethodSecurity` 필요 |
-| `@Secured` | ★★☆ | 역할 기반 접근 제어 (단순) | 메서드 | SpEL 불가, `@PreAuthorize` 권장 |
-| `@AuthenticationPrincipal` | ★★★ | 현재 인증 사용자 주입 | 파라미터 | `UserDetails` 구현체 직접 수신 |
-| `permitAll` / `authenticated` | ★★★ | URL 패턴별 접근 제어 | 설정 | 구체적 규칙 → 일반 규칙 순서 |
+| 어노테이션/설정               | 중요도 | 역할                         | 적용 위치 | 주의사항                        |
+| ----------------------------- | ------ | ---------------------------- | --------- | ------------------------------- |
+| `@EnableWebSecurity`          | ★★★    | Spring Security 활성화       | 클래스    | `SecurityConfig`에 1회만        |
+| `@SecurityFilterChain`        | ★★★    | 필터 체인 빈 등록            | 메서드    | —                               |
+| `@EnableMethodSecurity`       | ★★★    | 메서드 레벨 보안 활성화      | 클래스    | `@PreAuthorize` 사용 전제 조건  |
+| `@PreAuthorize`               | ★★★    | 메서드 레벨 권한 검증 (SpEL) | 메서드    | `@EnableMethodSecurity` 필요    |
+| `@Secured`                    | ★★☆    | 역할 기반 접근 제어 (단순)   | 메서드    | SpEL 불가, `@PreAuthorize` 권장 |
+| `@AuthenticationPrincipal`    | ★★★    | 현재 인증 사용자 주입        | 파라미터  | `UserDetails` 구현체 직접 수신  |
+| `permitAll` / `authenticated` | ★★★    | URL 패턴별 접근 제어         | 설정      | 구체적 규칙 → 일반 규칙 순서    |
 
 ---
 
@@ -768,6 +781,7 @@ public class SecurityConfig {
     }
 }
 ```
+````
 
 > **URL 규칙 순서:** 구체적인 패턴(예: `/api/auth/**`)을 먼저 선언해야 한다.
 > `anyRequest()`는 항상 마지막에 위치해야 한다.
@@ -912,51 +926,53 @@ public CorsConfigurationSource corsConfigurationSource() {
     return source;
 }
 ```
-```
+
+````
 
 - [x] **Step 2: 커밋**
 
 ```bash
 git add docs/guides/spring-boot-rest-api/04-security-auth.md
 git commit -m "docs: Security Auth 가이드 추가"
-```
+````
 
 ---
 
 ## Task 6: 05-db-migration.md
 
 **Files:**
+
 - Create: `docs/guides/spring-boot-rest-api/05-db-migration.md`
 
 - [x] **Step 1: 파일 생성**
 
-```markdown
+````markdown
 # DB Migration
 
 > 스키마 변경은 항상 Flyway를 통해. `ddl-auto`는 운영에서 반드시 `none`.
 
 ## 요약 테이블
 
-| 설정/규칙 | 중요도 | 역할 | 적용 위치 | 주의사항 |
-|---|---|---|---|---|
-| `ddl-auto=none` | ★★★ | 스키마 자동 변경 비활성화 (운영 필수) | application.yml | 운영 환경 기본값 |
-| `ddl-auto=validate` | ★★☆ | 엔티티-DB 스키마 일치 검증 | application.yml | Flyway와 함께 사용 |
-| `ddl-auto=update` | ★☆☆ | 자동 스키마 변경 (로컬 개발만) | application.yml | 운영 절대 금지 |
-| `V{n}__{desc}.sql` | ★★★ | Flyway 마이그레이션 파일 규칙 | 파일명 | 실행 후 절대 수정 금지 |
-| `R__{desc}.sql` | ★☆☆ | 반복 실행 마이그레이션 | 파일명 | 멱등성 보장 필수 |
-| `baseline-on-migrate` | ★★☆ | 기존 DB에 Flyway 최초 도입 | application.yml | 초기 도입 시 1회만 |
+| 설정/규칙             | 중요도 | 역할                                  | 적용 위치       | 주의사항               |
+| --------------------- | ------ | ------------------------------------- | --------------- | ---------------------- |
+| `ddl-auto=none`       | ★★★    | 스키마 자동 변경 비활성화 (운영 필수) | application.yml | 운영 환경 기본값       |
+| `ddl-auto=validate`   | ★★☆    | 엔티티-DB 스키마 일치 검증            | application.yml | Flyway와 함께 사용     |
+| `ddl-auto=update`     | ★☆☆    | 자동 스키마 변경 (로컬 개발만)        | application.yml | 운영 절대 금지         |
+| `V{n}__{desc}.sql`    | ★★★    | Flyway 마이그레이션 파일 규칙         | 파일명          | 실행 후 절대 수정 금지 |
+| `R__{desc}.sql`       | ★☆☆    | 반복 실행 마이그레이션                | 파일명          | 멱등성 보장 필수       |
+| `baseline-on-migrate` | ★★☆    | 기존 DB에 Flyway 최초 도입            | application.yml | 초기 도입 시 1회만     |
 
 ---
 
 ## ddl-auto 옵션 상세
 
-| 값 | 동작 | 권장 환경 |
-|---|---|---|
-| `none` | 아무것도 안 함 | **운영 (필수)** |
-| `validate` | 엔티티 ↔ 스키마 불일치 시 앱 시작 실패 | 운영 (Flyway 있을 때) |
-| `update` | 엔티티 변경에 맞게 스키마 자동 ALTER | 로컬 개발만 |
-| `create` | 앱 시작 시 스키마 DROP 후 CREATE | 테스트 환경만 |
-| `create-drop` | 앱 종료 시 스키마 DROP | 테스트 환경만 |
+| 값            | 동작                                   | 권장 환경             |
+| ------------- | -------------------------------------- | --------------------- |
+| `none`        | 아무것도 안 함                         | **운영 (필수)**       |
+| `validate`    | 엔티티 ↔ 스키마 불일치 시 앱 시작 실패 | 운영 (Flyway 있을 때) |
+| `update`      | 엔티티 변경에 맞게 스키마 자동 ALTER   | 로컬 개발만           |
+| `create`      | 앱 시작 시 스키마 DROP 후 CREATE       | 테스트 환경만         |
+| `create-drop` | 앱 종료 시 스키마 DROP                 | 테스트 환경만         |
 
 ```yaml
 # application-prod.yml — 운영 설정
@@ -976,6 +992,7 @@ spring:
   flyway:
     enabled: false
 ```
+````
 
 ---
 
@@ -1041,11 +1058,11 @@ ALTER TABLE users ADD COLUMN new_required_field VARCHAR(100) NOT NULL;
 
 ### Flyway vs Liquibase
 
-| 항목 | Flyway | Liquibase |
-|---|---|---|
-| 문법 | SQL / Java | XML / YAML / JSON / SQL |
-| 학습 곡선 | 낮음 | 높음 |
-| 롤백 | 유료 기능 (Community 불가) | XML 기반 롤백 지원 |
+| 항목        | Flyway                                  | Liquibase                 |
+| ----------- | --------------------------------------- | ------------------------- |
+| 문법        | SQL / Java                              | XML / YAML / JSON / SQL   |
+| 학습 곡선   | 낮음                                    | 높음                      |
+| 롤백        | 유료 기능 (Community 불가)              | XML 기반 롤백 지원        |
 | 적합한 경우 | SQL 직접 작성 선호, 단순한 마이그레이션 | 복잡한 멀티 DB, 롤백 필수 |
 
 > terab 권장: **Flyway** — SQL을 그대로 사용하고, 롤백 대신 Forward Migration 전략으로 운영.
@@ -1058,20 +1075,22 @@ dependencies {
     implementation 'org.flywaydb:flyway-database-postgresql'
 }
 ```
-```
+
+````
 
 - [x] **Step 2: 커밋**
 
 ```bash
 git add docs/guides/spring-boot-rest-api/05-db-migration.md
 git commit -m "docs: DB Migration 가이드 추가"
-```
+````
 
 ---
 
 ## Task 7: 06-quick-reference.md
 
 **Files:**
+
 - Create: `docs/guides/spring-boot-rest-api/06-quick-reference.md`
 
 - [x] **Step 1: 파일 생성**
@@ -1083,76 +1102,76 @@ git commit -m "docs: DB Migration 가이드 추가"
 
 ## 요청 매핑
 
-| 어노테이션 | 설명 | 상세 문서 |
-|---|---|---|
-| `@RestController` | HTTP 응답 자동 JSON 직렬화 | [01-controller-layer.md](./01-controller-layer.md#restcontroller) |
+| 어노테이션        | 설명                                 | 상세 문서                                                           |
+| ----------------- | ------------------------------------ | ------------------------------------------------------------------- |
+| `@RestController` | HTTP 응답 자동 JSON 직렬화           | [01-controller-layer.md](./01-controller-layer.md#restcontroller)   |
 | `@RequestMapping` | URL + HTTP 메서드 매핑 (공통 prefix) | [01-controller-layer.md](./01-controller-layer.md#http-메서드-매핑) |
-| `@GetMapping` | GET 요청 매핑 | [01-controller-layer.md](./01-controller-layer.md#http-메서드-매핑) |
-| `@PostMapping` | POST 요청 매핑 | [01-controller-layer.md](./01-controller-layer.md#http-메서드-매핑) |
-| `@PutMapping` | PUT 요청 매핑 | [01-controller-layer.md](./01-controller-layer.md#http-메서드-매핑) |
-| `@PatchMapping` | PATCH 요청 매핑 | [01-controller-layer.md](./01-controller-layer.md#http-메서드-매핑) |
-| `@DeleteMapping` | DELETE 요청 매핑 | [01-controller-layer.md](./01-controller-layer.md#http-메서드-매핑) |
+| `@GetMapping`     | GET 요청 매핑                        | [01-controller-layer.md](./01-controller-layer.md#http-메서드-매핑) |
+| `@PostMapping`    | POST 요청 매핑                       | [01-controller-layer.md](./01-controller-layer.md#http-메서드-매핑) |
+| `@PutMapping`     | PUT 요청 매핑                        | [01-controller-layer.md](./01-controller-layer.md#http-메서드-매핑) |
+| `@PatchMapping`   | PATCH 요청 매핑                      | [01-controller-layer.md](./01-controller-layer.md#http-메서드-매핑) |
+| `@DeleteMapping`  | DELETE 요청 매핑                     | [01-controller-layer.md](./01-controller-layer.md#http-메서드-매핑) |
 
 ## 요청 바인딩
 
-| 어노테이션 | 설명 | 상세 문서 |
-|---|---|---|
-| `@PathVariable` | URL 경로 변수 바인딩 | [01-controller-layer.md](./01-controller-layer.md#pathvariable) |
-| `@RequestParam` | 쿼리스트링 바인딩 | [01-controller-layer.md](./01-controller-layer.md#requestparam) |
-| `@RequestBody` | JSON 요청 바디 → 객체 역직렬화 | [01-controller-layer.md](./01-controller-layer.md#requestbody) |
-| `@RequestHeader` | HTTP 헤더 값 바인딩 | [01-controller-layer.md](./01-controller-layer.md) |
-| `@Valid` | Bean Validation 트리거 | [01-controller-layer.md](./01-controller-layer.md#requestbody) |
+| 어노테이션       | 설명                           | 상세 문서                                                       |
+| ---------------- | ------------------------------ | --------------------------------------------------------------- |
+| `@PathVariable`  | URL 경로 변수 바인딩           | [01-controller-layer.md](./01-controller-layer.md#pathvariable) |
+| `@RequestParam`  | 쿼리스트링 바인딩              | [01-controller-layer.md](./01-controller-layer.md#requestparam) |
+| `@RequestBody`   | JSON 요청 바디 → 객체 역직렬화 | [01-controller-layer.md](./01-controller-layer.md#requestbody)  |
+| `@RequestHeader` | HTTP 헤더 값 바인딩            | [01-controller-layer.md](./01-controller-layer.md)              |
+| `@Valid`         | Bean Validation 트리거         | [01-controller-layer.md](./01-controller-layer.md#requestbody)  |
 
 ## 응답 제어
 
-| 어노테이션/타입 | 설명 | 상세 문서 |
-|---|---|---|
-| `ResponseEntity<T>` | 상태코드 + 헤더 + 바디 제어 | [01-controller-layer.md](./01-controller-layer.md#responseentityt) |
-| `@ResponseStatus` | 고정 HTTP 상태코드 | [01-controller-layer.md](./01-controller-layer.md#responsestatus-vs-responseentity) |
-| `@RestControllerAdvice` | 전역 예외 처리기 | [01-controller-layer.md](./01-controller-layer.md#예외-처리) |
-| `@ExceptionHandler` | 특정 예외 처리 메서드 | [01-controller-layer.md](./01-controller-layer.md#예외-처리) |
+| 어노테이션/타입         | 설명                        | 상세 문서                                                                           |
+| ----------------------- | --------------------------- | ----------------------------------------------------------------------------------- |
+| `ResponseEntity<T>`     | 상태코드 + 헤더 + 바디 제어 | [01-controller-layer.md](./01-controller-layer.md#responseentityt)                  |
+| `@ResponseStatus`       | 고정 HTTP 상태코드          | [01-controller-layer.md](./01-controller-layer.md#responsestatus-vs-responseentity) |
+| `@RestControllerAdvice` | 전역 예외 처리기            | [01-controller-layer.md](./01-controller-layer.md#예외-처리)                        |
+| `@ExceptionHandler`     | 특정 예외 처리 메서드       | [01-controller-layer.md](./01-controller-layer.md#예외-처리)                        |
 
 ## 트랜잭션
 
-| 어노테이션/속성 | 설명 | 상세 문서 |
-|---|---|---|
-| `@Transactional` | 트랜잭션 경계 설정 | [02-service-layer.md](./02-service-layer.md#transactional) |
-| `@Transactional(readOnly=true)` | 조회 전용 최적화 | [02-service-layer.md](./02-service-layer.md#readonlytrue-효과) |
-| `Propagation.REQUIRED` | 기존 트랜잭션 참여 (기본값) | [02-service-layer.md](./02-service-layer.md#propagation-전파-레벨) |
-| `Propagation.REQUIRES_NEW` | 독립 트랜잭션 강제 생성 | [02-service-layer.md](./02-service-layer.md#propagation-전파-레벨) |
-| `rollbackFor` | 롤백 대상 예외 명시 | [02-service-layer.md](./02-service-layer.md#rollbackfor) |
-| `@Async` | 비동기 실행 | [02-service-layer.md](./02-service-layer.md#async) |
+| 어노테이션/속성                 | 설명                        | 상세 문서                                                          |
+| ------------------------------- | --------------------------- | ------------------------------------------------------------------ |
+| `@Transactional`                | 트랜잭션 경계 설정          | [02-service-layer.md](./02-service-layer.md#transactional)         |
+| `@Transactional(readOnly=true)` | 조회 전용 최적화            | [02-service-layer.md](./02-service-layer.md#readonlytrue-효과)     |
+| `Propagation.REQUIRED`          | 기존 트랜잭션 참여 (기본값) | [02-service-layer.md](./02-service-layer.md#propagation-전파-레벨) |
+| `Propagation.REQUIRES_NEW`      | 독립 트랜잭션 강제 생성     | [02-service-layer.md](./02-service-layer.md#propagation-전파-레벨) |
+| `rollbackFor`                   | 롤백 대상 예외 명시         | [02-service-layer.md](./02-service-layer.md#rollbackfor)           |
+| `@Async`                        | 비동기 실행                 | [02-service-layer.md](./02-service-layer.md#async)                 |
 
 ## JPA / 엔티티
 
-| 어노테이션 | 설명 | 상세 문서 |
-|---|---|---|
-| `@Entity` | JPA 엔티티 등록 | [03-jpa-repository-layer.md](./03-jpa-repository-layer.md#엔티티-기본-패턴-terab-스타일) |
-| `@Table` | 테이블명/인덱스 명시 | [03-jpa-repository-layer.md](./03-jpa-repository-layer.md#column-제약조건) |
-| `@Id` | PK 지정 | [03-jpa-repository-layer.md](./03-jpa-repository-layer.md#generatedvalue-전략) |
-| `@GeneratedValue` | PK 자동생성 전략 | [03-jpa-repository-layer.md](./03-jpa-repository-layer.md#generatedvalue-전략) |
-| `@Column` | 컬럼 제약조건 | [03-jpa-repository-layer.md](./03-jpa-repository-layer.md#column-제약조건) |
-| `@OneToMany` | 1:N 관계 | [03-jpa-repository-layer.md](./03-jpa-repository-layer.md#연관관계-매핑) |
-| `@ManyToOne` | N:1 관계 (연관관계 주인) | [03-jpa-repository-layer.md](./03-jpa-repository-layer.md#연관관계-매핑) |
-| `@Query` | 커스텀 JPQL | [03-jpa-repository-layer.md](./03-jpa-repository-layer.md#query--커스텀-쿼리) |
-| `@EntityGraph` | N+1 해결 | [03-jpa-repository-layer.md](./03-jpa-repository-layer.md#entitygraph--n1-해결) |
+| 어노테이션        | 설명                     | 상세 문서                                                                                |
+| ----------------- | ------------------------ | ---------------------------------------------------------------------------------------- |
+| `@Entity`         | JPA 엔티티 등록          | [03-jpa-repository-layer.md](./03-jpa-repository-layer.md#엔티티-기본-패턴-terab-스타일) |
+| `@Table`          | 테이블명/인덱스 명시     | [03-jpa-repository-layer.md](./03-jpa-repository-layer.md#column-제약조건)               |
+| `@Id`             | PK 지정                  | [03-jpa-repository-layer.md](./03-jpa-repository-layer.md#generatedvalue-전략)           |
+| `@GeneratedValue` | PK 자동생성 전략         | [03-jpa-repository-layer.md](./03-jpa-repository-layer.md#generatedvalue-전략)           |
+| `@Column`         | 컬럼 제약조건            | [03-jpa-repository-layer.md](./03-jpa-repository-layer.md#column-제약조건)               |
+| `@OneToMany`      | 1:N 관계                 | [03-jpa-repository-layer.md](./03-jpa-repository-layer.md#연관관계-매핑)                 |
+| `@ManyToOne`      | N:1 관계 (연관관계 주인) | [03-jpa-repository-layer.md](./03-jpa-repository-layer.md#연관관계-매핑)                 |
+| `@Query`          | 커스텀 JPQL              | [03-jpa-repository-layer.md](./03-jpa-repository-layer.md#query--커스텀-쿼리)            |
+| `@EntityGraph`    | N+1 해결                 | [03-jpa-repository-layer.md](./03-jpa-repository-layer.md#entitygraph--n1-해결)          |
 
 ## 보안
 
-| 어노테이션/설정 | 설명 | 상세 문서 |
-|---|---|---|
-| `@EnableWebSecurity` | Spring Security 활성화 | [04-security-auth.md](./04-security-auth.md#securityfilterchain-기본-구성) |
-| `@EnableMethodSecurity` | 메서드 레벨 보안 활성화 | [04-security-auth.md](./04-security-auth.md#securityfilterchain-기본-구성) |
-| `@PreAuthorize` | SpEL 기반 권한 검증 | [04-security-auth.md](./04-security-auth.md#preauthorize--rbac-권한-검증) |
-| `@AuthenticationPrincipal` | 현재 인증 사용자 주입 | [04-security-auth.md](./04-security-auth.md#authenticationprincipal) |
+| 어노테이션/설정            | 설명                    | 상세 문서                                                                  |
+| -------------------------- | ----------------------- | -------------------------------------------------------------------------- |
+| `@EnableWebSecurity`       | Spring Security 활성화  | [04-security-auth.md](./04-security-auth.md#securityfilterchain-기본-구성) |
+| `@EnableMethodSecurity`    | 메서드 레벨 보안 활성화 | [04-security-auth.md](./04-security-auth.md#securityfilterchain-기본-구성) |
+| `@PreAuthorize`            | SpEL 기반 권한 검증     | [04-security-auth.md](./04-security-auth.md#preauthorize--rbac-권한-검증)  |
+| `@AuthenticationPrincipal` | 현재 인증 사용자 주입   | [04-security-auth.md](./04-security-auth.md#authenticationprincipal)       |
 
 ## DB 마이그레이션
 
-| 설정/규칙 | 설명 | 상세 문서 |
-|---|---|---|
-| `ddl-auto=none` | 스키마 자동 변경 비활성화 | [05-db-migration.md](./05-db-migration.md#ddl-auto-옵션-상세) |
-| `V{n}__{desc}.sql` | Flyway 마이그레이션 파일 규칙 | [05-db-migration.md](./05-db-migration.md#파일-네이밍-규칙) |
-| `baseline-on-migrate` | 기존 DB Flyway 도입 | [05-db-migration.md](./05-db-migration.md#flyway) |
+| 설정/규칙             | 설명                          | 상세 문서                                                     |
+| --------------------- | ----------------------------- | ------------------------------------------------------------- |
+| `ddl-auto=none`       | 스키마 자동 변경 비활성화     | [05-db-migration.md](./05-db-migration.md#ddl-auto-옵션-상세) |
+| `V{n}__{desc}.sql`    | Flyway 마이그레이션 파일 규칙 | [05-db-migration.md](./05-db-migration.md#파일-네이밍-규칙)   |
+| `baseline-on-migrate` | 기존 DB Flyway 도입           | [05-db-migration.md](./05-db-migration.md#flyway)             |
 ```
 
 - [x] **Step 2: 커밋**
@@ -1167,6 +1186,7 @@ git commit -m "docs: Quick Reference 색인 파일 추가"
 ## Task 8: anti-patterns/README.md
 
 **Files:**
+
 - Create: `docs/guides/spring-boot-rest-api/anti-patterns/README.md`
 
 - [x] **Step 1: 파일 생성**
@@ -1179,37 +1199,37 @@ git commit -m "docs: Quick Reference 색인 파일 추가"
 
 ## 전체 목록
 
-| # | 패턴 | 카테고리 | 위험도 | 파일 |
-|---|------|----------|--------|------|
-| AP-01 | Controller에서 `@Transactional` 사용 | Controller | 🔵 | [01-controller.md](./01-controller.md) |
-| AP-02 | Controller에서 비즈니스 로직 직접 구현 | Controller | 🔵 | [01-controller.md](./01-controller.md) |
-| AP-03 | `@RequestBody`에 Entity 직접 바인딩 | Controller | 🟠 | [01-controller.md](./01-controller.md) |
-| AP-04 | 응답에 Entity 직접 반환 | Controller | 🟠 | [01-controller.md](./01-controller.md) |
-| AP-05 | `@PathVariable`로 내부 순차 DB ID 노출 | Controller | 🟠 | [01-controller.md](./01-controller.md) |
-| AP-06 | `@Transactional` self-invocation | Service | 🔵 | [02-service.md](./02-service.md) |
-| AP-07 | `@Transactional(readOnly=true)` 미사용 | Service | 🟡 | [02-service.md](./02-service.md) |
-| AP-08 | Service에서 `HttpServletRequest` 직접 참조 | Service | 🔵 | [02-service.md](./02-service.md) |
-| AP-09 | CheckedException `rollbackFor` 미설정 | Service | 🔴 | [02-service.md](./02-service.md) |
-| AP-10 | `@Entity`에 Lombok `@Data` 사용 | JPA | 🔵 | [03-jpa-repository.md](./03-jpa-repository.md) |
-| AP-11 | `@ManyToMany` 중간 엔티티 없이 사용 | JPA | 🔵 | [03-jpa-repository.md](./03-jpa-repository.md) |
-| AP-12 | N+1 쿼리 (Lazy 로딩 + 반복 접근) | JPA | 🟡 | [03-jpa-repository.md](./03-jpa-repository.md) |
-| AP-13 | 영속성 컨텍스트 밖 Lazy 로딩 | JPA | 🔵 | [03-jpa-repository.md](./03-jpa-repository.md) |
-| AP-14 | `Optional.get()` 직접 호출 | JPA | 🔵 | [03-jpa-repository.md](./03-jpa-repository.md) |
-| AP-15 | 양방향 연관관계에서 `@ToString` 사용 | JPA | 🔵 | [03-jpa-repository.md](./03-jpa-repository.md) |
-| AP-16 | `@Column(nullable=false)` 미설정 | JPA | 🔴 | [03-jpa-repository.md](./03-jpa-repository.md) |
-| AP-17 | `ddl-auto=update` 운영 사용 | DB | 🔴 | [04-db-migration.md](./04-db-migration.md) |
-| AP-18 | `ddl-auto=create`/`create-drop` 운영 사용 | DB | 🔴 | [04-db-migration.md](./04-db-migration.md) |
-| AP-19 | Flyway 없이 DB 직접 수정 | DB | 🔴 | [04-db-migration.md](./04-db-migration.md) |
-| AP-20 | 실행된 Flyway 파일 수정 | DB | 🔴 | [04-db-migration.md](./04-db-migration.md) |
-| AP-21 | 마이그레이션에서 스키마 변경 + 데이터 변환 혼합 | DB | 🔴 | [04-db-migration.md](./04-db-migration.md) |
-| AP-22 | 빈 catch 블록 (예외 삼킴) | 예외 | 🔵 | [05-exception-handling.md](./05-exception-handling.md) |
-| AP-23 | `Exception` 전체 catch | 예외 | 🔵 | [05-exception-handling.md](./05-exception-handling.md) |
-| AP-24 | HTTP 200에 에러 응답 반환 | 예외 | 🔵 | [05-exception-handling.md](./05-exception-handling.md) |
-| AP-25 | `@RestControllerAdvice` 없이 예외 분산 처리 | 예외 | 🔵 | [05-exception-handling.md](./05-exception-handling.md) |
-| AP-26 | 응답에 민감 필드 포함 (password 등) | 보안 | 🟠 | [06-security.md](./06-security.md) |
-| AP-27 | JPQL에 문자열 직접 연결 | 보안 | 🟠 | [06-security.md](./06-security.md) |
-| AP-28 | 권한 검증을 프론트엔드에만 의존 | 보안 | 🟠 | [06-security.md](./06-security.md) |
-| AP-29 | JWT Secret 코드 하드코딩 | 보안 | 🟠 | [06-security.md](./06-security.md) |
+| #     | 패턴                                            | 카테고리   | 위험도 | 파일                                                   |
+| ----- | ----------------------------------------------- | ---------- | ------ | ------------------------------------------------------ |
+| AP-01 | Controller에서 `@Transactional` 사용            | Controller | 🔵     | [01-controller.md](./01-controller.md)                 |
+| AP-02 | Controller에서 비즈니스 로직 직접 구현          | Controller | 🔵     | [01-controller.md](./01-controller.md)                 |
+| AP-03 | `@RequestBody`에 Entity 직접 바인딩             | Controller | 🟠     | [01-controller.md](./01-controller.md)                 |
+| AP-04 | 응답에 Entity 직접 반환                         | Controller | 🟠     | [01-controller.md](./01-controller.md)                 |
+| AP-05 | `@PathVariable`로 내부 순차 DB ID 노출          | Controller | 🟠     | [01-controller.md](./01-controller.md)                 |
+| AP-06 | `@Transactional` self-invocation                | Service    | 🔵     | [02-service.md](./02-service.md)                       |
+| AP-07 | `@Transactional(readOnly=true)` 미사용          | Service    | 🟡     | [02-service.md](./02-service.md)                       |
+| AP-08 | Service에서 `HttpServletRequest` 직접 참조      | Service    | 🔵     | [02-service.md](./02-service.md)                       |
+| AP-09 | CheckedException `rollbackFor` 미설정           | Service    | 🔴     | [02-service.md](./02-service.md)                       |
+| AP-10 | `@Entity`에 Lombok `@Data` 사용                 | JPA        | 🔵     | [03-jpa-repository.md](./03-jpa-repository.md)         |
+| AP-11 | `@ManyToMany` 중간 엔티티 없이 사용             | JPA        | 🔵     | [03-jpa-repository.md](./03-jpa-repository.md)         |
+| AP-12 | N+1 쿼리 (Lazy 로딩 + 반복 접근)                | JPA        | 🟡     | [03-jpa-repository.md](./03-jpa-repository.md)         |
+| AP-13 | 영속성 컨텍스트 밖 Lazy 로딩                    | JPA        | 🔵     | [03-jpa-repository.md](./03-jpa-repository.md)         |
+| AP-14 | `Optional.get()` 직접 호출                      | JPA        | 🔵     | [03-jpa-repository.md](./03-jpa-repository.md)         |
+| AP-15 | 양방향 연관관계에서 `@ToString` 사용            | JPA        | 🔵     | [03-jpa-repository.md](./03-jpa-repository.md)         |
+| AP-16 | `@Column(nullable=false)` 미설정                | JPA        | 🔴     | [03-jpa-repository.md](./03-jpa-repository.md)         |
+| AP-17 | `ddl-auto=update` 운영 사용                     | DB         | 🔴     | [04-db-migration.md](./04-db-migration.md)             |
+| AP-18 | `ddl-auto=create`/`create-drop` 운영 사용       | DB         | 🔴     | [04-db-migration.md](./04-db-migration.md)             |
+| AP-19 | Flyway 없이 DB 직접 수정                        | DB         | 🔴     | [04-db-migration.md](./04-db-migration.md)             |
+| AP-20 | 실행된 Flyway 파일 수정                         | DB         | 🔴     | [04-db-migration.md](./04-db-migration.md)             |
+| AP-21 | 마이그레이션에서 스키마 변경 + 데이터 변환 혼합 | DB         | 🔴     | [04-db-migration.md](./04-db-migration.md)             |
+| AP-22 | 빈 catch 블록 (예외 삼킴)                       | 예외       | 🔵     | [05-exception-handling.md](./05-exception-handling.md) |
+| AP-23 | `Exception` 전체 catch                          | 예외       | 🔵     | [05-exception-handling.md](./05-exception-handling.md) |
+| AP-24 | HTTP 200에 에러 응답 반환                       | 예외       | 🔵     | [05-exception-handling.md](./05-exception-handling.md) |
+| AP-25 | `@RestControllerAdvice` 없이 예외 분산 처리     | 예외       | 🔵     | [05-exception-handling.md](./05-exception-handling.md) |
+| AP-26 | 응답에 민감 필드 포함 (password 등)             | 보안       | 🟠     | [06-security.md](./06-security.md)                     |
+| AP-27 | JPQL에 문자열 직접 연결                         | 보안       | 🟠     | [06-security.md](./06-security.md)                     |
+| AP-28 | 권한 검증을 프론트엔드에만 의존                 | 보안       | 🟠     | [06-security.md](./06-security.md)                     |
+| AP-29 | JWT Secret 코드 하드코딩                        | 보안       | 🟠     | [06-security.md](./06-security.md)                     |
 ```
 
 - [x] **Step 2: 커밋**
@@ -1224,11 +1244,12 @@ git commit -m "docs: 안티패턴 가이드 목차 추가"
 ## Task 9: anti-patterns/01-controller.md
 
 **Files:**
+
 - Create: `docs/guides/spring-boot-rest-api/anti-patterns/01-controller.md`
 
-- [ ] **Step 1: 파일 생성**
+- [x] **Step 1: 파일 생성**
 
-```markdown
+````markdown
 # 안티패턴 — Controller Layer
 
 [← 목차로 돌아가기](./README.md)
@@ -1265,6 +1286,7 @@ public class FileController {
     }
 }
 ```
+````
 
 ---
 
@@ -1333,6 +1355,7 @@ public ResponseEntity<UserResponse> createUser(@RequestBody @Valid CreateUserReq
 **위험도:** 🟠 보안 취약점 + 🔵 유지보수 문제
 
 **왜 문제인가:**
+
 1. **민감 정보 노출:** `password`, `refreshToken`, 내부 ID 등이 JSON에 포함됨
 2. **순환 참조:** 양방향 연관관계(`@OneToMany` ↔ `@ManyToOne`)가 있으면 JSON 직렬화 중 무한루프 → `StackOverflowError`
 3. **API-DB 결합:** DB 스키마 변경이 즉시 API 응답 변경으로 이어짐
@@ -1378,25 +1401,27 @@ public ResponseEntity<FileResponse> getFile(@PathVariable UUID id) {
     // 예측 불가능, 순차 탐색 불가
 }
 ```
-```
 
-- [ ] **Step 2: 커밋**
+````
+
+- [x] **Step 2: 커밋**
 
 ```bash
 git add docs/guides/spring-boot-rest-api/anti-patterns/01-controller.md
 git commit -m "docs: Controller 안티패턴 가이드 추가 (AP-01~05)"
-```
+````
 
 ---
 
 ## Task 10: anti-patterns/02-service.md
 
 **Files:**
+
 - Create: `docs/guides/spring-boot-rest-api/anti-patterns/02-service.md`
 
-- [ ] **Step 1: 파일 생성**
+- [x] **Step 1: 파일 생성**
 
-```markdown
+````markdown
 # 안티패턴 — Service Layer
 
 [← 목차로 돌아가기](./README.md)
@@ -1448,6 +1473,7 @@ public class NotificationSender {
     public void sendNotification(UUID fileId) { ... }
 }
 ```
+````
 
 ---
 
@@ -1494,6 +1520,7 @@ public class FileService {
 
 **왜 문제인가:**
 Service가 HTTP 레이어(`HttpServletRequest`)에 의존하면:
+
 1. HTTP 없이 Service를 단위 테스트할 수 없음 (Mocking 필요)
 2. 스케줄러나 이벤트 리스너 같은 다른 진입점에서 Service 재사용 불가
 3. 책임 분리 원칙 위반
@@ -1559,25 +1586,27 @@ public void uploadFile(MultipartFile file) throws IOException {
     // IOException 발생 시 DB도 롤백 → 일관성 유지
 }
 ```
-```
 
-- [ ] **Step 2: 커밋**
+````
+
+- [x] **Step 2: 커밋**
 
 ```bash
 git add docs/guides/spring-boot-rest-api/anti-patterns/02-service.md
 git commit -m "docs: Service 안티패턴 가이드 추가 (AP-06~09)"
-```
+````
 
 ---
 
 ## Task 11: anti-patterns/03-jpa-repository.md
 
 **Files:**
+
 - Create: `docs/guides/spring-boot-rest-api/anti-patterns/03-jpa-repository.md`
 
-- [ ] **Step 1: 파일 생성**
+- [x] **Step 1: 파일 생성**
 
-```markdown
+````markdown
 # 안티패턴 — JPA / Repository Layer
 
 [← 목차로 돌아가기](./README.md)
@@ -1590,6 +1619,7 @@ git commit -m "docs: Service 안티패턴 가이드 추가 (AP-06~09)"
 
 **왜 문제인가:**
 `@Data`는 `@ToString` + `@EqualsAndHashCode` + `@Getter` + `@Setter` + `@RequiredArgsConstructor`를 포함한다.
+
 - `@ToString`: 연관 엔티티를 포함해 직렬화 → 양방향 관계 시 **무한 순환 참조** → `StackOverflowError`
 - `@EqualsAndHashCode`: PK 기반 equals/hashCode 미보장 → 컬렉션에서 동일 엔티티 중복 처리
 - `@Setter`: 불변성 파괴 → 엔티티 상태를 아무 곳에서나 변경 가능
@@ -1616,6 +1646,7 @@ public class User {
     private List<UserRole> userRoles = new ArrayList<>();
 }
 ```
+````
 
 ---
 
@@ -1815,25 +1846,27 @@ private String email;  // DB에 NULL 허용 — 데이터 정합성 미보장
 @Column(nullable = false, length = 255)
 private String email;  // DB NOT NULL 제약 + 길이 제한
 ```
-```
 
-- [ ] **Step 2: 커밋**
+````
+
+- [x] **Step 2: 커밋**
 
 ```bash
 git add docs/guides/spring-boot-rest-api/anti-patterns/03-jpa-repository.md
 git commit -m "docs: JPA Repository 안티패턴 가이드 추가 (AP-10~16)"
-```
+````
 
 ---
 
 ## Task 12: anti-patterns/04-db-migration.md
 
 **Files:**
+
 - Create: `docs/guides/spring-boot-rest-api/anti-patterns/04-db-migration.md`
 
-- [ ] **Step 1: 파일 생성**
+- [x] **Step 1: 파일 생성**
 
-```markdown
+````markdown
 # 안티패턴 — DB Migration
 
 [← 목차로 돌아가기](./README.md)
@@ -1864,6 +1897,7 @@ spring:
   flyway:
     enabled: true
 ```
+````
 
 ---
 
@@ -1872,6 +1906,7 @@ spring:
 **위험도:** 🔴 데이터 전체 삭제
 
 **왜 문제인가:**
+
 - `create`: 앱 시작 시 기존 테이블을 DROP하고 다시 CREATE → **모든 데이터 삭제**
 - `create-drop`: 앱 종료 시 테이블 DROP → 재시작 시 데이터 없음
 
@@ -1895,6 +1930,7 @@ spring:
 
 **왜 문제인가:**
 DBeaver, psql 등으로 운영 DB를 직접 수정하면:
+
 1. 개발/스테이징/운영 환경 간 스키마가 달라짐
 2. 변경 이력이 없어 롤백 불가
 3. 팀원 로컬 환경 재현 불가 → "내 로컬에서는 됩니다" 문제 발생
@@ -1920,7 +1956,7 @@ Flyway는 실행된 파일의 checksum을 `flyway_schema_history` 테이블에 �
 파일을 수정하면 저장된 checksum과 불일치 → 앱 시작 시 예외 발생.
 
 ```
-ERROR: Validate failed: 
+ERROR: Validate failed:
 Migration checksum mismatch for migration version 2
 -> Applied to database : 1234567890
 -> Resolved locally    : 9876543210
@@ -1961,25 +1997,27 @@ UPDATE users SET quota_bytes = 10737418240 WHERE quota_bytes IS NULL;
 -- V6__quota_column_not_null.sql
 ALTER TABLE users ALTER COLUMN quota_bytes SET NOT NULL;
 ```
-```
 
-- [ ] **Step 2: 커밋**
+````
+
+- [x] **Step 2: 커밋**
 
 ```bash
 git add docs/guides/spring-boot-rest-api/anti-patterns/04-db-migration.md
 git commit -m "docs: DB Migration 안티패턴 가이드 추가 (AP-17~21)"
-```
+````
 
 ---
 
 ## Task 13: anti-patterns/05-exception-handling.md
 
 **Files:**
+
 - Create: `docs/guides/spring-boot-rest-api/anti-patterns/05-exception-handling.md`
 
-- [ ] **Step 1: 파일 생성**
+- [x] **Step 1: 파일 생성**
 
-```markdown
+````markdown
 # 안티패턴 — 예외 처리
 
 [← 목차로 돌아가기](./README.md)
@@ -2010,6 +2048,7 @@ try {
     throw new ApiException(ErrorCode.FILE_DELETE_FAILED);
 }
 ```
+````
 
 ---
 
@@ -2114,25 +2153,27 @@ public ResponseEntity<UserResponse> getUser(@PathVariable UUID id) {
     // 없으면 GlobalExceptionHandler가 처리
 }
 ```
-```
 
-- [ ] **Step 2: 커밋**
+````
+
+- [x] **Step 2: 커밋**
 
 ```bash
 git add docs/guides/spring-boot-rest-api/anti-patterns/05-exception-handling.md
 git commit -m "docs: 예외처리 안티패턴 가이드 추가 (AP-22~25)"
-```
+````
 
 ---
 
 ## Task 14: anti-patterns/06-security.md
 
 **Files:**
+
 - Create: `docs/guides/spring-boot-rest-api/anti-patterns/06-security.md`
 
-- [ ] **Step 1: 파일 생성**
+- [x] **Step 1: 파일 생성**
 
-```markdown
+````markdown
 # 안티패턴 — 보안
 
 [← 목차로 돌아가기](./README.md)
@@ -2175,6 +2216,7 @@ public record UserResponse(
     }
 }
 ```
+````
 
 ---
 
@@ -2262,20 +2304,22 @@ public class JwtProvider {
 ```yaml
 # ✅ application.yml — 실제 값은 환경변수로 주입
 jwt:
-  secret: ${JWT_SECRET}  # Docker Secret 또는 시스템 환경변수
+  secret: ${JWT_SECRET} # Docker Secret 또는 시스템 환경변수
+
 
 # terab Docker Swarm 배포 시:
 # docker secret create jwt_secret <(echo "실제시크릿값")
 # docker service update --secret-add jwt_secret api
 ```
-```
 
-- [ ] **Step 2: 최종 커밋**
+````
+
+- [x] **Step 2: 최종 커밋**
 
 ```bash
 git add docs/guides/spring-boot-rest-api/anti-patterns/06-security.md
 git commit -m "docs: 보안 안티패턴 가이드 추가 (AP-26~29)"
-```
+````
 
 ---
 
@@ -2283,17 +2327,17 @@ git commit -m "docs: 보안 안티패턴 가이드 추가 (AP-26~29)"
 
 ### Spec Coverage
 
-| 스펙 요구사항 | 구현 Task |
-|---|---|
-| 레이어별 가이드 (01~05) | Task 2~6 |
-| 각 파일 상단 요약 테이블 | Task 2~6 (각 파일 상단) |
-| 어노테이션 내부 동작 원리 | Task 2~6 본문 |
-| terab 프로젝트 스타일 코드 예시 | Task 2~6 모든 코드 예시 |
-| Quick Reference 색인 (B타입) | Task 7 |
-| 안티패턴 가이드 분리 파일 | Task 9~14 |
-| 29개 안티패턴 전체 목록 | Task 8 (README) |
-| DB 마이그레이션 관련 내용 | Task 6 (05-db-migration), Task 12 (AP-17~21) |
-| 안티패턴 목차 파일 | Task 8 |
-| 전체 목차 (README.md) | Task 1 |
+| 스펙 요구사항                   | 구현 Task                                    |
+| ------------------------------- | -------------------------------------------- |
+| 레이어별 가이드 (01~05)         | Task 2~6                                     |
+| 각 파일 상단 요약 테이블        | Task 2~6 (각 파일 상단)                      |
+| 어노테이션 내부 동작 원리       | Task 2~6 본문                                |
+| terab 프로젝트 스타일 코드 예시 | Task 2~6 모든 코드 예시                      |
+| Quick Reference 색인 (B타입)    | Task 7                                       |
+| 안티패턴 가이드 분리 파일       | Task 9~14                                    |
+| 29개 안티패턴 전체 목록         | Task 8 (README)                              |
+| DB 마이그레이션 관련 내용       | Task 6 (05-db-migration), Task 12 (AP-17~21) |
+| 안티패턴 목차 파일              | Task 8                                       |
+| 전체 목차 (README.md)           | Task 1                                       |
 
 모든 스펙 요구사항이 커버됨. Placeholder 없음. 타입/메서드명 일관성 확인됨.

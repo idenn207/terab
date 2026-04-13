@@ -1,10 +1,9 @@
 package com.terab.api.slice;
 
-import static com.terab.api.support.SecurityTestSupport.authenticatedUser;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static com.terab.api.support.SecurityTestSupport.*;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 // import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 // ┌──────────────────────────────────────────────────────────────┐
 // │ Slice Test Template (@WebMvcTest)                            │
@@ -12,6 +11,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 // │ 사용 후 이 주석 블록을 삭제하세요                            │
 // └──────────────────────────────────────────────────────────────┘
 
+import java.util.UUID;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -49,7 +49,7 @@ class _SliceTestTemplate {
 
             // when & then
             mockMvc.perform(get("/api/your-endpoint")
-                            .with(authenticatedUser("user@test.com")))
+                            .with(authenticatedUser(UUID.randomUUID())))
                     .andExpect(status().isOk());
         }
     }
@@ -63,7 +63,7 @@ class _SliceTestTemplate {
             String invalidBody = "{}";
 
             mockMvc.perform(post("/api/your-endpoint")
-                            .with(authenticatedUser("user@test.com"))
+                            .with(authenticatedUser(UUID.randomUUID()))
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(invalidBody))
                     .andExpect(status().isBadRequest());

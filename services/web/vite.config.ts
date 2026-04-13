@@ -2,12 +2,13 @@
 /// <reference types="vitest/config" />
 import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
+import { visualizer } from 'rollup-plugin-visualizer';
 import { defineConfig } from 'vite';
 import svgr from 'vite-plugin-svgr';
 
 // https://vite.dev/config/
 export default defineConfig({
-  plugins: [react(), svgr(), tailwindcss()],
+  plugins: [react(), svgr(), tailwindcss(), visualizer({ template: 'sunburst' })],
   server: {
     proxy: {
       '/api': {
@@ -25,5 +26,37 @@ export default defineConfig({
     setupFiles: './src/test/setup.ts',
     css: true,
     passWithNoTests: true,
+  },
+  build: {
+    rolldownOptions: {
+      output: {
+        codeSplitting: {
+          minSize: 20000,
+          groups: [
+            {
+              name: 'react-vendor',
+              test: /node_modules[\\/]react/,
+              priority: 20,
+            },
+            {
+              name: 'ui-vendor',
+              test: /node_modules[\\/][@heroicons|@headlessui|@tailwindcss]/,
+              priority: 20,
+            },
+            {
+              name: 'vendor',
+              test: /node_modules/,
+              priority: 10,
+            },
+            {
+              name: 'common',
+              minShareCount: 2,
+              minSize: 10000,
+              priority: 5,
+            },
+          ],
+        },
+      },
+    },
   },
 });

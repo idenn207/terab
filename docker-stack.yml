@@ -7,9 +7,14 @@ services:
   db:
     image: postgres:16-alpine
     environment:
-      POSTGRES_DB: terab_db
-      POSTGRES_USER: terab_user
+      POSTGRES_DB_FILE: /run/configs/db_name
+      POSTGRES_USER_FILE: /run/configs/db_user
       POSTGRES_PASSWORD_FILE: /run/secrets/terab_db_password
+    configs:
+      - source: db_name
+        target: /run/configs/db_name
+      - source: db_user
+        target: /run/configs/db_user
     secrets:
       - terab_db_password
     volumes:
@@ -17,7 +22,7 @@ services:
     networks:
       - terab-net
     healthcheck:
-      test: ['CMD-SHELL', 'pg_isready -U terab_user -d terab_db']
+      test: ['CMD-SHELL', 'pg_isready']
       interval: 10s
       timeout: 5s
       retries: 5
@@ -36,8 +41,11 @@ services:
     image: minio/minio:latest
     command: server /data --console-address ":9001"
     environment:
-      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_USER_FILE: /run/configs/minio_root_user
       MINIO_ROOT_PASSWORD_FILE: /run/secrets/terab_minio_password
+    configs:
+      - source: minio_root_user
+        target: /run/configs/minio_root_user
     secrets:
       - terab_minio_password
     volumes:
@@ -60,8 +68,24 @@ services:
   api:
     image: ghcr.io/idenn207/terab-api:latest
     configs:
-      - source: api_properties
-        target: /app/application.properties
+      - source: db_url
+        target: /run/configs/db_url
+      - source: db_user
+        target: /run/configs/db_user
+      - source: minio_endpoint
+        target: /run/configs/minio_endpoint
+      - source: minio_root_user
+        target: /run/configs/minio_root_user
+      - source: minio_bucket
+        target: /run/configs/minio_bucket
+      - source: owner_username
+        target: /run/configs/owner_username
+      - source: owner_nickname
+        target: /run/configs/owner_nickname
+      - source: jwt_access_expiry_ms
+        target: /run/configs/jwt_access_expiry_ms
+      - source: jwt_refresh_expiry_ms
+        target: /run/configs/jwt_refresh_expiry_ms
     secrets:
       - terab_db_password
       - terab_minio_password
@@ -169,7 +193,25 @@ services:
         condition: on-failure
 
 configs:
-  api_properties:
+  db_url:
+    external: true
+  db_name:
+    external: true
+  db_user:
+    external: true
+  minio_endpoint:
+    external: true
+  minio_root_user:
+    external: true
+  minio_bucket:
+    external: true
+  owner_username:
+    external: true
+  owner_nickname:
+    external: true
+  jwt_access_expiry_ms:
+    external: true
+  jwt_refresh_expiry_ms:
     external: true
 
 volumes:

@@ -10,25 +10,26 @@ import org.testcontainers.utility.DockerImageName;
  */
 public final class TestContainersConfig {
 
-    public static final PostgreSQLContainer<?> POSTGRES =
-            new PostgreSQLContainer<>(DockerImageName.parse("postgres:16-alpine"))
-                    .withDatabaseName("terab_test")
-                    .withUsername("test")
-                    .withPassword("test");
+  @SuppressWarnings("resource")
+  public static final PostgreSQLContainer<?> POSTGRES =
+    new PostgreSQLContainer<>(DockerImageName.parse("postgres:16-alpine"))
+      .withDatabaseName("terab_test")
+      .withUsername("test")
+      .withPassword("test");
 
-    @SuppressWarnings("resource")
-    public static final GenericContainer<?> MINIO =
-            new GenericContainer<>(DockerImageName.parse("minio/minio:latest"))
-                    .withExposedPorts(9000)
-                    .withEnv("MINIO_ROOT_USER", "minioadmin")
-                    .withEnv("MINIO_ROOT_PASSWORD", "minioadmin")
-                    .withCommand("server /data");
+  @SuppressWarnings("resource")
+  public static final GenericContainer<?> MINIO =
+    new GenericContainer<>(DockerImageName.parse("minio/minio:latest"))
+      .withExposedPorts(9000)
+      .withEnv("MINIO_ROOT_USER", "minioadmin")
+      .withEnv("MINIO_ROOT_PASSWORD", "minioadmin")
+      .withCommand("server /data");
 
-    static {
-        POSTGRES.start();
-        MINIO.start();
-    }
+  static {
+    POSTGRES.start();
+    MINIO.start();
+  }
 
-    private TestContainersConfig() {
-    }
+  private TestContainersConfig() {
+  }
 }

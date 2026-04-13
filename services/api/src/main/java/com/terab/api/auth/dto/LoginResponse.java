@@ -1,5 +1,3 @@
 package com.terab.api.auth.dto;
 
-public class LoginResponse {
-  
-}
+public record LoginResponse(String accessToken, UserResponse user) {}
