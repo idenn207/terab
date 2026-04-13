@@ -63,7 +63,7 @@ scripts/    # 빌드/배포 자동화 스크립트
 ### 공통 원칙
 
 - 인코딩: UTF-8
-- 줄바꿈: CRLF (Windows 개발 환경, EOL은 `.gitattributes`로 명시)
+- 줄바꿈: 기본 CRLF (Windows 개발 환경, EOL은 `.gitattributes`로 명시) — Linux 환경에서 실행되는 파일은 LF 사용 (아래 기준 참조)
 - 코드 식별자(변수명, 함수명, 파일명, 브랜치명)는 영어로 작성
 - 네이밍은 역할이 명확히 드러나도록 작성 (약어 지양)
 - 매직 넘버/문자열은 상수로 추출
@@ -113,6 +113,10 @@ scripts/    # 빌드/배포 자동화 스크립트
 - 요청 범위를 벗어난 리팩토링, 주석 추가, 기능 확장 금지
 - 기존 파일의 설정값(비밀번호, 포트 등)을 추측이나 예시값으로 덮어쓰기 금지
 - 보안에 민감한 파일(`*.env`, `secrets.*`, `application-*.properties`) 수정 전 반드시 확인
+- 새 파일 생성 시 줄바꿈은 기본 CRLF; 단, 아래 조건 중 하나라도 해당하면 LF로 저장한다
+  - Docker 이미지 빌드에 포함되는 파일 (`Dockerfile`, 컨테이너 내 shell script 등)
+  - GitHub Actions / CI runner에서 직접 실행되는 파일 (`.github/workflows/*.yml`, `scripts/*.sh` 등)
+  - Linux 서버에서 직접 실행되는 shell script
 
 ### 응답
 
