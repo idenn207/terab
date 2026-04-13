@@ -1,5 +1,4 @@
-import { LogoLabel } from '@/shared/assets';
-import { Button, Field, Heading, Input, Label } from '@/shared/ui';
+import { Button, Field, Input, Label } from '@/shared/ui';
 import { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { LOGIN_ERROR_MESSAGES } from '../model/loginErrors';
@@ -28,8 +27,6 @@ export function LoginForm() {
 
   return (
     <form onSubmit={handleSubmit(login)} className="grid w-full max-w-sm grid-cols-1 gap-6">
-      <LogoLabel className="h-6 text-zinc-950 dark:text-white forced-colors:text-[CanvasText]" />
-      <Heading>로그인</Heading>
       <Field>
         <Label htmlFor="username">아이디</Label>
         <Input

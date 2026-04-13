@@ -1,4 +1,5 @@
 import { DrivePage, LoginPage, NavbarPage, SidebarLayoutPage, SidebarPage } from '@/pages';
+import { PrivateRoute } from '@/shared/router';
 import { AuthLayout } from '@/widgets';
 import type { RouteObject } from 'react-router-dom';
 
@@ -33,7 +34,11 @@ const authRoutes: RouteObject[] = [
 const appRoutes: RouteObject[] = [
   {
     path: '/drive',
-    element: <DrivePage />,
+    element: (
+      <PrivateRoute>
+        <DrivePage />
+      </PrivateRoute>
+    ),
     // element: <SidebarLayout />,
     children: [
       // { index: true, element: <DrivePage /> },
