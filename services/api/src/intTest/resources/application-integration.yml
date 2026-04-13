@@ -24,6 +24,8 @@ minio:
   bucket: test-bucket
 
 app:
+  security:
+    password-pepper: integration-test-pepper-value
   owner:
     username: owner
     password: owner-test-password-123

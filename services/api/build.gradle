@@ -1,66 +1,66 @@
 plugins {
-    id 'org.springframework.boot' version '3.5.13'
-    id 'io.spring.dependency-management' version '1.1.7'
-    id 'java'
+  id 'org.springframework.boot' version '3.5.13'
+  id 'io.spring.dependency-management' version '1.1.7'
+  id 'java'
 }
 
 group = 'com.terab'
 version = '0.0.1-SNAPSHOT'
 
 java {
-    toolchain {
-        languageVersion = JavaLanguageVersion.of(21)
-    }
+  toolchain {
+    languageVersion = JavaLanguageVersion.of(21)
+  }
 }
 
 repositories {
-    mavenCentral()
+  mavenCentral()
 }
 
 dependencies {
-    // Spring Boot 핵심
-    implementation 'org.springframework.boot:spring-boot-starter-actuator'
-    implementation 'org.springframework.boot:spring-boot-starter-web'
-    implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
-    implementation 'org.springframework.boot:spring-boot-starter-security'
-    implementation 'org.springframework.boot:spring-boot-starter-validation'
-    implementation 'org.springframework.boot:spring-boot-devtools'
+  // Spring Boot 핵심
+  implementation 'org.springframework.boot:spring-boot-starter-actuator'
+  implementation 'org.springframework.boot:spring-boot-starter-web'
+  implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+  implementation 'org.springframework.boot:spring-boot-starter-security'
+  implementation 'org.springframework.boot:spring-boot-starter-validation'
+  implementation 'org.springframework.boot:spring-boot-devtools'
 
-    // PostgreSQL
-    runtimeOnly 'org.postgresql:postgresql'
+  // PostgreSQL
+  runtimeOnly 'org.postgresql:postgresql'
 
-    // JWT
-    implementation 'io.jsonwebtoken:jjwt-api:0.12.5'
-    runtimeOnly 'io.jsonwebtoken:jjwt-impl:0.12.5'
-    runtimeOnly 'io.jsonwebtoken:jjwt-jackson:0.12.5'
+  // JWT
+  implementation 'io.jsonwebtoken:jjwt-api:0.12.5'
+  runtimeOnly 'io.jsonwebtoken:jjwt-impl:0.12.5'
+  runtimeOnly 'io.jsonwebtoken:jjwt-jackson:0.12.5'
 
-    // MinIO (S3 호환 파일 스토리지)
-    implementation 'io.minio:minio:8.5.9'
+  // MinIO (S3 호환 파일 스토리지)
+  implementation 'io.minio:minio:8.5.9'
 
-    // DevTools (로컬 개발 시 자동 재시작)
-    developmentOnly 'org.springframework.boot:spring-boot-devtools'
+  // DevTools (로컬 개발 시 자동 재시작)
+  developmentOnly 'org.springframework.boot:spring-boot-devtools'
 
-    // Lombok (보일러플레이트 제거)
-    compileOnly 'org.projectlombok:lombok'
-    annotationProcessor 'org.projectlombok:lombok'
+  // Lombok (보일러플레이트 제거)
+  compileOnly 'org.projectlombok:lombok'
+  annotationProcessor 'org.projectlombok:lombok'
 
-    // Flyway (DB 마이그레이션)
-    implementation 'org.flywaydb:flyway-core'
-    implementation 'org.flywaydb:flyway-database-postgresql'
+  // Flyway (DB 마이그레이션)
+  implementation 'org.flywaydb:flyway-core'
+  implementation 'org.flywaydb:flyway-database-postgresql'
 
-    // 테스트
-    testImplementation 'org.springframework.boot:spring-boot-starter-test'
-    testImplementation 'org.springframework.security:spring-security-test'
-    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+  // 테스트
+  testImplementation 'org.springframework.boot:spring-boot-starter-test'
+  testImplementation 'org.springframework.security:spring-security-test'
+  testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 
-    // Testcontainers (버전은 Spring Boot BOM이 관리)
-    testImplementation 'org.testcontainers:testcontainers'
-    testImplementation 'org.testcontainers:junit-jupiter'
-    testImplementation 'org.testcontainers:postgresql'
+  // Testcontainers (버전은 Spring Boot BOM이 관리)
+  testImplementation 'org.testcontainers:testcontainers'
+  testImplementation 'org.testcontainers:junit-jupiter'
+  testImplementation 'org.testcontainers:postgresql'
 
-    // Lombok 테스트 지원
-    testCompileOnly 'org.projectlombok:lombok'
-    testAnnotationProcessor 'org.projectlombok:lombok'
+  // Lombok 테스트 지원
+  testCompileOnly 'org.projectlombok:lombok'
+  testAnnotationProcessor 'org.projectlombok:lombok'
 }
 
 // =============================================================================
@@ -69,60 +69,60 @@ dependencies {
 
 // Integration Test 소스셋 (src/intTest)
 sourceSets {
-    intTest {
-        java.srcDir 'src/intTest/java'
-        resources.srcDir 'src/intTest/resources'
-        compileClasspath += sourceSets.main.output + sourceSets.test.output
-        runtimeClasspath += sourceSets.main.output + sourceSets.test.output
-    }
+  intTest {
+    java.srcDir 'src/intTest/java'
+    resources.srcDir 'src/intTest/resources'
+    compileClasspath += sourceSets.main.output + sourceSets.test.output
+    runtimeClasspath += sourceSets.main.output + sourceSets.test.output
+  }
 }
 
 configurations {
-    intTestImplementation.extendsFrom testImplementation
-    intTestRuntimeOnly.extendsFrom testRuntimeOnly
-    intTestCompileOnly.extendsFrom testCompileOnly
-    intTestAnnotationProcessor.extendsFrom testAnnotationProcessor
+  intTestImplementation.extendsFrom testImplementation
+  intTestRuntimeOnly.extendsFrom testRuntimeOnly
+  intTestCompileOnly.extendsFrom testCompileOnly
+  intTestAnnotationProcessor.extendsFrom testAnnotationProcessor
 }
 
 // Unit + Slice 테스트: ./gradlew test
 tasks.named('test') {
-    useJUnitPlatform()
-    maxParallelForks = Runtime.runtime.availableProcessors().intdiv(2) ?: 1
-    // 템플릿 파일은 테스트 실행 대상에서 제외
-    exclude '**/_*Template*'
-    // 실행 가능한 테스트 클래스가 없으면 태스크 skip (Gradle 9.0 호환)
-    onlyIf {
-        !testClassesDirs.asFileTree.matching {
-            include '**/*Test.class', '**/*Tests.class'
-            exclude '**/_*Template*'
-        }.empty
-    }
+  useJUnitPlatform()
+  maxParallelForks = Runtime.runtime.availableProcessors().intdiv(2) ?: 1
+  // 템플릿 파일은 테스트 실행 대상에서 제외
+  exclude '**/_*Template*'
+  // 실행 가능한 테스트 클래스가 없으면 태스크 skip (Gradle 9.0 호환)
+  onlyIf {
+    !testClassesDirs.asFileTree.matching {
+      include '**/*Test.class', '**/*Tests.class'
+      exclude '**/_*Template*'
+    }.empty
+  }
 }
 
 // Integration 테스트: ./gradlew integrationTest
 tasks.register('integrationTest', Test) {
-    description = 'Runs integration tests with Testcontainers.'
-    group = 'verification'
-    testClassesDirs = sourceSets.intTest.output.classesDirs
-    classpath = sourceSets.intTest.runtimeClasspath
-    useJUnitPlatform()
-    // 템플릿 파일은 테스트 실행 대상에서 제외
-    exclude '**/_*Template*'
-    // 실행 가능한 테스트 클래스가 없으면 태스크 skip (Gradle 9.0 호환)
-    onlyIf {
-        !testClassesDirs.asFileTree.matching {
-            include '**/*Test.class', '**/*Tests.class'
-            exclude '**/_*Template*'
-        }.empty
-    }
+  description = 'Runs integration tests with Testcontainers.'
+  group = 'verification'
+  testClassesDirs = sourceSets.intTest.output.classesDirs
+  classpath = sourceSets.intTest.runtimeClasspath
+  useJUnitPlatform()
+  // 템플릿 파일은 테스트 실행 대상에서 제외
+  exclude '**/_*Template*'
+  // 실행 가능한 테스트 클래스가 없으면 태스크 skip (Gradle 9.0 호환)
+  onlyIf {
+    !testClassesDirs.asFileTree.matching {
+      include '**/*Test.class', '**/*Tests.class'
+      exclude '**/_*Template*'
+    }.empty
+  }
 }
 
 // intTest 리소스 복사 시 중복 파일 허용 (main/test output 포함으로 인한 충돌 방지)
 tasks.named('processIntTestResources') {
-    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+  duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 }
 
 // ./gradlew check 시 integration 테스트도 포함
 tasks.named('check') {
-    dependsOn tasks.named('integrationTest')
+  dependsOn tasks.named('integrationTest')
 }

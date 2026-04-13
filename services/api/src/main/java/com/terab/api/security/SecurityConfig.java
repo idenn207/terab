@@ -15,6 +15,7 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 
 @Configuration
@@ -40,6 +41,10 @@ public class SecurityConfig {
         .requestMatchers(HttpMethod.GET, "/api/shares/**").permitAll()
         .anyRequest().authenticated()
       )
+      .exceptionHandling(ex -> ex
+        .authenticationEntryPoint((req, res, e) ->
+          res.sendError(HttpServletResponse.SC_UNAUTHORIZED))
+      )
       .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
     return http.build();
@@ -57,7 +62,7 @@ public class SecurityConfig {
     config.setAllowedOrigins(List.of(
       "https://drive.skypark207.com",
       "https://admin.drive.skypark207.com",
-      "http://localhost:5173" // 로컬 개발
+      "http://localhost:5173" // 로컬 개발(웹)
     ));
     config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
     config.setAllowedHeaders(List.of("*"));

@@ -7,6 +7,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 import com.terab.api.rbac.repository.RoleRepository;
+import com.terab.api.security.TokenHasher;
 import com.terab.api.user.domain.User;
 import com.terab.api.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -20,6 +21,7 @@ public class OwnerAccountInitializer implements ApplicationRunner {
   private final UserRepository userRepository;
   private final RoleRepository roleRepository;
   private final PasswordEncoder passwordEncoder;
+  private final TokenHasher tokenHasher;
 
   @Value("${app.owner.username:owner}")
   private String ownerUsername;
@@ -49,7 +51,7 @@ public class OwnerAccountInitializer implements ApplicationRunner {
     User owner = new User();
     owner.setUsername(ownerUsername);
     owner.setNickname(ownerNickname);
-    owner.setPassword(passwordEncoder.encode(ownerPassword));
+    owner.setPassword(passwordEncoder.encode(tokenHasher.pepperPassword(ownerPassword)));
     owner.setActive(true);
     owner.getRoles().add(ownerRole);
 

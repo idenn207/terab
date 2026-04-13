@@ -20,6 +20,7 @@ import com.terab.api.common.exception.ErrorCode;
 import com.terab.api.rbac.domain.Permission;
 import com.terab.api.rbac.domain.Role;
 import com.terab.api.security.JwtProvider;
+import com.terab.api.security.TokenHasher;
 import com.terab.api.user.domain.User;
 import com.terab.api.user.repository.UserRepository;
 import io.jsonwebtoken.Claims;
@@ -36,12 +37,13 @@ public class AuthService {
   private final RefreshTokenRepository refreshTokenRepository;
   private final JwtProvider jwtProvider;
   private final PasswordEncoder passwordEncoder;
+  private final TokenHasher tokenHasher;
 
   public LoginResponse login(LoginRequest request, HttpServletResponse response) {
     User user = userRepository.findByUsername(request.username())
       .orElseThrow(() -> new ApiException(ErrorCode.INVALID_CREDENTIALS));
 
-    if (!passwordEncoder.matches(request.password(), user.getPassword())) {
+    if (!passwordEncoder.matches(tokenHasher.pepperPassword(request.password()), user.getPassword())) {
       throw new ApiException(ErrorCode.INVALID_CREDENTIALS);
     }
 
@@ -64,7 +66,7 @@ public class AuthService {
 
     RefreshToken stored = refreshTokenRepository.findValidByUserId(userId)
       .stream()
-      .filter(rt -> passwordEncoder.matches(rawRefreshToken, rt.getTokenHash()))
+      .filter(rt -> tokenHasher.verifyRefreshToken(rawRefreshToken, rt.getTokenHash()))
       .findFirst()
       .orElseThrow(() -> new ApiException(ErrorCode.REFRESH_TOKEN_INVALID));
 
@@ -79,7 +81,7 @@ public class AuthService {
     if (rawRefreshToken != null) {
       refreshTokenRepository.findValidByUserId(userId)
         .stream()
-        .filter(rt -> passwordEncoder.matches(rawRefreshToken, rt.getTokenHash()))
+        .filter(rt -> tokenHasher.verifyRefreshToken(rawRefreshToken, rt.getTokenHash()))
         .findFirst()
         .ifPresent(rt -> {
           rt.setRevokedAt(OffsetDateTime.now());
@@ -107,7 +109,7 @@ public class AuthService {
 
     RefreshToken rt = new RefreshToken();
     rt.setUser(user);
-    rt.setTokenHash(passwordEncoder.encode(rawRefreshToken));
+    rt.setTokenHash(tokenHasher.hashRefreshToken(rawRefreshToken));
     rt.setExpiresAt(OffsetDateTime.now().plus(
       Duration.ofMillis(jwtProvider.getRefreshTokenExpMs())
     ));

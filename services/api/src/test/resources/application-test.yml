@@ -17,3 +17,7 @@ minio:
   access-key: test
   secret-key: test
   bucket: test-bucket
+
+app:
+  security:
+    password-pepper: test-pepper-value-for-unit-tests

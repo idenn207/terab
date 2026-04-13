@@ -44,6 +44,8 @@ jwt:
   refresh-token-expiration-ms: ${jwt_refresh_expiry_ms:604800000}
 
 app:
+  security:
+    password-pepper: ${terab_password_pepper:}
   owner:
     username: ${owner_username:owner}
     nickname: ${owner_nickname:Owner}
