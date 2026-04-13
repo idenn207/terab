@@ -33,3 +33,26 @@ graph LR
     API --> DB
     API --> S3
 ```
+
+---
+
+## 사전 요구사항
+
+### 로컬 개발
+
+| 도구 | 버전 |
+| --- | --- |
+| Git | 최신 |
+| Java | 21 |
+| Node.js | 20 이상 |
+| Docker Desktop | 최신 |
+
+### 운영 배포 (NAS)
+
+- Docker Swarm 초기화 완료 (`docker swarm init`)
+- GitHub Container Registry(GHCR) 인증 등록
+
+> **참고 문서**
+>
+> - [Docker Swarm 시작하기](https://docs.docker.com/engine/swarm/swarm-tutorial/)
+> - [GHCR 인증 가이드](https://docs.github.com/en/packages/working-with-a-github-packages-registry/working-with-the-container-registry)
