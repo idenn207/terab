@@ -31,4 +31,5 @@ services/web/build/
 # rollup-plugin-visualizer
 services/web/stats.html
 .superpowers/
+.worktrees/
 
