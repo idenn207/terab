@@ -240,3 +240,27 @@ Docker Secret으로 등록되며 컨테이너 내 `/run/secrets/<key>` 경로로
 | `terab_jwt_secret` | JWT 서명 키 | 256bit(32자) 이상 랜덤 문자열 | ✓ |
 | `terab_owner_password` | 오너 계정 초기 비밀번호 | 배포 후 변경 권장 | ✓ |
 | `terab_password_pepper` | 비밀번호 해싱 pepper | 랜덤 문자열, 분실 시 모든 비밀번호 무효화 | ✓ |
+
+---
+
+## 프로젝트 구조
+
+```
+terab/
+├── services/
+│   ├── api/          # Spring Boot 백엔드 (Java 21, Gradle)
+│   ├── web/          # React + Vite 프론트엔드 (Capacitor Android 포함)
+│   └── nginx/        # Nginx 리버스 프록시 설정
+├── volumes/          # 로컬 개발용 데이터 볼륨 (git 제외)
+├── scripts/          # 유틸리티 스크립트 (secret 검증 등)
+├── docs/             # 설계 문서, 기획 문서
+├── docker-compose.local.yml  # 로컬 개발용 Compose 파일
+├── docker-stack.yml          # 운영 Docker Swarm 스택 정의
+├── Makefile                  # 모든 작업의 진입점
+├── local.env                 # 로컬 개발 환경변수 (git 제외)
+├── configs.env.example       # 운영 Config 키 목록 템플릿
+└── secrets.env.example       # 운영 Secret 키 목록 템플릿
+```
+
+> 각 서비스의 내부 구조·개발 방법은 추후 별도 문서로 제공 예정:  
+> `services/api/README.md` · `services/web/README.md`
