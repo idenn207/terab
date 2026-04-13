@@ -13,6 +13,9 @@ java {
   }
 }
 
+// Lombok 1.18.40+ required for Java 25 annotation processing
+ext['lombok.version'] = '1.18.40'
+
 repositories {
   mavenCentral()
 }
