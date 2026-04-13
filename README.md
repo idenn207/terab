@@ -142,3 +142,67 @@ make dev-down  # 종료
 | `application-local.properties not found` | `make setup-local` 스킵 | `make setup-local` 실행 |
 | MinIO 콘솔(9001) 접속 불가 | 포트 충돌 | `docker ps`로 점유 프로세스 확인 |
 | API 환경변수 인식 불가 | `local.env` 수정 후 `make setup-local` 미재실행 | `make setup-local` 재실행 후 API 재시작 |
+
+---
+
+## 운영 배포 (NAS / Docker Swarm)
+
+```
+configs.env 작성 → secrets.env 작성 → make setup → make stack-deploy
+```
+
+> **Docker Config / Secret이란?**  
+> Docker Swarm은 설정값과 민감 정보를 서비스에 안전하게 주입하는 메커니즘을 제공한다.  
+> - **Config**: DB URL, MinIO 엔드포인트 등 비민감 설정 — Swarm이 서비스에 주입  
+> - **Secret**: 비밀번호·JWT 시크릿 등 민감 값 — 암호화 저장, 컨테이너 내 `/run/secrets/`로 주입  
+> 참고: [Docker Secrets 공식 문서](https://docs.docker.com/engine/swarm/secrets/)
+
+### 1. 환경 파일 작성
+
+NAS에서 아래 파일을 작성한다. **git에 절대 커밋하지 않는다.**
+
+```bash
+# configs.env — configs.env.example 복사 후 값 입력
+cp configs.env.example configs.env
+
+# secrets.env — secrets.env.example 복사 후 값 입력
+cp secrets.env.example secrets.env
+```
+
+설정 키 전체 목록은 [설정 레퍼런스](#설정-레퍼런스) 참조.
+
+### 2. Docker Config / Secret 등록
+
+```bash
+make setup
+```
+
+`configs.env`의 키를 Docker Config로, `secrets.env`의 키를 Docker Secret으로 등록한다.  
+재실행 시 기존 항목을 자동으로 삭제 후 재등록한다 (`config already exists` 경고는 정상).
+
+### 3. 스택 배포
+
+```bash
+make stack-deploy
+```
+
+`docker-stack.yml` 기준으로 terab 스택을 배포한다.
+
+### 4. 이미지 업데이트 (배포 후 업데이트)
+
+```bash
+make stack-update
+```
+
+API + Web 서비스의 이미지를 `latest`로 업데이트하고 롤링 재시작한다.
+
+### 트러블슈팅 — 운영
+
+| 증상 | 원인 | 해결 |
+|---|---|---|
+| `config not found: db_url` (서비스 기동 실패) | `make setup` 스킵 또는 일부 키 누락 | `docker config ls` 확인 후 `make setup` 재실행 |
+| `secret ... not found` | `secrets.env` 값 미입력 또는 등록 실패 | `docker secret ls` 확인, 빈 값 여부 점검 |
+| 서비스가 계속 Restarting | healthcheck 실패 (DB 미준비, 설정 오류 등) | `docker service logs terab_api`로 원인 확인 |
+| `stack deploy` 후 이미지 pull 실패 | GHCR 인증 미등록 | [GHCR 인증 가이드](https://docs.github.com/en/packages/working-with-a-github-packages-registry/working-with-the-container-registry) 참조 |
+| `make setup` 재실행 시 `config already exists` 경고 | 기존 config 충돌 | Makefile이 자동으로 `rm` 후 재등록 — 정상 동작 |
+| `make setup` 후에도 환경변수 변경이 반영 안 됨 | Swarm이 기존 config를 캐시 | `make stack-update`로 서비스 강제 재시작 |
