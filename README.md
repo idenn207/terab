@@ -206,3 +206,37 @@ API + Web 서비스의 이미지를 `latest`로 업데이트하고 롤링 재시
 | `stack deploy` 후 이미지 pull 실패 | GHCR 인증 미등록 | [GHCR 인증 가이드](https://docs.github.com/en/packages/working-with-a-github-packages-registry/working-with-the-container-registry) 참조 |
 | `make setup` 재실행 시 `config already exists` 경고 | 기존 config 충돌 | Makefile이 자동으로 `rm` 후 재등록 — 정상 동작 |
 | `make setup` 후에도 환경변수 변경이 반영 안 됨 | Swarm이 기존 config를 캐시 | `make stack-update`로 서비스 강제 재시작 |
+
+---
+
+## 설정 레퍼런스
+
+### configs.env (비민감 설정값)
+
+Docker Config로 등록되며 `application.yml`에서 `${key}` 형태로 주입된다.
+
+| 키 | 설명 | 예시 | 필수 |
+|---|---|---|---|
+| `db_url` | JDBC 데이터소스 URL | `jdbc:postgresql://db:5432/terab` | ✓ |
+| `db_name` | PostgreSQL DB명 | `terab` | ✓ |
+| `db_user` | PostgreSQL 사용자명 | `terab` | ✓ |
+| `minio_endpoint` | MinIO 엔드포인트 URL | `http://minio:9000` | ✓ |
+| `minio_root_user` | MinIO 루트 사용자명 | `admin` | ✓ |
+| `minio_bucket` | 기본 버킷명 | `terab` | ✓ |
+| `owner_username` | 최초 오너 계정 ID | `admin` | ✓ |
+| `owner_nickname` | 오너 계정 표시명 | `관리자` | ✓ |
+| `jwt_access_expiry_ms` | Access token 만료 시간 (ms) | `900000` (15분) | ✓ |
+| `jwt_refresh_expiry_ms` | Refresh token 만료 시간 (ms) | `604800000` (7일) | ✓ |
+| `cors_allowed_origins` | CORS 허용 오리진 (쉼표 구분) | `https://drive.example.com` | ✓ |
+
+### secrets.env (민감 값 — 절대 git 커밋 금지)
+
+Docker Secret으로 등록되며 컨테이너 내 `/run/secrets/<key>` 경로로 주입된다.
+
+| 키 | 설명 | 권장 사항 | 필수 |
+|---|---|---|---|
+| `terab_db_password` | PostgreSQL 비밀번호 | — | ✓ |
+| `terab_minio_password` | MinIO 루트 비밀번호 | — | ✓ |
+| `terab_jwt_secret` | JWT 서명 키 | 256bit(32자) 이상 랜덤 문자열 | ✓ |
+| `terab_owner_password` | 오너 계정 초기 비밀번호 | 배포 후 변경 권장 | ✓ |
+| `terab_password_pepper` | 비밀번호 해싱 pepper | 랜덤 문자열, 분실 시 모든 비밀번호 무효화 | ✓ |
