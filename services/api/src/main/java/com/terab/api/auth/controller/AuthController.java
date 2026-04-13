@@ -53,7 +53,8 @@ public class AuthController {
     public ResponseEntity<Void> logout(
       @AuthenticationPrincipal CustomUserDetails userDetails,
       @CookieValue(name = "refreshToken", required = false) String refreshToken,
-      HttpServletResponse response) {
+      HttpServletResponse response
+    ) {
     authService.logout(userDetails.getUserId(), refreshToken, response);
     return ResponseEntity.noContent().build();
   }
