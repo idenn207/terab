@@ -36,7 +36,7 @@ public class JwtProvider {
       .claim("permissions", permissions)
       .issuedAt(now)
       .expiration(new Date(now.getTime() + accessTokenExpMs))
-      .signWith(key)
+      .signWith(key, Jwts.SIG.HS256)
       .compact();
   }
 
@@ -47,7 +47,7 @@ public class JwtProvider {
       .claim("type", "refresh")
       .issuedAt(now)
       .expiration(new Date(now.getTime() + refreshTokenExpMs))
-      .signWith(key)
+      .signWith(key, Jwts.SIG.HS256)
       .compact();
   }
 

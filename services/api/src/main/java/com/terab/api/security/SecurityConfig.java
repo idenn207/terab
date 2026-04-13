@@ -1,6 +1,7 @@
 package com.terab.api.security;
 
 import java.util.List;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -25,6 +26,9 @@ public class SecurityConfig {
 
   private final JwtAuthenticationFilter jwtAuthenticationFilter;
 
+  @Value("${cors_allowed_origins}")
+  private List<String> corsAllowedOrigins;
+
   @Bean
   public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
     http
@@ -36,6 +40,7 @@ public class SecurityConfig {
         .requestMatchers(HttpMethod.GET, "/actuator/health").permitAll()
         .requestMatchers(HttpMethod.POST, "/api/auth/login").permitAll()
         .requestMatchers(HttpMethod.POST, "/api/auth/refresh").permitAll()
+        .requestMatchers(HttpMethod.POST, "/api/auth/logout").permitAll()
         .requestMatchers(HttpMethod.POST, "/api/auth/register").permitAll()
         .requestMatchers(HttpMethod.GET, "/api/auth/invitations/**").permitAll()
         .requestMatchers(HttpMethod.GET, "/api/shares/**").permitAll()
@@ -58,12 +63,7 @@ public class SecurityConfig {
   @Bean
   public CorsConfigurationSource corsConfigurationSource() {
     CorsConfiguration config = new CorsConfiguration();
-    // TODO: 환경변수로 관리 예정
-    config.setAllowedOrigins(List.of(
-      "https://drive.skypark207.com",
-      "https://admin.drive.skypark207.com",
-      "http://localhost:5173" // 로컬 개발(웹)
-    ));
+    config.setAllowedOrigins(corsAllowedOrigins);
     config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
     config.setAllowedHeaders(List.of("*"));
     config.setAllowCredentials(true);

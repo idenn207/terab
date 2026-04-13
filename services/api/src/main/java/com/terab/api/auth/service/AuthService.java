@@ -64,11 +64,16 @@ public class AuthService {
 
     UUID userId = UUID.fromString(claims.getSubject());
 
-    RefreshToken stored = refreshTokenRepository.findValidByUserId(userId)
-      .stream()
+    List<RefreshToken> validTokens = refreshTokenRepository.findValidByUserId(userId);
+    RefreshToken stored = validTokens.stream()
       .filter(rt -> tokenHasher.verifyRefreshToken(rawRefreshToken, rt.getTokenHash()))
       .findFirst()
-      .orElseThrow(() -> new ApiException(ErrorCode.REFRESH_TOKEN_INVALID));
+      .orElseGet(() -> {
+        // JWT 서명은 유효하나 DB에 일치하는 RT 없음 = 이미 rotate된 토큰 재사용 시도
+        // 해당 userId의 모든 활성 RT를 즉시 무효화 (family invalidation)
+        refreshTokenRepository.revokeAllByUserId(userId, OffsetDateTime.now());
+        throw new ApiException(ErrorCode.REFRESH_TOKEN_INVALID);
+      });
 
     // Rotation: 기존 토큰 폐기
     stored.setExpiresAt(OffsetDateTime.now());
@@ -77,16 +82,21 @@ public class AuthService {
     return issueTokens(stored.getUser(), response);
   }
 
-  public void logout(UUID userId, String rawRefreshToken, HttpServletResponse response) {
+  public void logout(String rawRefreshToken, HttpServletResponse response) {
     if (rawRefreshToken != null) {
-      refreshTokenRepository.findValidByUserId(userId)
-        .stream()
-        .filter(rt -> tokenHasher.verifyRefreshToken(rawRefreshToken, rt.getTokenHash()))
-        .findFirst()
-        .ifPresent(rt -> {
-          rt.setRevokedAt(OffsetDateTime.now());
-          refreshTokenRepository.save(rt);
-        });
+      try {
+        UUID userId = jwtProvider.extractUserId(rawRefreshToken);
+        refreshTokenRepository.findValidByUserId(userId)
+          .stream()
+          .filter(rt -> tokenHasher.verifyRefreshToken(rawRefreshToken, rt.getTokenHash()))
+          .findFirst()
+          .ifPresent(rt -> {
+            rt.setRevokedAt(OffsetDateTime.now());
+            refreshTokenRepository.save(rt);
+          });
+      } catch (JwtException ignored) {
+        // RT가 유효하지 않아도 쿠키는 지운다
+      }
     }
     addClearRefreshTokenCookie(response);
   }

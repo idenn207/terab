@@ -48,6 +48,8 @@ public class TokenHasher {
   }
 
   public boolean verifyRefreshToken(String rawToken, String storedHash) {
-    return hashRefreshToken(rawToken).equals(storedHash);
+    byte[] expected = hashRefreshToken(rawToken).getBytes(StandardCharsets.UTF_8);
+    byte[] actual   = storedHash.getBytes(StandardCharsets.UTF_8);
+    return MessageDigest.isEqual(expected, actual);
   }
 }

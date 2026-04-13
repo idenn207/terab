@@ -121,9 +121,9 @@ class AuthControllerTest {
   class Logout {
 
     @Test
-    void should_return_401_without_auth() throws Exception {
+    void should_return_204_without_auth() throws Exception {
       mockMvc.perform(post("/api/auth/logout"))
-        .andExpect(status().isUnauthorized());
+        .andExpect(status().isNoContent());
     }
 
     @Test

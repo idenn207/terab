@@ -39,7 +39,7 @@ public class OwnerAccountInitializer implements ApplicationRunner {
       log.warn("app.owner.password not set - skipping owner account initialization");
       return;
     }
-    if(userRepository.count() > 0) {
+    if (userRepository.findByUsername(ownerUsername).isPresent()) {
       return;
     }
 
