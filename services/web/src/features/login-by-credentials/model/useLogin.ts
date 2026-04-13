@@ -18,6 +18,7 @@ interface LoginError {
 export function useLogin() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<LoginError | null>(null);
+  const resetError = () => setError(null);
   const navigate = useNavigate();
   const setAuth = useUserStore((s) => s.setAuth);
 
@@ -39,5 +40,5 @@ export function useLogin() {
     }
   };
 
-  return { login, isLoading, error };
+  return { login, isLoading, error, resetError };
 }
