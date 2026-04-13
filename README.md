@@ -251,7 +251,7 @@ terab/
 │   ├── api/          # Spring Boot 백엔드 (Java 21, Gradle)
 │   ├── web/          # React + Vite 프론트엔드 (Capacitor Android 포함)
 │   └── nginx/        # Nginx 리버스 프록시 설정
-├── volumes/          # 로컬 개발용 데이터 볼륨 (git 제외)
+├── volumes/          # 로컬 개발용 데이터 볼륨 (make infra 실행 시 자동 생성, git 제외)
 ├── scripts/          # 유틸리티 스크립트 (secret 검증 등)
 ├── docs/             # 설계 문서, 기획 문서
 ├── docker-compose.local.yml  # 로컬 개발용 Compose 파일
