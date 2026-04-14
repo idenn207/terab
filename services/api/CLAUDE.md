@@ -57,18 +57,18 @@ Controller → Service → Repository
 - 연관관계: 기본 `FetchType.LAZY`, EAGER 사용 금지
 - `@Table(name = "...")` 항상 명시
 - 불변 엔티티(Role, Permission 류): `@NoArgsConstructor(access = AccessLevel.PROTECTED)`
-- `@Builder` 사용 금지 — 필드 직접 설정 방식 사용
+- `@Builder` 사용 금지 — `@NoArgsConstructor` + `@Getter` + `@Setter` 사용, `new Entity()` 후 setter로 필드 설정
 - 도메인 판단 로직(`isValid()` 등)은 Entity 메서드로 작성
 
 ### DTO
 
 - Java record 사용
 - 네이밍: 요청 `XxxRequest`, 응답 `XxxResponse`
-- Controller ↔ Service 경계에서만 사용; Entity를 직접 반환하지 않는다
+- Controller ↔ Service 경계에서만 사용; Service 내부와 Repository 레이어에서는 Entity를 그대로 사용한다
 
 ### Service
 
-- 클래스 레벨에 `@Transactional` 선언, 읽기 전용 메서드는 `@Transactional(readOnly = true)`
+- 클래스 레벨에 `@Transactional` (기본 read-write) 선언, 읽기 전용 메서드만 `@Transactional(readOnly = true)`로 오버라이드
 - `@RequiredArgsConstructor`로 생성자 주입
 - 복잡한 흐름은 private 메서드로 분리
 - Service가 다른 도메인 Repository를 직접 주입받지 않는다
