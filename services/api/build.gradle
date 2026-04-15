@@ -12,10 +12,9 @@ java {
     languageVersion = JavaLanguageVersion.of(25)
   }
 }
-
+// Lombok 1.18.40+ required for Java 25 annotation processing
+ext['lombok.version'] = '1.18.40'
 ext {
-  // Lombok 1.18.40+ required for Java 25 annotation processing
-  set('lombokVersion', '1.18.40')
   set('springCloudVersion', '2025.1.1')
 }
 
@@ -26,6 +25,7 @@ repositories {
 dependencyManagement {
   imports {
     mavenBom "org.springframework.boot:spring-boot-dependencies:4.0.5"
+    mavenBom "org.springframework.cloud:spring-cloud-dependencies:${springCloudVersion}"
   }
 }
 
@@ -38,6 +38,10 @@ dependencies {
   implementation 'org.springframework.boot:spring-boot-starter-validation'
   implementation 'org.springframework.boot:spring-boot-devtools'
   // runtimeOnly 'org.springframework.boot:spring-boot-properties-migrator'
+
+  // Spring Cloud Stream (RabbitMQ binder)
+  implementation 'org.springframework.cloud:spring-cloud-stream'
+  implementation 'org.springframework.cloud:spring-cloud-starter-stream-rabbit'
 
   // PostgreSQL
   runtimeOnly 'org.postgresql:postgresql'
@@ -76,6 +80,9 @@ dependencies {
   testImplementation 'org.testcontainers:testcontainers'
   testImplementation 'org.testcontainers:testcontainers-junit-jupiter'
   testImplementation 'org.testcontainers:testcontainers-postgresql'
+  
+  // Testcontainers — RabbitMQ (통합 테스트)
+  testImplementation 'org.testcontainers:testcontainers-rabbitmq'
 
   // Lombok 테스트 지원
   testCompileOnly 'org.projectlombok:lombok'
