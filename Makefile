@@ -69,6 +69,10 @@ stack-update:
 		terab_web
 
 # ─── 빌드 ────────────────────────────────────────────────────────
+.PHONY: build-api
+build-api:
+	cd services/api && ./gradlew build --args='--spring.profiles.active=local'
+
 .PHONY: build-web
 build-web:
 	cd services/web && npm run build
@@ -81,6 +85,10 @@ build-android:
 .PHONY: api
 api:
 	cd services/api && ./gradlew bootRun --args='--spring.profiles.active=local'
+
+.PHONY: api-stop
+api-stop:
+	cd services/api && ./gradlew --stop
 
 .PHONY: notification
 notification:

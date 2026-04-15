@@ -7,6 +7,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import com.terab.api.security.ClaimsUtil;
 import com.terab.api.security.JwtProvider;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.JwtException;
@@ -38,8 +39,9 @@ class JwtProviderTest {
       UUID userId = UUID.randomUUID();
       String token = jwtProvider.generateAccessToken(userId, "testuser", List.of("USER"), List.of("file:read", "file:write"));
       Claims claims = jwtProvider.validateAndGetClaims(token);
-      assertThat(claims.get("username", String.class)).isEqualTo("testuser");
-      assertThat(claims.get("permissions", List.class)).contains("file:read", "file:write");
+
+      assertThat(ClaimsUtil.getString(claims, "username")).isEqualTo("testuser");
+      assertThat(ClaimsUtil.getStringList(claims, "permissions")).contains("file:read", "file:write");
     }
   }
 

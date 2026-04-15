@@ -1,5 +1,5 @@
 plugins {
-  id 'org.springframework.boot' version '3.5.13'
+  id 'org.springframework.boot' version '4.0.5'
   id 'io.spring.dependency-management' version '1.1.7'
   id 'java'
 }
@@ -9,15 +9,24 @@ version = '0.0.1-SNAPSHOT'
 
 java {
   toolchain {
-    languageVersion = JavaLanguageVersion.of(21)
+    languageVersion = JavaLanguageVersion.of(25)
   }
 }
 
-// Lombok 1.18.40+ required for Java 25 annotation processing
-ext['lombok.version'] = '1.18.40'
+ext {
+  // Lombok 1.18.40+ required for Java 25 annotation processing
+  set('lombokVersion', '1.18.40')
+  set('springCloudVersion', '2025.1.1')
+}
 
 repositories {
   mavenCentral()
+}
+
+dependencyManagement {
+  imports {
+    mavenBom "org.springframework.boot:spring-boot-dependencies:4.0.5"
+  }
 }
 
 dependencies {
@@ -28,6 +37,7 @@ dependencies {
   implementation 'org.springframework.boot:spring-boot-starter-security'
   implementation 'org.springframework.boot:spring-boot-starter-validation'
   implementation 'org.springframework.boot:spring-boot-devtools'
+  // runtimeOnly 'org.springframework.boot:spring-boot-properties-migrator'
 
   // PostgreSQL
   runtimeOnly 'org.postgresql:postgresql'
@@ -47,19 +57,25 @@ dependencies {
   compileOnly 'org.projectlombok:lombok'
   annotationProcessor 'org.projectlombok:lombok'
 
-  // Flyway (DB 마이그레이션)
-  implementation 'org.flywaydb:flyway-core'
+  // Flyway (DB 마이그레이션) — Spring Boot 4.0부터 starter 명시 필수
+  implementation 'org.springframework.boot:spring-boot-starter-flyway'
   implementation 'org.flywaydb:flyway-database-postgresql'
 
   // 테스트
   testImplementation 'org.springframework.boot:spring-boot-starter-test'
+  // Spring Boot 4.0부터 @WebMvcTest가 spring-boot-webmvc-test 모듈로 분리됨
+  testImplementation 'org.springframework.boot:spring-boot-webmvc-test'
+  // Spring Boot 4.0부터 TestRestTemplate이 spring-boot-resttestclient 모듈로 분리됨
+  testImplementation 'org.springframework.boot:spring-boot-resttestclient'
+  // TestRestTemplate이 내부적으로 RestTemplateBuilder를 사용 (spring-boot-restclient에서 분리됨)
+  testImplementation 'org.springframework.boot:spring-boot-restclient'
   testImplementation 'org.springframework.security:spring-security-test'
   testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 
-  // Testcontainers (버전은 Spring Boot BOM이 관리)
+  // Testcontainers (버전은 Spring Boot BOM이 관리 — 2.0부터 아티팩트 ID 변경)
   testImplementation 'org.testcontainers:testcontainers'
-  testImplementation 'org.testcontainers:junit-jupiter'
-  testImplementation 'org.testcontainers:postgresql'
+  testImplementation 'org.testcontainers:testcontainers-junit-jupiter'
+  testImplementation 'org.testcontainers:testcontainers-postgresql'
 
   // Lombok 테스트 지원
   testCompileOnly 'org.projectlombok:lombok'

@@ -1,5 +1,6 @@
 package com.terab.api.support;
 
+import org.springframework.boot.resttestclient.autoconfigure.AutoConfigureTestRestTemplate;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
@@ -17,6 +18,7 @@ import org.springframework.test.context.DynamicPropertySource;
  * </pre>
  */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+@AutoConfigureTestRestTemplate
 @ActiveProfiles("integration")
 public abstract class IntegrationTestBase {
 
