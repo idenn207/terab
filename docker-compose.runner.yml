@@ -17,12 +17,12 @@ services:
     container_name: github-runner
     restart: unless-stopped
     env_file:
-      - application-runner.properties
+      - runner.env
     environment:
       REPO_URL: https://github.com/idenn207/terab
       RUNNER_NAME: terab-nas-runner
       LABELS: self-hosted,nas
-      EPHEMERAL: "false"
+      EPHEMERAL: 'false'
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - runner_data:/home/runner

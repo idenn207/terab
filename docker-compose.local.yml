@@ -49,6 +49,28 @@ services:
       timeout: 5s
       retries: 5
 
+  # ─── RabbitMQ (메시지 브로커) ──────────────────────────
+  rabbitmq:
+    image: rabbitmq:3.13-management-alpine
+    container_name: terab_rabbitmq
+    restart: unless-stopped
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD}
+    volumes:
+      - ./volumes/rabbitmq:/var/lib/rabbitmq
+    ports:
+      - '5672:5672'
+      - '15672:15672'
+    networks:
+      - terab-net
+    healthcheck:
+      test: ['CMD', 'rabbitmq-diagnostics', 'ping']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
   # ─── Spring Boot API ─────────────────────────────────────────────
   api:
     build:

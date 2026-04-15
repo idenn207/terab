@@ -27,11 +27,11 @@ setup: ## 운영 Docker Config/Secret 등록 (NAS에서 실행, configs.env + se
 # ─── 로컬 인프라 (DB + MinIO만) ───────────────────────────────────
 .PHONY: infra
 infra:
-	$(LOCAL) up -d db minio
+	$(LOCAL) up -d db minio rabbitmq
 
 .PHONY: infra-down
 infra-down:
-	$(LOCAL) stop db minio
+	$(LOCAL) stop db minio rabbitmq
 
 .PHONY: infra-reset
 infra-reset:
@@ -81,6 +81,14 @@ build-android:
 .PHONY: api
 api:
 	cd services/api && ./gradlew bootRun --args='--spring.profiles.active=local'
+
+.PHONY: notification
+notification:
+	cd services/notification && ./gradlew bootRun --args='--spring.profiles.active=local'
+
+.PHONY: test-notification
+test-notification:
+	cd services/notification && ./gradlew check
 
 # ─── 프론트엔드 ────────────────────────────────────────────────────
 .PHONY: web
