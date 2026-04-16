@@ -2,14 +2,18 @@ package com.terab.api.auth.application;
 
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseCookie;
+import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 import com.terab.api.auth.application.interfaces.ILogoutUseCase;
 import com.terab.api.auth.service.AuthService;
 import jakarta.servlet.http.HttpServletResponse;
+import lombok.RequiredArgsConstructor;
 
+@Component
+@RequiredArgsConstructor
 public class LogoutUseCase implements ILogoutUseCase {
 
-  private AuthService authService;
+  private final AuthService authService;
 
   @Transactional
   @Override
