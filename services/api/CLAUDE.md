@@ -40,10 +40,8 @@ Service (service/)           ← 단일 도메인 재사용 비즈니스 로직
     ↓
 Repository (repository/)     ← DB 접근 인터페이스
     ↓
-Domain Entity (domain/)      ← Repository가 참조하여 영속성 관리
+Domain Entity (domain/)      ← 모든 레이어에서 파라미터·반환값으로 전달, Controller 직접 반환 금지
 ```
-
-Domain Entity는 Service·UseCase가 데이터로 전달·수신한다. Controller는 Entity 직접 참조 금지.
 
 ### 주요 명령어
 
@@ -288,7 +286,7 @@ public class RegisterPushTokenUseCase implements IRegisterPushTokenUseCase {
 
 ## Claude 행동 지침 (API)
 
-- 새 도메인 추가 시 `domain · dto · controller · service · repository` 구조를 따른다
+- 새 도메인 추가 시 `domain · dto · controller · service · repository · application · application/interfaces` 구조를 따른다
 - 새 엔드포인트 추가 시 `SecurityConfig`에 인가 규칙을 반드시 함께 작성한다
 - Entity 변경이 DB 스키마에 영향을 주면 Flyway 마이그레이션 파일을 함께 생성한다
 - 테스트 작성 계층은 위 기준표를 따른다 — 모든 신규 기능에 최소 Unit 또는 Slice 테스트 포함
