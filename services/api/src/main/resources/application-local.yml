@@ -4,9 +4,13 @@ server:
 spring:
   jpa:
     show-sql: true
+  rabbitmq:
+    host: localhost
+    port: 5672
+    username: terab
+    password: terab1234
 
 logging:
   level:
     root: info
     '[com.terab.api]': warn
-

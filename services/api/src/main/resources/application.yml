@@ -28,6 +28,23 @@ spring:
     multipart:
       max-file-size: 10GB
       max-request-size: 10GB
+  rabbitmq:
+    host: ${rabbitmq_host:localhost}
+    port: ${rabbitmq_port:5672}
+    username: ${rabbitmq_username:terab}
+    password: ${terab_rabbitmq_password:}
+  cloud:
+    stream:
+      bindings:
+        terab-events-out-0:
+          destination: terab.events
+          content-type: application/json
+      rabbit:
+        bindings:
+          terab-events-out-0:
+            producer:
+              routing-key-expression: headers['routingKey']
+              exchange-type: topic
 
 server:
   port: 8080
