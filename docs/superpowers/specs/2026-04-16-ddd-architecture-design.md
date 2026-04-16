@@ -31,7 +31,7 @@ Domain Entity는 Service·UseCase가 데이터로 전달·수신한다. Controll
 | 서브패키지 | 내용 |
 |-----------|------|
 | `application/` | UseCase 구체 클래스 — 유즈케이스 단위 흐름 조율, 트랜잭션 소유 |
-| `application/interface/` | UseCase 인터페이스 (`I` 접두사) |
+| `application/interfaces/` | UseCase 인터페이스 (`I` 접두사) |
 | `service/` | Domain Service — 단일 도메인 재사용 비즈니스 로직 |
 | `domain/` | Entity, 비즈니스 판단 메서드, `@Embeddable`, 도메인 `Enum` |
 | `dto/` | 요청·응답 Java record |
@@ -96,7 +96,7 @@ public interface UseCase {}
 ### Interface + 구체 클래스 구조
 
 ```java
-// auth/application/interface/ILoginUseCase.java
+// auth/application/interfaces/ILoginUseCase.java
 public interface ILoginUseCase extends UseCase {
     LoginResponse execute(LoginRequest request, HttpServletResponse response);
 }
@@ -200,7 +200,7 @@ public class RegisterPushTokenUseCase implements IRegisterPushTokenUseCase {
 
 ## CLAUDE.md 반영 항목
 
-1. 패키지 구조표에 `application/`, `application/interface/` 서브패키지 추가
+1. 패키지 구조표에 `application/`, `application/interfaces/` 서브패키지 추가
 2. 레이어 의존 방향 다이어그램 교체
 3. UseCase 섹션 신규 추가 (마커 인터페이스, I 접두사 인터페이스, 구체 클래스, 명명, 트랜잭션)
 4. 도메인 간 참조 규칙 신규 추가
