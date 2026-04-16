@@ -1,11 +1,11 @@
 package com.terab.api.unit.auth;
 
+import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.ArgumentMatchers;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -33,8 +33,8 @@ class LogoutUseCaseTest {
 
       verify(authService).revokeRefreshToken("raw-refresh-token");
       verify(response).addHeader(
-        ArgumentMatchers.eq("Set-Cookie"),
-        ArgumentMatchers.contains("refreshToken=")
+        eq("Set-Cookie"),
+        contains("refreshToken=")
       );
     }
 

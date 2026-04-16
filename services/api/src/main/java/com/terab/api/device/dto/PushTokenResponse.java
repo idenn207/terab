@@ -1,5 +1,5 @@
 package com.terab.api.device.dto;
 
-public record PushTokenResponse() {
-  
-}
+import java.util.UUID;
+
+public record PushTokenResponse(UUID deviceId) {}

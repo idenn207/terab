@@ -28,6 +28,7 @@ services/api/src/main/java/com/terab/api/device/domain/Device.java
 services/api/src/main/java/com/terab/api/device/repository/DeviceRepository.java
 services/api/src/main/java/com/terab/api/device/dto/PushTokenRequest.java
 services/api/src/main/java/com/terab/api/device/dto/PushTokenResponse.java
+services/api/src/main/java/com/terab/api/device/service/DeviceService.java
 services/api/src/main/java/com/terab/api/device/controller/DeviceController.java
 services/api/src/main/java/com/terab/api/notification/event/PushChallengeEvent.java
 services/api/src/main/java/com/terab/api/notification/publisher/PushChallengePublisher.java
@@ -458,11 +459,11 @@ package com.terab.api.slice;
 
 import static com.terab.api.support.SecurityTestSupport.authenticatedUser;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
-import java.time.OffsetDateTime;
 import java.util.UUID;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -476,13 +477,10 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import com.terab.api.common.exception.GlobalExceptionHandler;
 import com.terab.api.device.controller.DeviceController;
-import com.terab.api.device.domain.Device;
-import com.terab.api.device.repository.DeviceRepository;
+import com.terab.api.device.dto.PushTokenResponse;
+import com.terab.api.device.service.DeviceService;
 import com.terab.api.security.JwtProvider;
 import com.terab.api.security.SecurityConfig;
-import com.terab.api.user.domain.User;
-import com.terab.api.user.repository.UserRepository;
-import java.util.Optional;
 
 @WebMvcTest(DeviceController.class)
 @Import({SecurityConfig.class, GlobalExceptionHandler.class})
@@ -493,10 +491,7 @@ class DeviceControllerTest {
   MockMvc mockMvc;
 
   @MockitoBean
-  DeviceRepository deviceRepository;
-
-  @MockitoBean
-  UserRepository userRepository;
+  DeviceService deviceService;
 
   @MockitoBean
   JwtProvider jwtProvider;
@@ -511,22 +506,7 @@ class DeviceControllerTest {
       UUID userId = UUID.randomUUID();
       UUID deviceId = UUID.randomUUID();
 
-      User user = new User();
-      user.setId(userId);
-      user.setUsername("testuser");
-      user.setNickname("테스트");
-      user.setPassword("hashed");
-
-      Device savedDevice = new Device();
-      savedDevice.setId(deviceId);
-      savedDevice.setUser(user);
-      savedDevice.setPushToken("fcm-token-abc123");
-      savedDevice.setPlatform("android");
-      savedDevice.setLastSeenAt(OffsetDateTime.now());
-
-      given(userRepository.findById(userId)).willReturn(Optional.of(user));
-      given(deviceRepository.findByPushToken("fcm-token-abc123")).willReturn(Optional.empty());
-      given(deviceRepository.save(any())).willReturn(savedDevice);
+      given(deviceService.registerPushToken(eq(userId), any())).willReturn(new PushTokenResponse(deviceId));
 
       mockMvc.perform(
           post("/api/auth/devices/push-token")
@@ -579,52 +559,44 @@ class DeviceControllerTest {
 cd services/api && ./gradlew test --tests "com.terab.api.slice.DeviceControllerTest" -i 2>&1 | tail -20
 ```
 
-Expected: `DeviceController` 클래스가 없어서 컴파일 에러 발생.
+Expected: `DeviceService` · `DeviceController` 클래스가 없어서 컴파일 에러 발생.
 
 ---
 
-## Task 7: DeviceController 구현 (TDD — GREEN)
+## Task 7: DeviceService + DeviceController 구현 (TDD — GREEN)
 
 **Files:**
+- Create: `services/api/src/main/java/com/terab/api/device/service/DeviceService.java`
 - Create: `services/api/src/main/java/com/terab/api/device/controller/DeviceController.java`
 
-- [ ] **Step 1: DeviceController.java 생성**
+- [ ] **Step 1: DeviceService.java 생성**
 
 ```java
-package com.terab.api.device.controller;
+package com.terab.api.device.service;
 
 import java.time.OffsetDateTime;
-import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import java.util.UUID;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import com.terab.api.common.exception.ApiException;
 import com.terab.api.common.exception.ErrorCode;
 import com.terab.api.device.domain.Device;
 import com.terab.api.device.dto.PushTokenRequest;
 import com.terab.api.device.dto.PushTokenResponse;
 import com.terab.api.device.repository.DeviceRepository;
-import com.terab.api.security.CustomUserDetails;
 import com.terab.api.user.repository.UserRepository;
-import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 
-@RestController
-@RequestMapping("/api/auth/devices")
+@Service
+@Transactional
 @RequiredArgsConstructor
-public class DeviceController {
+public class DeviceService {
 
   private final DeviceRepository deviceRepository;
   private final UserRepository userRepository;
 
-  @PostMapping("/push-token")
-  public ResponseEntity<PushTokenResponse> registerPushToken(
-      @RequestBody @Valid PushTokenRequest request,
-      @AuthenticationPrincipal CustomUserDetails userDetails
-  ) {
-    var user = userRepository.findById(userDetails.getUserId())
+  public PushTokenResponse registerPushToken(UUID userId, PushTokenRequest request) {
+    var user = userRepository.findById(userId)
         .orElseThrow(() -> new ApiException(ErrorCode.INVALID_CREDENTIALS));
 
     Device device = deviceRepository.findByPushToken(request.pushToken())
@@ -639,12 +611,47 @@ public class DeviceController {
     }
 
     device = deviceRepository.save(device);
-    return ResponseEntity.ok(new PushTokenResponse(device.getId()));
+    return new PushTokenResponse(device.getId());
   }
 }
 ```
 
-- [ ] **Step 2: 테스트 재실행 — PASS 확인**
+- [ ] **Step 2: DeviceController.java 생성**
+
+```java
+package com.terab.api.device.controller;
+
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+import com.terab.api.device.dto.PushTokenRequest;
+import com.terab.api.device.dto.PushTokenResponse;
+import com.terab.api.device.service.DeviceService;
+import com.terab.api.security.CustomUserDetails;
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
+
+@RestController
+@RequestMapping("/api/auth/devices")
+@RequiredArgsConstructor
+public class DeviceController {
+
+  private final DeviceService deviceService;
+
+  @PostMapping("/push-token")
+  public ResponseEntity<PushTokenResponse> registerPushToken(
+      @RequestBody @Valid PushTokenRequest request,
+      @AuthenticationPrincipal CustomUserDetails userDetails
+  ) {
+    return ResponseEntity.ok(deviceService.registerPushToken(userDetails.getUserId(), request));
+  }
+}
+```
+
+- [ ] **Step 3: 테스트 재실행 — PASS 확인**
 
 ```bash
 cd services/api && ./gradlew test --tests "com.terab.api.slice.DeviceControllerTest" -i 2>&1 | tail -10
@@ -652,7 +659,7 @@ cd services/api && ./gradlew test --tests "com.terab.api.slice.DeviceControllerT
 
 Expected: `BUILD SUCCESSFUL`, 3개 테스트 PASS.
 
-- [ ] **Step 3: Commit**
+- [ ] **Step 4: Commit**
 
 ```bash
 git add services/api/src/main/java/com/terab/api/device/ \
