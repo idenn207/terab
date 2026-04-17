@@ -2,6 +2,7 @@ package com.terab.api.support;
 
 import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.postgresql.PostgreSQLContainer;
+import org.testcontainers.rabbitmq.RabbitMQContainer;
 import org.testcontainers.utility.DockerImageName;
 
 /**
@@ -25,9 +26,16 @@ public final class TestContainersConfig {
       .withEnv("MINIO_ROOT_PASSWORD", "minioadmin")
       .withCommand("server /data");
 
+  @SuppressWarnings("resource")
+  public static final RabbitMQContainer RABBITMQ =
+    new RabbitMQContainer(DockerImageName.parse("rabbitmq:3.13-alpine"))
+      .withAdminUser("terab")
+      .withAdminPassword("terab");
+
   static {
     POSTGRES.start();
     MINIO.start();
+    RABBITMQ.start();
   }
 
   private TestContainersConfig() {
