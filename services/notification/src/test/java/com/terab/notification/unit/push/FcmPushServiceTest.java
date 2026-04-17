@@ -47,6 +47,8 @@ class FcmPushServiceTest {
     verify(firebaseMessaging).send(any(Message.class));
   }
 
+  @Test
+  @DisplayName("FCM 전송 실패 시 RuntimeException을 던진다")
   void should_throw_runtime_exception_on_fcm_failure() throws FirebaseMessagingException {
     FirebaseMessagingException fcmEx = mock(FirebaseMessagingException.class);
     given(firebaseMessaging.send(any(Message.class))).willThrow(fcmEx);

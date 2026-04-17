@@ -11,7 +11,7 @@ import lombok.RequiredArgsConstructor;
 public class PushChallengePublisher {
 
   private static final String BINDING = "terab-events-out-0";
-  private static final String ROUTING_KEY = "auto.2fa.challenge";
+  private static final String ROUTING_KEY = "auth.2fa.challenge";
 
   private final StreamBridge streamBridge;
 
