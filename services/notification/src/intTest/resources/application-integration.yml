@@ -1,0 +1,23 @@
+spring:
+  cloud:
+    function:
+      definition: processPushChallenge
+    stream:
+      bindings:
+        processPushChallenge-in-0:
+          destination: terab.events
+          group: notification-push-integration
+      rabbit:
+        bindings:
+          processPushChallenge-in-0:
+            consumer:
+              binding-routing-key: auth.2fa.challenge
+              exchange-type: topic
+  rabbitmq:
+    host: localhost
+    port: 5672
+    username: terab
+    password: terab
+
+firebase:
+  credentials-path: dummy-path-overridden-by-mock
