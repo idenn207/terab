@@ -25,6 +25,11 @@ services/api/build/
 services/api/bin/
 services/api/src/main/resources/META-INF/
 
+services/notification/.gradle/
+services/notification/build/
+services/notification/bin/
+services/notification/src/main/resources/META-INF/
+
 # Node
 services/web/node_modules/
 services/web/dist/

@@ -35,7 +35,7 @@ infra-down:
 
 .PHONY: infra-reset
 infra-reset:
-	rm -rf ./volumes/ && $(LOCAL) up -d db minio
+	rm -rf ./volumes/ && $(LOCAL) up -d db minio rabbitmq
 
 # ─── 개발 환경 (전체 서비스, 로컬 빌드) ──────────────────────────
 .PHONY: dev-up
@@ -73,6 +73,10 @@ stack-update:
 build-api:
 	cd services/api && ./gradlew build
 
+.PHONY: build-notification
+build-notification:
+	cd services/notification && ./gradlew build
+
 .PHONY: build-web
 build-web:
 	cd services/web && npm run build
@@ -94,9 +98,10 @@ api-stop:
 notification:
 	cd services/notification && ./gradlew bootRun --args='--spring.profiles.active=local'
 
-.PHONY: test-notification
-test-notification:
-	cd services/notification && ./gradlew check
+.PHONY: notification-stop
+notification-stop:
+	cd services/notification && ./gradlew --stop
+
 
 # ─── 프론트엔드 ────────────────────────────────────────────────────
 .PHONY: web
@@ -114,7 +119,7 @@ android-open:
 
 # ─── 테스트 ────────────────────────────────────────────────────────
 .PHONY: test
-test: test-api test-web
+test: test-api test-notification test-web
 
 .PHONY: test-api
 test-api:
@@ -127,6 +132,18 @@ test-api-unit:
 .PHONY: test-api-integration
 test-api-integration:
 	cd services/api && ./gradlew integrationTest
+
+.PHONY: test-notification
+test-notification:
+	cd services/notification && ./gradlew check
+
+.PHONY: test-notification
+test-notification-unit:
+	cd services/notification && ./gradlew test
+
+.PHONY: test-notification
+test-notification-integration:
+	cd services/notification && ./gradlew integrationTest
 
 .PHONY: test-web
 test-web:

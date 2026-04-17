@@ -1,0 +1,13 @@
+# 로컬 개발 전용 설정 — Spring profile: local
+server:
+  port: 9092
+
+spring:
+  rabbitmq:
+    host: localhost
+    port: 5672
+    username: terab
+    password: terab1234
+
+firebase:
+  credentials-path: ${FIREBASE_CREDENTIALS_PATH:}
