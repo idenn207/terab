@@ -4,10 +4,10 @@ spring:
       - 'optional:configtree:/run/secrets/'
       - 'optional:configtree:/run/configs/'
   rabbitmq:
-    host: ${rabbitmq_host:localhost}
-    port: ${rabbitmq_port:5672}
-    username: ${rabbitmq_username:terab}
-    password: ${terab_rabbitmq_password:}
+    host: ${RABBITMQ_HOST:localhost}
+    port: ${RABBITMQ_PORT:5672}
+    username: ${RABBITMQ_USERNAME:terab}
+    password: ${RABBITMQ_PASSWORD:}
   cloud:
     function:
       definition: processPushChallenge

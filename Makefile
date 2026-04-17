@@ -1,58 +1,60 @@
 SHELL := C:/Program Files/Git/usr/bin/bash.exe
 
-LOCAL := docker compose -f docker-compose.local.yml --env-file local.env
-
 # ─── 환경 설정 ────────────────────────────────────────────────────
-.PHONY: setup-local
-setup-local: ## 로컬 개발 초기 설정 (최초 클론 후 1회, local.env 변경 시 재실행)
-	grep -E '^[a-z]' local.env > services/api/application-local.properties
-
 .PHONY: setup
 setup: ## 운영 Docker Config/Secret 등록 (NAS에서 실행, configs.env + secrets.env 필요)
 	@echo "=== Registering Docker Configs ==="
-	@while IFS='=' read -r key val; do \
+	@while IFS='=' read -r key val || [ -n "$$key" ]; do \
 	  [ -z "$$key" ] && continue; \
 	  echo "$$key" | grep -q '^#' && continue; \
 	  docker config rm $$key 2>/dev/null || true; \
 	  printf '%s' "$$val" | docker config create $$key -; \
 	done < configs.env
 	@echo "=== Registering Docker Secrets ==="
-	@while IFS='=' read -r key val; do \
+	@while IFS='=' read -r key val || [ -n "$$key" ]; do \
 	  [ -z "$$key" ] && continue; \
 	  echo "$$key" | grep -q '^#' && continue; \
 	  docker secret rm $$key 2>/dev/null || true; \
 	  printf '%s' "$$val" | docker secret create $$key -; \
 	done < secrets.env
 
-# ─── 로컬 인프라 (DB + MinIO만) ───────────────────────────────────
+.PHONY: setup-local
+setup-local: ## 로컬 개발 초기 설정 (최초 클론 후 1회, configs.env/secrets.env 변경 시 재실행)
+	@bash scripts/setup-local.sh
+
+# ─── 로컬 인프라 (DB + MinIO + RabbitMQ) ──────────────────────────
 .PHONY: infra
 infra:
-	$(LOCAL) up -d db minio rabbitmq
+	docker stack deploy -c docker-stack.infra.local.yml terab-infra
 
 .PHONY: infra-down
 infra-down:
-	$(LOCAL) stop db minio rabbitmq
+	docker stack rm terab-infra
 
 .PHONY: infra-reset
 infra-reset:
-	rm -rf ./volumes/ && $(LOCAL) up -d db minio rabbitmq
+	docker stack rm terab-infra
+	@echo "네트워크 제거 대기 중..."
+	@until ! docker network inspect terab-infra_terab-net > /dev/null 2>&1; do sleep 1; done
+	rm -rf ./volumes/
+	docker stack deploy -c docker-stack.infra.local.yml terab-infra
 
 # ─── 개발 환경 (전체 서비스, 로컬 빌드) ──────────────────────────
-.PHONY: dev-up
-dev-up:
-	$(LOCAL) up -d
+.PHONY: dev
+dev: infra build-local
+	docker stack deploy -c docker-stack.app.local.yml terab
 
 .PHONY: dev-down
-dev-down:
-	$(LOCAL) down
+dev-down: infra-down
+	docker stack rm terab
 
 # ─── Docker Swarm 운영 환경 ────────────────────────────────────────
 .PHONY: stack-deploy
-stack-deploy:
+stack:
 	docker stack deploy -c docker-stack.yml terab --with-registry-auth
 
 .PHONY: stack-rm
-stack-rm:
+stack-down:
 	docker stack rm terab
 
 .PHONY: stack-update
@@ -67,6 +69,13 @@ stack-update:
 		--with-registry-auth \
 		--force \
 		terab_web
+
+# ─── 로컬 이미지 빌드 ─────────────────────────────────────────────
+.PHONY: build-local
+build-local:
+	docker build -t terab-api:local ./services/api
+	docker build -t terab-notification:local ./services/notification
+	docker build -t terab-web:local ./services/web
 
 # ─── 빌드 ────────────────────────────────────────────────────────
 .PHONY: build-api
@@ -90,16 +99,16 @@ build-android:
 api:
 	cd services/api && ./gradlew bootRun --args='--spring.profiles.active=local'
 
-.PHONY: api-stop
-api-stop:
-	cd services/api && ./gradlew --stop
-
 .PHONY: notification
 notification:
 	cd services/notification && ./gradlew bootRun --args='--spring.profiles.active=local'
 
-.PHONY: notification-stop
-notification-stop:
+.PHONY: stop-api
+stop-api:
+	cd services/api && ./gradlew --stop
+
+.PHONY: stop-notification
+stop-notification:
 	cd services/notification && ./gradlew --stop
 
 

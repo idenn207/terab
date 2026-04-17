@@ -7,22 +7,20 @@ services:
   db:
     image: postgres:16-alpine
     environment:
-      POSTGRES_DB_FILE: /run/configs/db_name
-      POSTGRES_USER_FILE: /run/configs/db_user
-      POSTGRES_PASSWORD_FILE: /run/secrets/terab_db_password
+      POSTGRES_DB_FILE: /run/configs/DB_NAME
+      POSTGRES_USER_FILE: /run/configs/DB_USER
+      POSTGRES_PASSWORD_FILE: /run/secrets/DB_PASSWORD
     configs:
-      - source: db_name
-        target: /run/configs/db_name
-      - source: db_user
-        target: /run/configs/db_user
+      - { source: DB_NAME, target: /run/configs/DB_NAME }
+      - { source: DB_USER, target: /run/configs/DB_USER }
     secrets:
-      - terab_db_password
+      - DB_PASSWORD
     volumes:
       - /volume2/docker/terab/volumes/db:/var/lib/postgresql/data
     networks:
       - terab-net
     healthcheck:
-      test: ['CMD-SHELL', 'pg_isready']
+      test: ['CMD-SHELL', 'pg_isready -U "$$(cat /run/configs/DB_USER)" -d "$${cat /run/configs/DB_NAME}"']
       interval: 10s
       timeout: 5s
       retries: 5
@@ -41,13 +39,12 @@ services:
     image: minio/minio:latest
     command: server /data --console-address ":9001"
     environment:
-      MINIO_ROOT_USER_FILE: /run/configs/minio_root_user
-      MINIO_ROOT_PASSWORD_FILE: /run/secrets/terab_minio_password
+      MINIO_ROOT_USER_FILE: /run/configs/MINIO_ROOT_USER
+      MINIO_ROOT_PASSWORD_FILE: /run/secrets/MINIO_PASSWORD
     configs:
-      - source: minio_root_user
-        target: /run/configs/minio_root_user
+      - { source: MINIO_ROOT_USER, target: /run/configs/MINIO_ROOT_USER }
     secrets:
-      - terab_minio_password
+      - MINIO_PASSWORD
     volumes:
       - /volume1/storage:/data
     ports:
@@ -64,33 +61,63 @@ services:
       restart_policy:
         condition: on-failure
 
+  # ─── RabbitMQ (메시지 브로커) ─────────────────────────────────
+  rabbitmq:
+    image: rabbitmq:3.13-management-alpine
+    entrypoint:
+      - /bin/sh
+      - -c
+      - |
+        export RABBITMQ_DEFAULT_USER=$$(cat /run/configs/RABBITMQ_USERNAME)
+        export RABBITMQ_DEFAULT_PASS=$$(cat /run/secrets/RABBITMQ_PASSWORD)
+        exec docker-entrypoint.sh rabbitmq-server
+    configs:
+      - { source: RABBITMQ_USERNAME, target: /run/configs/RABBITMQ_USERNAME }
+    secrets:
+      - RABBITMQ_PASSWORD
+    volumes:
+      - /volume2/docker/terab/volumes/rabbitmq:/var/lib/rabbitmq
+    networks:
+      - terab-net
+    healthcheck:
+      test: ['CMD', 'rabbitmq-diagnostics', 'ping']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    deploy:
+      replicas: 1
+      placement:
+        constraints:
+          - node.role == manager
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+
   # ─── Spring Boot API ──────────────────────────────────────────
   api:
     image: ghcr.io/idenn207/terab-api:latest
     configs:
-      - source: db_url
-        target: /run/configs/db_url
-      - source: db_user
-        target: /run/configs/db_user
-      - source: minio_endpoint
-        target: /run/configs/minio_endpoint
-      - source: minio_root_user
-        target: /run/configs/minio_root_user
-      - source: minio_bucket
-        target: /run/configs/minio_bucket
-      - source: owner_username
-        target: /run/configs/owner_username
-      - source: owner_nickname
-        target: /run/configs/owner_nickname
-      - source: jwt_access_expiry_ms
-        target: /run/configs/jwt_access_expiry_ms
-      - source: jwt_refresh_expiry_ms
-        target: /run/configs/jwt_refresh_expiry_ms
+      - { source: DB_URL, target: /run/configs/DB_URL }
+      - { source: DB_USER, target: /run/configs/DB_USER }
+      - { source: MINIO_ENDPOINT, target: /run/configs/MINIO_ENDPOINT }
+      - { source: MINIO_ROOT_USER, target: /run/configs/MINIO_ROOT_USER }
+      - { source: MINIO_BUCKET, target: /run/configs/MINIO_BUCKET }
+      - { source: OWNER_USERNAME, target: /run/configs/OWNER_USERNAME }
+      - { source: OWNER_NICKNAME, target: /run/configs/OWNER_NICKNAME }
+      - { source: JWT_ACCESS_EXPIRY_MS, target: /run/configs/JWT_ACCESS_EXPIRY_MS }
+      - { source: JWT_REFRESH_EXPIRY_MS, target: /run/configs/JWT_REFRESH_EXPIRY_MS }
+      - { source: CORS_ALLOWED_ORIGINS, target: /run/configs/CORS_ALLOWED_ORIGINS }
+      - { source: RABBITMQ_HOST, target: /run/configs/RABBITMQ_HOST }
+      - { source: RABBITMQ_PORT, target: /run/configs/RABBITMQ_PORT }
+      - { source: RABBITMQ_USERNAME, target: /run/configs/RABBITMQ_USERNAME }
     secrets:
-      - terab_db_password
-      - terab_minio_password
-      - terab_jwt_secret
-      - terab_owner_password
+      - DB_PASSWORD
+      - MINIO_PASSWORD
+      - JWT_SECRET
+      - OWNER_PASSWORD
+      - PASSWORD_PEPPER
+      - RABBITMQ_PASSWORD
     networks:
       - terab-net
     healthcheck:
@@ -114,6 +141,30 @@ services:
         condition: on-failure
         delay: 5s
         max_attempts: 3
+
+  # ─── Notification MS ──────────────────────────────────────────
+  notification:
+    image: ghcr.io/idenn207/terab-notification:latest
+    configs:
+      - { source: RABBITMQ_HOST, target: /run/configs/RABBITMQ_HOST }
+      - { source: RABBITMQ_PORT, target: /run/configs/RABBITMQ_PORT }
+      - { source: RABBITMQ_USERNAME, target: /run/configs/RABBITMQ_USERNAME }
+      - { source: FIREBASE_CREDENTIALS_PATH, target: /run/configs/FIREBASE_CREDENTIALS_PATH }
+    secrets:
+      - RABBITMQ_PASSWORD
+    networks:
+      - terab-net
+    healthcheck:
+      test: ['CMD-SHELL', 'wget -qO /dev/null http://localhost:8082/actuator/health || exit 1']
+      interval: 15s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+        delay: 5s
 
   # ─── React Frontend ───────────────────────────────────────────
   web:
@@ -193,26 +244,21 @@ services:
         condition: on-failure
 
 configs:
-  db_url:
-    external: true
-  db_name:
-    external: true
-  db_user:
-    external: true
-  minio_endpoint:
-    external: true
-  minio_root_user:
-    external: true
-  minio_bucket:
-    external: true
-  owner_username:
-    external: true
-  owner_nickname:
-    external: true
-  jwt_access_expiry_ms:
-    external: true
-  jwt_refresh_expiry_ms:
-    external: true
+  DB_NAME: { external: true }
+  DB_URL: { external: true }
+  DB_USER: { external: true }
+  MINIO_ENDPOINT: { external: true }
+  MINIO_ROOT_USER: { external: true }
+  MINIO_BUCKET: { external: true }
+  OWNER_USERNAME: { external: true }
+  OWNER_NICKNAME: { external: true }
+  JWT_ACCESS_EXPIRY_MS: { external: true }
+  JWT_REFRESH_EXPIRY_MS: { external: true }
+  CORS_ALLOWED_ORIGINS: { external: true }
+  RABBITMQ_HOST: { external: true }
+  RABBITMQ_PORT: { external: true }
+  RABBITMQ_USERNAME: { external: true }
+  FIREBASE_CREDENTIALS_PATH: { external: true }
 
 volumes:
   portainer_data:
@@ -223,11 +269,10 @@ networks:
     attachable: true
 
 secrets:
-  terab_db_password:
-    external: true
-  terab_minio_password:
-    external: true
-  terab_jwt_secret:
-    external: true
-  terab_owner_password:
-    external: true
+  DB_PASSWORD: { external: true }
+  MINIO_PASSWORD: { external: true }
+  JWT_SECRET: { external: true }
+  OWNER_PASSWORD: { external: true }
+  PASSWORD_PEPPER: { external: true }
+  RABBITMQ_PASSWORD: { external: true }
+

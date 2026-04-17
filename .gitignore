@@ -1,8 +1,8 @@
 # 환경 설정 (절대 커밋 금지)
 .claude/*.local.*
+secrets/
 configs.env
 secrets.env
-services/api/application-local.properties
 application-runner.properties
 
 # 데이터 볼륨
@@ -38,4 +38,5 @@ services/web/build/
 services/web/stats.html
 .superpowers/
 .worktrees/
-
+services/api/run/
+services/notification/run/

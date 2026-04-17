@@ -2,13 +2,11 @@ server:
   port: 9090
 
 spring:
+  config:
+    import:
+      - 'optional:configtree:./run/'
   jpa:
     show-sql: true
-  rabbitmq:
-    host: localhost
-    port: 5672
-    username: terab
-    password: terab1234
 
 logging:
   level:
