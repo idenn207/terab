@@ -13,10 +13,12 @@
 
 | 서브패키지 | 내용 |
 |-----------|------|
+| `application/` | UseCase 구체 클래스 — 유즈케이스 단위 흐름 조율, 트랜잭션 소유 |
+| `application/interfaces/` | UseCase 인터페이스 (`I` 접두사) |
 | `domain/` | Entity, 비즈니스 로직 메서드, `@Embeddable`, 도메인 `Enum` |
 | `dto/` | 요청·응답 Java record |
 | `controller/` | REST 엔드포인트 |
-| `service/` | 비즈니스 흐름 조율 |
+| `service/` | Domain Service — 단일 도메인 재사용 비즈니스 로직 |
 | `repository/` | Spring Data JPA 인터페이스 |
 
 도메인 패키지와 별도로 아래 3개 패키지가 공존한다:
@@ -30,12 +32,16 @@
 ### 레이어 의존 방향
 
 ```
-Controller → Service → Repository
-                     ↘ Domain (모든 레이어에서 참조 가능)
+Controller
+    ↓ (IXxxUseCase 인터페이스 의존)
+UseCase (application/)       ← 유즈케이스 단위 흐름 조율, @Transactional 소유
+    ↓
+Service (service/)           ← 단일 도메인 재사용 비즈니스 로직
+    ↓
+Repository (repository/)     ← DB 접근 인터페이스
+    ↓
+Domain Entity (domain/)      ← 모든 레이어에서 파라미터·반환값으로 전달, Controller 직접 반환 금지
 ```
-
-- Service는 다른 도메인의 Repository를 직접 호출하지 않는다
-- 타 도메인 데이터가 필요한 경우 해당 도메인의 Service를 통해 접근한다
 
 ### 주요 명령어
 
@@ -64,11 +70,28 @@ Controller → Service → Repository
 
 - Java record 사용
 - 네이밍: 요청 `XxxRequest`, 응답 `XxxResponse`
-- Controller ↔ Service 경계에서만 사용; Service 내부와 Repository 레이어에서는 Entity를 그대로 사용한다
+- Controller ↔ UseCase 경계에서 사용
+- UseCase: Request DTO 입력 / Response DTO 반환 / Entity 변환 담당
+- Service: Entity · 원시값(UUID, String 등)만 사용 (DTO 금지)
+- Repository: Entity만
+- Controller: Entity 직접 반환 금지
+
+### UseCase
+
+- `common/usecase/UseCase.java` 마커 인터페이스를 구현한다
+- 인터페이스는 `application/interfaces/` 에 위치, 명명: `I{동사}{대상}UseCase`
+- 구체 클래스는 `application/` 에 위치, 명명: `{동사}{대상}UseCase`
+- 진입 메서드명: `execute(...)` 통일, DTO를 직접 파라미터로 사용 (Command 래퍼 없음)
+- `@Transactional`은 구체 클래스의 `execute()` 메서드에 선언 — 트랜잭션 소유자
+- 여러 도메인의 Service를 자유롭게 조합 가능
+- Controller는 UseCase 인터페이스(`IXxxUseCase`)에만 의존, 구체 클래스 직접 주입 금지
 
 ### Service
 
-- 클래스 레벨에 `@Transactional` (기본 read-write) 선언, 읽기 전용 메서드만 `@Transactional(readOnly = true)`로 오버라이드
+- 클래스 레벨 `@Transactional` 선언하지 않는다 — UseCase 트랜잭션에 REQUIRED 전파로 참여
+- DB 쓰기 메서드: 메서드 레벨 `@Transactional` 선언
+- DB 읽기 메서드: 메서드 레벨 `@Transactional(readOnly = true)` 선언
+- UseCase 없이 직접 호출되는 경우(Security Filter 등)도 메서드 레벨로 처리
 - `@RequiredArgsConstructor`로 생성자 주입
 - 복잡한 흐름은 private 메서드로 분리
 - Service가 다른 도메인 Repository를 직접 주입받지 않는다
@@ -78,6 +101,27 @@ Controller → Service → Repository
 - Spring Data JPA 인터페이스만 선언
 - 커스텀 JPQL은 `@Query`로 인터페이스 내에 작성
 - Native Query는 성능상 불가피한 경우에만 사용
+
+### 도메인 간 참조 규칙
+
+- Service → 타 도메인 Repository 직접 주입 **금지**
+- Service → 타 도메인 Service 직접 주입 **금지**
+- 교차 도메인 조합이 필요한 경우 UseCase에서만 허용
+
+```java
+// ❌ 금지
+@Service
+public class DeviceService {
+    private final UserRepository userRepository; // 타 도메인 Repository 직접 주입
+}
+
+// ✅ 허용
+@Component
+public class RegisterPushTokenUseCase implements IRegisterPushTokenUseCase {
+    private final UserService userService;     // UseCase가 타 도메인 Service 조합
+    private final DeviceService deviceService;
+}
+```
 
 ## 예외 처리
 
@@ -242,8 +286,12 @@ Controller → Service → Repository
 
 ## Claude 행동 지침 (API)
 
-- 새 도메인 추가 시 `domain · dto · controller · service · repository` 구조를 따른다
+- 새 도메인 추가 시 `domain · dto · controller · service · repository · application · application/interfaces` 구조를 따른다
 - 새 엔드포인트 추가 시 `SecurityConfig`에 인가 규칙을 반드시 함께 작성한다
 - Entity 변경이 DB 스키마에 영향을 주면 Flyway 마이그레이션 파일을 함께 생성한다
 - 테스트 작성 계층은 위 기준표를 따른다 — 모든 신규 기능에 최소 Unit 또는 Slice 테스트 포함
 - `application-local.yml`, `application-*.yml` 환경 설정 파일 수정 전 반드시 확인
+- 단일 도메인 비즈니스 로직은 `service/`에 작성한다
+- 교차 도메인 조합이 필요하면 `application/interfaces/IXxxUseCase` + `application/XxxUseCase`를 생성한다
+- Service가 타 도메인 Repository·Service를 직접 주입받는 코드는 작성하지 않는다
+- Controller는 `IXxxUseCase` 인터페이스에만 의존한다

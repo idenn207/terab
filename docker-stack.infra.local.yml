@@ -1,0 +1,110 @@
+# 로컬 인프라 전용 스택 — make infra 용
+# docker config/secret은 make setup으로 사전 등록 필요
+
+services:
+  # ─── PostgreSQL ───────────────────────────────────────────────
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB_FILE: /run/configs/DB_NAME
+      POSTGRES_USER_FILE: /run/configs/DB_USER
+      POSTGRES_PASSWORD_FILE: /run/secrets/DB_PASSWORD
+    configs:
+      - { source: DB_NAME, target: /run/configs/DB_NAME }
+      - { source: DB_USER, target: /run/configs/DB_USER }
+    secrets:
+      - DB_PASSWORD
+    volumes:
+      - ./volumes/db:/var/lib/postgresql/data
+    ports:
+      - '5432:5432'
+    networks:
+      - terab-net
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U "$$(cat /run/configs/DB_USER)" -d "$$(cat /run/configs/DB_NAME)"']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+
+  # ─── MinIO ───────────────────────────────────────────────────
+  minio:
+    image: minio/minio:latest
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER_FILE: /run/configs/MINIO_ROOT_USER
+      MINIO_ROOT_PASSWORD_FILE: /run/secrets/MINIO_PASSWORD
+    configs:
+      - { source: MINIO_ROOT_USER, target: /run/configs/MINIO_ROOT_USER }
+    secrets:
+      - MINIO_PASSWORD
+    volumes:
+      - ./volumes/storage:/data
+    ports:
+      - '9000:9000'
+      - '9001:9001'
+    networks:
+      - terab-net
+    healthcheck:
+      test: ['CMD', 'curl', '-f', 'http://localhost:9000/minio/health/live']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+
+  # ─── RabbitMQ ────────────────────────────────────────────────
+  # RabbitMQ 3.13은 _FILE 환경변수를 제거했으므로 엔트리포인트에서 직접 읽어 주입
+  rabbitmq:
+    image: rabbitmq:3.13-management-alpine
+    entrypoint:
+      - /bin/sh
+      - -c
+      - |
+        export RABBITMQ_DEFAULT_USER=$$(cat /run/configs/RABBITMQ_USERNAME)
+        export RABBITMQ_DEFAULT_PASS=$$(cat /run/secrets/RABBITMQ_PASSWORD)
+        exec docker-entrypoint.sh rabbitmq-server
+    configs:
+      - { source: RABBITMQ_USERNAME, target: /run/configs/RABBITMQ_USERNAME }
+    secrets:
+      - RABBITMQ_PASSWORD
+    volumes:
+      - ./volumes/rabbitmq:/var/lib/rabbitmq
+    ports:
+      - '5672:5672'
+      - '15672:15672'
+    networks:
+      - terab-net
+    healthcheck:
+      test: ['CMD', 'rabbitmq-diagnostics', 'ping']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+
+networks:
+  terab-net:
+    driver: overlay
+    attachable: true
+
+configs:
+  DB_NAME: { external: true }
+  DB_USER: { external: true }
+  MINIO_ROOT_USER: { external: true }
+  RABBITMQ_USERNAME: { external: true }
+
+secrets:
+  DB_PASSWORD: { external: true }
+  MINIO_PASSWORD: { external: true }
+  RABBITMQ_PASSWORD: { external: true }
+

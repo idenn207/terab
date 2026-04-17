@@ -1,12 +1,13 @@
 # 환경 설정 (절대 커밋 금지)
 .claude/*.local.*
+secrets/
 configs.env
 secrets.env
-services/api/application-local.properties
 application-runner.properties
 
 # 데이터 볼륨
 volumes/db/
+volumes/rabbitmq/
 volumes/storage/
 
 # IDE
@@ -24,6 +25,11 @@ services/api/build/
 services/api/bin/
 services/api/src/main/resources/META-INF/
 
+services/notification/.gradle/
+services/notification/build/
+services/notification/bin/
+services/notification/src/main/resources/META-INF/
+
 # Node
 services/web/node_modules/
 services/web/dist/
@@ -32,4 +38,5 @@ services/web/build/
 services/web/stats.html
 .superpowers/
 .worktrees/
-
+services/api/run/
+services/notification/run/

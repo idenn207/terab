@@ -1,0 +1,68 @@
+# 로컬 개발용 docker-stack.yml override
+# 사용법: docker stack deploy -c docker-stack.yml -c docker-stack.local.yml terab
+# 주의: make infra (terab-infra 스택)가 먼저 실행되어 terab-infra_terab-net 네트워크가 있어야 함
+#
+# [현재 미사용] make dev는 docker-stack.app.local.yml을 직접 사용한다.
+# 향후 docker-stack.yml 기반 배포에서 포트/replicas 등을 override할 필요가 생기면
+# 이 파일을 활성화한다: make dev 타겟에 -c docker-stack.local.yml 을 추가하면 됨.
+
+services:
+  # ─── Infra: terab-infra 스택에서 실행 중이므로 여기서는 0 ─────────
+  # make dev-up 전에 반드시 make infra가 먼저 실행되어야 함
+  db:
+    deploy:
+      replicas: 0
+
+  minio:
+    ports: []
+    deploy:
+      replicas: 0
+
+  rabbitmq:
+    deploy:
+      replicas: 0
+
+  # ─── App: 로컬 빌드 이미지 override ────────────────────────────
+  # 주의: docker stack deploy는 build를 지원하지 않으므로 make dev가 배포 전 이미지를 빌드함
+  api:
+    image: terab-api:local
+    deploy:
+      replicas: 1
+      placement:
+        constraints: []
+      update_config:
+        order: start-first
+
+  notification:
+    image: terab-notification:local
+    ports:
+      - '8082:8082'
+    deploy:
+      replicas: 1
+      placement:
+        constraints: []
+
+  web:
+    image: terab-web:local
+    deploy:
+      replicas: 1
+      placement:
+        constraints: []
+
+  # ─── 로컬 불필요 서비스 제거 ─────────────────────────────────────
+  portainer:
+    ports: []
+    deploy:
+      replicas: 0
+
+  portainer_agent:
+    deploy:
+      mode: replicated
+      replicas: 0
+
+# ─── 네트워크: terab-infra 스택이 생성한 네트워크 참조 ─────────────
+networks:
+  terab-net:
+    external: true
+    name: terab-infra_terab-net
+

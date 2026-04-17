@@ -6,7 +6,7 @@ NAS에서 동작하는 셀프호스팅 파일 관리 서비스.
 
 | 레이어 | 기술 |
 |--------|------|
-| API | Spring Boot 3.x / Java 21 |
+| API | Spring Boot 4.x / Java 25 |
 | Web | React 19 + Vite / TypeScript |
 | DB | PostgreSQL 16 |
 | Object Storage | MinIO (S3 호환) |

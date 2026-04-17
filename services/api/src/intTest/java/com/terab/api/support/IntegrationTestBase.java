@@ -1,5 +1,6 @@
 package com.terab.api.support;
 
+import org.springframework.boot.resttestclient.autoconfigure.AutoConfigureTestRestTemplate;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
@@ -17,6 +18,7 @@ import org.springframework.test.context.DynamicPropertySource;
  * </pre>
  */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+@AutoConfigureTestRestTemplate
 @ActiveProfiles("integration")
 public abstract class IntegrationTestBase {
 
@@ -35,5 +37,11 @@ public abstract class IntegrationTestBase {
         registry.add("minio.access-key", () -> "minioadmin");
         registry.add("minio.secret-key", () -> "minioadmin");
         registry.add("minio.bucket", () -> "test-bucket");
+
+        // RabbitMQ
+        registry.add("spring.rabbitmq.host", TestContainersConfig.RABBITMQ::getHost);
+        registry.add("spring.rabbitmq.port", TestContainersConfig.RABBITMQ::getAmqpPort);
+        registry.add("spring.rabbitmq.username", () -> "terab");
+        registry.add("spring.rabbitmq.password", () -> "terab");
     }
 }

@@ -2,12 +2,14 @@ package com.terab.api.integration;
 
 import static org.assertj.core.api.Assertions.*;
 import java.util.Map;
-import org.junit.Test;
 import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.web.client.TestRestTemplate;
+import org.springframework.boot.resttestclient.TestRestTemplate;
+import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -39,7 +41,6 @@ class AuthIntegrationTest extends IntegrationTestBase {
       .anyMatch(cookie -> cookie.startsWith("refreshToken="));
   }
 
-  @SuppressWarnings("unchecked")
   @Test
   @DisplayName("잘못된 비밀번호로 로그인하면 401을 반환한다")
   void login_withWrongPassword_returns401() {
@@ -50,8 +51,12 @@ class AuthIntegrationTest extends IntegrationTestBase {
       headers
     );
 
-    @SuppressWarnings("rawtypes")
-    ResponseEntity<Map> response = restTemplate.postForEntity("/api/auth/login", request, Map.class);
+    ResponseEntity<Map<String, Object>> response = restTemplate.exchange(
+      "/api/auth/login",
+      HttpMethod.POST,
+      request,
+      new ParameterizedTypeReference<Map<String, Object>>() {}
+    );
 
     assertThat(response.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
     assertThat(response.getBody()).containsEntry("code", "INVALID_CREDENTIALS");

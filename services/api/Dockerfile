@@ -1,7 +1,11 @@
 # ─── Stage 1: Build ─────────────────────────────────────────────
-FROM eclipse-temurin:21-jdk-alpine AS builder
+FROM eclipse-temurin:25-jdk-alpine AS builder
 
 WORKDIR /app
+
+# Gradle 9은 JAVA_HOME을 toolchain으로 자동 인식하지 않아 명시적으로 경로를 등록
+RUN mkdir -p /root/.gradle && \
+    echo "org.gradle.java.installations.paths=${JAVA_HOME}" > /root/.gradle/gradle.properties
 
 # Gradle wrapper & 의존성 캐시 (소스 변경 시 재다운로드 방지)
 COPY gradlew .
@@ -15,7 +19,7 @@ COPY src src
 RUN ./gradlew bootJar --no-daemon -x test
 
 # ─── Stage 2: Runtime ────────────────────────────────────────────
-FROM eclipse-temurin:21-jre-alpine
+FROM eclipse-temurin:25-jre-alpine
 
 WORKDIR /app
 
