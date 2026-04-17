@@ -1,6 +1,10 @@
 # 로컬 개발용 docker-stack.yml override
 # 사용법: docker stack deploy -c docker-stack.yml -c docker-stack.local.yml terab
 # 주의: make infra (terab-infra 스택)가 먼저 실행되어 terab-infra_terab-net 네트워크가 있어야 함
+#
+# [현재 미사용] make dev는 docker-stack.app.local.yml을 직접 사용한다.
+# 향후 docker-stack.yml 기반 배포에서 포트/replicas 등을 override할 필요가 생기면
+# 이 파일을 활성화한다: make dev 타겟에 -c docker-stack.local.yml 을 추가하면 됨.
 
 services:
   # ─── Infra: terab-infra 스택에서 실행 중이므로 여기서는 0 ─────────

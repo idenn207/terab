@@ -146,11 +146,11 @@ test-api-integration:
 test-notification:
 	cd services/notification && ./gradlew check
 
-.PHONY: test-notification
+.PHONY: test-notification-unit
 test-notification-unit:
 	cd services/notification && ./gradlew test
 
-.PHONY: test-notification
+.PHONY: test-notification-integration
 test-notification-integration:
 	cd services/notification && ./gradlew integrationTest
 

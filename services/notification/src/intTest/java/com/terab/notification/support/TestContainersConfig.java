@@ -12,7 +12,7 @@ public final class TestContainersConfig {
       .withAdminPassword("terab");
 
   static {
-    RABBITMQ.start();;
+    RABBITMQ.start();
   }
 
   private TestContainersConfig() {}

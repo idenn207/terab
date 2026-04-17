@@ -29,7 +29,7 @@ class NotificationIntegrationTest extends NotificationIntegrationTestBase {
   FirebaseMessaging firebaseMessaging;
 
   @Test
-  @DisplayName("RabbitMQ에 PushChallengeEvent 발행 시 FcmPushService.snedPushChellenge가 호출된다")
+  @DisplayName("RabbitMQ에 PushChallengeEvent 발행 시 FcmPushService.sendPushChellenge가 호출된다")
   void should_consume_event_and_call_fcm_service() {
     PushChallengeEvent event = new PushChallengeEvent(
       UUID.randomUUID(),

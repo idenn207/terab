@@ -72,7 +72,7 @@ class LoginUseCaseTest {
       
       given(userService.findByUsername("testuser")).willReturn(user);
       willThrow(new ApiException(ErrorCode.INVALID_CREDENTIALS))
-        .given(authService).validateCredentials(user, "wrong");;
+        .given(authService).validateCredentials(user, "wrong");
 
       assertThatThrownBy(() -> loginUseCase.execute(request, response))
         .isInstanceOf(ApiException.class);

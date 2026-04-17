@@ -17,7 +17,7 @@ class PushChallengePublisherIntegrationTest extends IntegrationTestBase {
 
   @Test
   @DisplayName("PushChallengePublisher가 예외 없이 이벤트를 RabbitMQ에 발행한다")
-  void should_publish_event_with_exception() {
+  void should_publish_event_without_exception() {
     PushChallengeEvent event = new PushChallengeEvent(
       UUID.randomUUID(),
       "fcm-token-integration-test",

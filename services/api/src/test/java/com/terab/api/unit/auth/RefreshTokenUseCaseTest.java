@@ -57,7 +57,7 @@ class RefreshTokenUseCaseTest {
     }
 
     @Test
-    @DisplayName("유효하지 않은 RT명 ApiException을 던진다")
+    @DisplayName("유효하지 않은 RT면 ApiException을 던진다")
     void should_throw_when_rt_invalid() {
       HttpServletResponse response = mock(HttpServletResponse.class);
       willThrow(new ApiException(ErrorCode.REFRESH_TOKEN_INVALID))
