@@ -113,10 +113,14 @@ throw new ApiException(ErrorCode.XXX);
 | Consumer (Service 위임) | Unit (Mockito) | `src/test/.../unit/{channel}/` |
 | MQ → Consumer → Service 전체 흐름 | Integration (Testcontainers) | `src/intTest/.../integration/` |
 
+> Unit 테스트는 `@ExtendWith(MockitoExtension.class)` + `@Mock`/`@InjectMocks`, Integration 테스트는 `@SpringBootTest` + `@MockitoBean` 조합으로 작성한다.
+
 ### 작성 규칙
 
 - `@WebMvcTest` 슬라이스 없음 — HTTP 레이어가 없으므로
-- Integration Test에서 FCM은 `@MockitoBean`으로 교체 — 실제 Firebase 호출 금지
+- Integration Test에서 FCM 관련 Bean은 `@MockitoBean`으로 교체 — 실제 Firebase 호출 금지
+  - `FcmPushService`: 발송 로직 검증 대상이므로 Mock 처리
+  - `FirebaseMessaging`: `FirebaseConfig` 초기화 우회를 위해 함께 Mock 처리 필수
 - RabbitMQ는 Testcontainers로 실제 기동 (`TestContainersConfig`)
 - 메서드명: `should_동작_when_조건`
 - `@Nested` + `@DisplayName` 그룹화
