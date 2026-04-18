@@ -56,8 +56,6 @@ describe('useDeepLink', () => {
 
     renderHook(() => useDeepLink(), { wrapper: MemoryRouter });
 
-    await new Promise((resolve) => setTimeout(resolve, 50));
-
     expect(App.addListener).not.toHaveBeenCalled();
   });
 });

@@ -8,6 +8,7 @@ services/api/run/
 services/notification/run/
 
 # Anroid Release Key
+google-services.json
 *.jks
 
 # 데이터 볼륨
@@ -43,10 +44,10 @@ services/web/dist/
 services/web/build/
 
 # Android — 민감 파일 및 빌드 캐시
-android/app/google-services.json
-android/.gradle/
-android/app/.cxx/
-android/app/build/
+services/web/android/app/google-services.json
+services/web/android/.gradle/
+services/web/android/app/.cxx/
+services/web/android/app/build/
 
 # rollup-plugin-visualizer
 services/web/stats.html

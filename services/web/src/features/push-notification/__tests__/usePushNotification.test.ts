@@ -93,14 +93,42 @@ describe('usePushNotification', () => {
     expect(mockRegisterPushToken).not.toHaveBeenCalled();
   });
 
+  it('FCM 토큰 수신 후 로그인하면 보관된 토큰으로 API를 호출한다', async () => {
+    mockRequestPermissions.mockResolvedValue({ receive: 'granted' });
+    // 미인증 상태에서 시작
+    useUserStore.getState().clearAuth();
+
+    const { rerender } = renderHook(() => usePushNotification());
+
+    await waitFor(() => capturedRegistrationCallback !== null);
+    await capturedRegistrationCallback!({ value: 'fcm-token-pending' });
+
+    // 아직 미인증 — API 호출 없어야 함
+    expect(mockRegisterPushToken).not.toHaveBeenCalled();
+
+    // 로그인 → accessToken 변경 → pendingToken useEffect 트리거
+    useUserStore.getState().setAuth('test-access-token', {
+      id: 'user-1',
+      username: 'testuser',
+      nickname: '테스트',
+    });
+    rerender();
+
+    await waitFor(() => {
+      expect(mockRegisterPushToken).toHaveBeenCalledWith({
+        pushToken: 'fcm-token-pending',
+        platform: 'android',
+      });
+    });
+  });
+
   it('비네이티브 플랫폼에서는 권한 요청을 하지 않는다', async () => {
     const { Capacitor } = await import('@capacitor/core');
     vi.mocked(Capacitor.isNativePlatform).mockReturnValue(false);
 
     renderHook(() => usePushNotification());
 
-    // 비동기 작업 대기
-    await new Promise((resolve) => setTimeout(resolve, 50));
+    await Promise.resolve();
 
     expect(mockRequestPermissions).not.toHaveBeenCalled();
   });
