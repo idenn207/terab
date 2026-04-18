@@ -15,14 +15,14 @@ services:
   github-runner:
     image: myoung34/github-runner:latest
     container_name: github-runner
-    restart: unless-stopped
+    restart: always
     env_file:
       - runner.env
     environment:
       REPO_URL: https://github.com/idenn207/terab
       RUNNER_NAME: terab-nas-runner
       LABELS: self-hosted,nas
-      EPHEMERAL: 'false'
+      EPHEMERAL: 'true'
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - runner_data:/home/runner

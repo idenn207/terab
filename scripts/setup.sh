@@ -3,8 +3,8 @@ set -e
 
 register_config() {
   local key="$1" val="$2"
-  docker config rm "$key" 2>/dev/null || true
-  if printf '%s' "$val" | docker config create "$key" - 2>/dev/null; then
+  docker config rm "$key" >/dev/null 2>&1 || true
+  if printf '%s' "$val" | docker config create "$key" - >/dev/null 2>&1; then
     echo "  ✓ $key"
   else
     echo "  ⚠ $key — 스택 실행 중(in use), 건너뜀 (값 변경 시 스택 중단 후 재실행)"
@@ -13,8 +13,8 @@ register_config() {
 
 register_secret_value() {
   local key="$1" val="$2"
-  docker secret rm "$key" 2>/dev/null || true
-  if printf '%s' "$val" | docker secret create "$key" - 2>/dev/null; then
+  docker secret rm "$key" >/dev/null 2>&1 || true
+  if printf '%s' "$val" | docker secret create "$key" - >/dev/null 2>&1; then
     echo "  ✓ $key"
   else
     echo "  ⚠ $key — 스택 실행 중(in use), 건너뜀"
@@ -24,8 +24,8 @@ register_secret_value() {
 register_secret_file() {
   local file="$1" name
   name=$(basename "$file")
-  docker secret rm "$name" 2>/dev/null || true
-  if docker secret create "$name" "$file" 2>/dev/null; then
+  docker secret rm "$name" >/dev/null 2>&1 || true
+  if docker secret create "$name" "$file" >/dev/null 2>&1; then
     echo "  ✓ $name"
   else
     echo "  ⚠ $name — 스택 실행 중(in use), 건너뜀"
