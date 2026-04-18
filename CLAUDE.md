@@ -8,6 +8,8 @@ NAS에서 동작하는 셀프호스팅 파일 관리 서비스.
 |--------|------|
 | API | Spring Boot 4.x / Java 25 |
 | Web | React 19 + Vite / TypeScript |
+| Mobile | Capacitor (Android WebView) |
+| Notification MS | Spring Boot 4.x / RabbitMQ + Firebase FCM |
 | DB | PostgreSQL 16 |
 | Object Storage | MinIO (S3 호환) |
 | 인프라 | Docker Swarm + Nginx |
@@ -20,6 +22,7 @@ make setup-local  # 최초 클론 후 1회 실행 (local.env → properties 변�
 make infra        # DB/MinIO 컨테이너 기동
 make api          # API 개발 서버 실행
 make web          # Web 개발 서버 실행
+make notification # Notification MS 개발 서버 실행
 ```
 
 **운영 (NAS)**
@@ -34,12 +37,13 @@ make stack-rm     # 스택 제거
 
 ```
 services/
-  api/      # Spring Boot — 세부 컨벤션은 services/api/CLAUDE.md 참조
-  web/      # React + Vite — 세부 컨벤션은 services/web/CLAUDE.md 참조
-  nginx/    # 리버스 프록시 설정
-docs/       # 기획/설계 문서
-scripts/    # 빌드/배포 자동화 스크립트
-.worktrees/ # Git worktree 작업 디렉토리 (커밋 대상 제외)
+  api/          # Spring Boot — 세부 컨벤션은 services/api/CLAUDE.md 참조
+  web/          # React + Vite — 세부 컨벤션은 services/web/CLAUDE.md 참조
+  notification/ # Notification MS (RabbitMQ + FCM) — 별도 Spring Boot 서비스
+  nginx/        # 리버스 프록시 설정
+docs/           # 기획/설계 문서
+scripts/        # 빌드/배포 자동화 스크립트
+.worktrees/     # Git worktree 작업 디렉토리 (커밋 대상 제외)
 ```
 
 ## 도메인 용어
