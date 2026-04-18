@@ -98,6 +98,14 @@ build-web:
 build-android:
 	cd services/web && npm run cap:sync
 
+.PHONY: build-android-dev
+build-android-dev:
+	cd services/web && npm run cap:sync:dev
+
+.PHONY: build-android-prod
+build-android-prod:
+	cd services/web && npm run cap:sync:prod
+
 # ─── 백엔드 ────────────────────────────────────────────────────────
 .PHONY: api
 api:

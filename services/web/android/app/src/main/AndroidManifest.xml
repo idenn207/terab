@@ -5,6 +5,7 @@
         android:allowBackup="true"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
+        android:networkSecurityConfig="@xml/network_security_config"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/AppTheme">
@@ -22,6 +23,25 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
 
+            <!-- TODO: App Links — 딥링크 (Phase 2: 라우팅 인프라, Phase 3: 실제 페이지 연결) -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="https"
+                    android:host="drive.skypark207.com"
+                    android:pathPrefix="/invite/" />
+            </intent-filter>
+
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="https"
+                    android:host="drive.skypark207.com"
+                    android:pathPrefix="/auth/2fa/" />
+            </intent-filter>
+
         </activity>
 
         <provider
@@ -36,6 +56,9 @@
     </application>
 
     <!-- Permissions -->
-
+    <!-- 기본 인터넷 권한 -->
     <uses-permission android:name="android.permission.INTERNET" />
+
+    <!-- Push 알림 권한 (Android 13+) — 런타임 요청 시 사용 -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 </manifest>

@@ -7,6 +7,10 @@ runner.env
 services/api/run/
 services/notification/run/
 
+# Anroid Release Key
+google-services.json
+*.jks
+
 # 데이터 볼륨
 volumes/db/
 volumes/rabbitmq/
@@ -15,6 +19,8 @@ volumes/storage/
 # IDE
 .idea/
 .vscode/
+.superpowers/
+.worktrees/
 
 # OS
 .DS_Store
@@ -36,9 +42,12 @@ services/notification/src/main/resources/META-INF/
 services/web/node_modules/
 services/web/dist/
 services/web/build/
+
+# Android — 민감 파일 및 빌드 캐시
+services/web/android/app/google-services.json
+services/web/android/.gradle/
+services/web/android/app/.cxx/
+services/web/android/app/build/
+
 # rollup-plugin-visualizer
 services/web/stats.html
-.superpowers/
-.worktrees/
-services/api/run/
-services/notification/run/

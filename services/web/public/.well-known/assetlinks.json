@@ -1,0 +1,10 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.skypark207.drive",
+      "sha256_cert_fingerprints": ["DA:F9:3B:14:E7:AE:F7:BB:1B:4C:5B:6D:92:95:5E:E8:F9:A7:D8:04:B3:4F:6C:5E:5A:B2:53:E6:82:8D:8F:20"]
+    }
+  }
+]
