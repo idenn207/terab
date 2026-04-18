@@ -8,7 +8,7 @@ import svgr from 'vite-plugin-svgr';
 
 // https://vite.dev/config/
 export default defineConfig({
-  plugins: [react(), svgr(), tailwindcss(), visualizer({ template: 'sunburst' })],
+  plugins: [react(), svgr({ svgrOptions: { svgo: false } }), tailwindcss(), visualizer({ template: 'sunburst' })],
   server: {
     proxy: {
       '/api': {
