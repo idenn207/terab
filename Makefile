@@ -40,9 +40,17 @@ dev-down: infra-down
 	docker stack rm terab
 
 # ─── Docker Swarm 운영 환경 ────────────────────────────────────────
+.PHONY: ensure-volumes
+ensure-volumes: ## 운영 스택 bind mount 경로 생성 (없을 경우에만)
+	@mkdir -p \
+		/volume2/docker/terab/volumes/db \
+		/volume2/docker/terab/volumes/rabbitmq \
+		/volume2/docker/terab/services/nginx \
+		/volume1/storage
+
 .PHONY: stack
-stack:
-	docker stack deploy -c docker-stack.yml terab --with-registry-auth
+stack: ensure-volumes
+	@bash scripts/stack-deploy.sh
 
 .PHONY: stack-down
 stack-down:
@@ -59,7 +67,12 @@ stack-update:
 		--image ghcr.io/idenn207/terab-web:latest \
 		--with-registry-auth \
 		--force \
-		terab_web
+		terab_web \
+	&& docker service update \
+		--image ghcr.io/idenn207/terab-notification:latest \
+		--with-registry-auth \
+		--force \
+		terab_notification
 
 # ─── 로컬 이미지 빌드 ─────────────────────────────────────────────
 .PHONY: build-local
@@ -153,4 +166,4 @@ test-web:
 # ─── Runner ────────────────────────────────────────────────────────
 .PHONY: runner
 runner:
-	docker composs -c docker-compose.runner.yml
+	docker compose -f docker-compose.runner.yml up
