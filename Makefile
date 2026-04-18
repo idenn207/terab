@@ -1,4 +1,8 @@
-SHELL := C:/Program Files/Git/usr/bin/bash.exe
+ifeq ($(OS), Windows_NT)
+	SHELL := C:/Program Files/Git/usr/bin/bash.exe
+else
+	SHELL := /bin/bash
+endif
 
 # ─── 환경 설정 ────────────────────────────────────────────────────
 .PHONY: setup
@@ -49,11 +53,11 @@ dev-down: infra-down
 	docker stack rm terab
 
 # ─── Docker Swarm 운영 환경 ────────────────────────────────────────
-.PHONY: stack-deploy
+.PHONY: stack
 stack:
 	docker stack deploy -c docker-stack.yml terab --with-registry-auth
 
-.PHONY: stack-rm
+.PHONY: stack-down
 stack-down:
 	docker stack rm terab
 
@@ -157,3 +161,9 @@ test-notification-integration:
 .PHONY: test-web
 test-web:
 	cd services/web && npm test
+
+
+# ─── Runner ────────────────────────────────────────────────────────
+.PHONY: runner
+runner:
+	docker composs -c docker-compose.runner.yml

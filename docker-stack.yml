@@ -16,7 +16,7 @@ services:
     secrets:
       - DB_PASSWORD
     volumes:
-      - /volume2/docker/terab/volumes/db:/var/lib/postgresql/data
+      - /volume2/db:/var/lib/postgresql/data
     networks:
       - terab-net
     healthcheck:
@@ -76,7 +76,7 @@ services:
     secrets:
       - RABBITMQ_PASSWORD
     volumes:
-      - /volume2/docker/terab/volumes/rabbitmq:/var/lib/rabbitmq
+      - /volume2/rabbitmq:/var/lib/rabbitmq
     networks:
       - terab-net
     healthcheck:
@@ -275,4 +275,3 @@ secrets:
   OWNER_PASSWORD: { external: true }
   PASSWORD_PEPPER: { external: true }
   RABBITMQ_PASSWORD: { external: true }
-

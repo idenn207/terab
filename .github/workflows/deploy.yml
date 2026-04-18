@@ -31,6 +31,10 @@ jobs:
         working-directory: services/api
         run: ./gradlew check
 
+      - name: Notification tests
+        working-directory: services/notification
+        run: ./gradlew check
+
       - name: Set up Node 20
         uses: actions/setup-node@v4
         with:
@@ -60,6 +64,8 @@ jobs:
             context: ./services/api
           - service: web
             context: ./services/web
+          - service: notification
+            context: ./services/notification
 
     steps:
       - uses: actions/checkout@v4
@@ -103,7 +109,7 @@ jobs:
       packages: write
     strategy:
       matrix:
-        package: [terab-api, terab-web]
+        package: [terab-api, terab-web, terab-notification]
 
     steps:
       - name: Delete old versions
@@ -142,3 +148,11 @@ jobs:
             --with-registry-auth \
             --force \
             terab_web
+
+      - name: Update notification service
+        run: |
+          docker service update \
+            --image ghcr.io/idenn207/terab-notification:latest \
+            --with-registry-auth \
+            --force \
+            terab_notification

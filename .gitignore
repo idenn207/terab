@@ -3,7 +3,9 @@
 secrets/
 configs.env
 secrets.env
-application-runner.properties
+runner.env
+services/api/run/
+services/notification/run/
 
 # 데이터 볼륨
 volumes/db/
