@@ -1,6 +1,6 @@
 import { useUserStore } from '@/entities';
-import { server } from '@/test/mocks';
 import { act, renderHook } from '@testing-library/react';
+import { server } from '@tests/mocks';
 import { http, HttpResponse } from 'msw';
 import { MemoryRouter } from 'react-router-dom';
 import { useLogin } from '../model/useLogin';
