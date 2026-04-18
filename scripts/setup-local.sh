@@ -44,5 +44,18 @@ for service in "${SERVICES[@]}"; do
   echo "  ✓ services/${service}/run/ 생성 완료 ($(ls services/${service}/run/ | wc -l)개 파일)"
 done
 
+# ─── secrets/ 파일 secret → run/ 복사 ──────────────────────────
+if [ -d secrets ]; then
+  echo ""
+  echo "=== 파일 secret 복사 ==="
+  for f in secrets/*; do
+    name=$(basename "$f")
+    for service in "${SERVICES[@]}"; do
+      cp "$f" "services/${service}/run/${name}"
+    done
+    echo "  ✓ ${name} → services/{api,notification}/run/"
+  done
+fi
+
 echo ""
 echo "setup-local 완료. 'make api' 또는 'make notification'으로 서버를 기동하세요."

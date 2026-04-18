@@ -6,21 +6,8 @@ endif
 
 # ─── 환경 설정 ────────────────────────────────────────────────────
 .PHONY: setup
-setup: ## 운영 Docker Config/Secret 등록 (NAS에서 실행, configs.env + secrets.env 필요)
-	@echo "=== Registering Docker Configs ==="
-	@while IFS='=' read -r key val || [ -n "$$key" ]; do \
-	  [ -z "$$key" ] && continue; \
-	  echo "$$key" | grep -q '^#' && continue; \
-	  docker config rm $$key 2>/dev/null || true; \
-	  printf '%s' "$$val" | docker config create $$key -; \
-	done < configs.env
-	@echo "=== Registering Docker Secrets ==="
-	@while IFS='=' read -r key val || [ -n "$$key" ]; do \
-	  [ -z "$$key" ] && continue; \
-	  echo "$$key" | grep -q '^#' && continue; \
-	  docker secret rm $$key 2>/dev/null || true; \
-	  printf '%s' "$$val" | docker secret create $$key -; \
-	done < secrets.env
+setup: ## 운영 Docker Config/Secret 등록 (NAS에서 실행, configs.env + secrets.env + secrets/ 필요)
+	@bash scripts/setup.sh
 
 .PHONY: setup-local
 setup-local: ## 로컬 개발 초기 설정 (최초 클론 후 1회, configs.env/secrets.env 변경 시 재실행)
