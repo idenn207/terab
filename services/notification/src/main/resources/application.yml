@@ -28,7 +28,8 @@ server:
   port: 8082
 
 firebase:
-  credentials-path: ${FIREBASE_CREDENTIALS_PATH:}
+  # Docker secret은 /run/secrets/{name} 경로에 고정 마운트됨
+  credentials-path: /run/secrets/FIREBASE_CREDENTIAL_JSON
 
 management:
   endpoints:

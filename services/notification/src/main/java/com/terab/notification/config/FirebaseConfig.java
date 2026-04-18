@@ -2,7 +2,6 @@ package com.terab.notification.config;
 
 import java.io.FileInputStream;
 import java.io.IOException;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
@@ -39,19 +38,9 @@ public class FirebaseConfig {
     if (Path.of(rawPath).isAbsolute()) {
       return Path.of(rawPath);
     }
-    // ./나 상대 경로 → 프로젝트 루트 기준
-    return findProjectRoot().resolve(rawPath);
-  }
-
-  // Makefile 존재 여부로 프로젝트 루트 탐색
-  private Path findProjectRoot() {
-    Path dir = Path.of(System.getProperty("user.dir"));
-    while (dir != null) {
-      if (Files.exists(dir.resolve("Makefile"))) {
-        return dir;
-      }
-      dir = dir.getParent();
-    }
-    return Path.of(System.getProperty("user.dir"));
+    // 상대 경로 → 실행 디렉터리(user.dir) 기준
+    // Docker: user.dir=/app, 절대 경로를 사용하므로 이 분기에 들어오지 않음
+    // 로컬 Gradle: user.dir=services/notification
+    return Path.of(System.getProperty("user.dir")).resolve(rawPath);
   }
 }

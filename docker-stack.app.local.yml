@@ -49,9 +49,9 @@ services:
       - { source: RABBITMQ_HOST, target: /run/configs/RABBITMQ_HOST }
       - { source: RABBITMQ_PORT, target: /run/configs/RABBITMQ_PORT }
       - { source: RABBITMQ_USERNAME, target: /run/configs/RABBITMQ_USERNAME }
-      - { source: FIREBASE_CREDENTIALS_PATH, target: /run/configs/FIREBASE_CREDENTIALS_PATH }
     secrets:
       - RABBITMQ_PASSWORD
+      - FIREBASE_CREDENTIAL_JSON
     ports:
       - '8082:8082'
     networks:
@@ -124,7 +124,6 @@ configs:
   RABBITMQ_HOST: { external: true }
   RABBITMQ_PORT: { external: true }
   RABBITMQ_USERNAME: { external: true }
-  FIREBASE_CREDENTIALS_PATH: { external: true }
 
 secrets:
   DB_PASSWORD: { external: true }
@@ -133,3 +132,4 @@ secrets:
   OWNER_PASSWORD: { external: true }
   PASSWORD_PEPPER: { external: true }
   RABBITMQ_PASSWORD: { external: true }
+  FIREBASE_CREDENTIAL_JSON: { external: true }
