@@ -1,7 +1,8 @@
 import { DrivePage, LoginPage, NavbarPage, SidebarLayoutPage, SidebarPage } from '@/pages';
-import { PrivateRoute } from '@/shared/router';
 import { AuthLayout } from '@/widgets';
+import { PrivateRoute } from '@shared/router';
 import type { RouteObject } from 'react-router-dom';
+import { AppShell } from '../AppShell';
 
 const rootRoutes: RouteObject[] = [
   {
@@ -85,4 +86,9 @@ const testRoutes: RouteObject[] = [
   },
 ];
 
-export const routes: RouteObject[] = [...rootRoutes, ...authRoutes, ...appRoutes, ...testRoutes];
+export const routes: RouteObject[] = [
+  {
+    element: <AppShell />,
+    children: [...rootRoutes, ...authRoutes, ...appRoutes, ...testRoutes],
+  },
+];
