@@ -219,7 +219,7 @@ public class RegisterPushTokenUseCase implements IRegisterPushTokenUseCase {
 ## Flyway 마이그레이션
 
 - 파일명: `V{n}__{설명}.sql` — 버전은 순번, 설명은 `snake_case`
-  - 예: `V3__add_file_nodes_table.sql`
+  - 예: `V1__init_schema.sql`, `V2__auth_phase1_schema.sql` (명사형도 허용)
 - 한 번 적용된 마이그레이션 파일은 수정 금지 — 변경 필요 시 신규 버전 추가
 - 스키마 변경과 시드 데이터는 같은 파일에 작성 가능
 - 마이그레이션 파일은 항상 멱등성 확보 (`IF NOT EXISTS`, `IF EXISTS` 활용)

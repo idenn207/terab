@@ -31,10 +31,26 @@ npm run cap:android    # Android 앱 실행 (에뮬레이터/기기)
 
 ### 테스트 파일 위치
 
-- 컴포넌트/훅 테스트: 대상 파일과 동일 디렉토리 (`*.test.tsx`, `*.test.ts`)
-- MSW 핸들러·서버 설정: `src/test/mocks/`
-- 테스트 템플릿: `src/test/templates/` (복사 후 사용, 원본 수정 금지)
-- 상세 가이드: `src/test/TDD_GUIDE.md`
+FSD 레이어 구조에 맞게 테스트를 슬라이스 내부에 배치한다.
+
+```
+src/
+  __tests__/              # 공유 테스트 인프라 (슬라이스에 속하지 않는 것만)
+    mocks/                # MSW 핸들러·서버 설정
+    templates/            # 테스트 템플릿 (복사 후 사용, 원본 수정 금지)
+    setup.ts              # Vitest 전역 설정
+    TDD_GUIDE.md          # 테스트 작성 가이드
+
+  features/{slice}/
+    __tests__/            # 해당 슬라이스의 테스트
+      *.test.tsx
+
+  entities/{domain}/
+    __tests__/            # 해당 도메인의 테스트
+      *.test.ts
+```
+
+테스트 파일은 대상 슬라이스의 `__tests__/` 서브디렉토리에 위치한다. 슬라이스에 귀속되지 않는 공유 유틸·MSW 설정은 `src/__tests__/`에만 둔다. 테스트 파일 네이밍: `*.test.tsx` (컴포넌트/훅), `*.test.ts` (유틸/스토어)
 
 ## FSD 레이어 의존 규칙
 
