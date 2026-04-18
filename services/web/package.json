@@ -12,6 +12,8 @@
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "cap:sync": "tsc -b && vite build && npx cap sync",
+    "cap:sync:dev":  "tsc -b && vite build && cross-env CAPACITOR_ENV=dev npx cap sync",
+    "cap:sync:prod": "tsc -b && vite build && cross-env CAPACITOR_ENV=prod npx cap sync",
     "cap:android": "npx cap run android"
   },
   "dependencies": {
@@ -48,6 +50,7 @@
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^6.0.0",
+    "cross-env": "^10.1.0",
     "eslint": "^9.39.4",
     "eslint-plugin-react-hooks": "^7.0.1",
     "eslint-plugin-react-refresh": "^0.5.2",

@@ -3,15 +3,20 @@ import { KeyboardResize } from '@capacitor/keyboard';
 import '@capacitor/push-notifications';
 import '@capacitor/splash-screen';
 
+type CapacitorEnv = 'bundle' | 'dev' | 'prod';
+const env = (process.env.CAPACITOR_ENV ?? 'bundle') as CapacitorEnv;
+
+const servers: Record<CapacitorEnv, CapacitorConfig['server']> = {
+  bundle: undefined,
+  dev:    { url: 'http://10.0.2.2:5173',        androidScheme: 'http'  },
+  prod:   { url: 'https://drive.skypark207.com', androidScheme: 'https' },
+};
+
 const config: CapacitorConfig = {
   appId: 'com.skypark207.drive',
   appName: 'TeraB',
   webDir: 'dist',
-  /** 운영 배포 시 주석 해제 */
-  // server: {
-  //   url: 'https://drive.skypark207.com',
-  //   androidScheme: 'https',
-  // },
+  server: servers[env],
   plugins: {
     SplashScreen: {
       launchShowDuration: 1500,

@@ -10,6 +10,7 @@ import svgr from 'vite-plugin-svgr';
 export default defineConfig({
   plugins: [react(), svgr({ svgrOptions: { svgo: false } }), tailwindcss(), visualizer({ template: 'sunburst' })],
   server: {
+    host: true,
     proxy: {
       '/api': {
         target: 'http://localhost:9090',
