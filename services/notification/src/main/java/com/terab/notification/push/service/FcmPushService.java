@@ -17,7 +17,7 @@ public class FcmPushService {
   public void sendPushChallenge(PushChallengeEvent event) {
     Notification notification = Notification.builder()
       .setTitle("로그인 승인 요청")
-      .setBody(String.format("숫자 %s를 확인하고 승인해 주세요.", event.code()))
+      .setBody("모바일 앱에서 숫자를 선택해 로그인을 승인해 주세요.")
       .build();
 
     Message message = Message.builder()
@@ -25,7 +25,7 @@ public class FcmPushService {
       .setNotification(notification)
       .putData("type", "2FA_CHALLENGE")
       .putData("challengeId", event.challengeId().toString())
-      .putData("code", event.code())
+      .putData("options", event.options())
       .putData("expiresAt", event.expiresAt().toString())
       .build();
 

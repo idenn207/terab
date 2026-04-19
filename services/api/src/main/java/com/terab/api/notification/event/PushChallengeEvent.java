@@ -6,7 +6,7 @@ import java.util.UUID;
 public record PushChallengeEvent(
   UUID userId,
   String pushToken,
-  String code,
+  String options,
   UUID challengeId,
   OffsetDateTime expiresAt
 ) {}
