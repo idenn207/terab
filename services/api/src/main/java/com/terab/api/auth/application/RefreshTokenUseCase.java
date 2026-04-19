@@ -27,7 +27,7 @@ public class RefreshTokenUseCase implements IRefreshTokenUseCase {
     String newRawRefreshToken = authService.issueRefreshToken(user);
     setRefreshTokenCookie(response, newRawRefreshToken);
 
-    return new LoginResponse(
+    return LoginResponse.authenticated(
       accessToken,
       new UserResponse(user.getId(), user.getUsername(), user.getNickname())
     );

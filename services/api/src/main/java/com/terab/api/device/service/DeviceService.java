@@ -1,6 +1,8 @@
 package com.terab.api.device.service;
 
 import java.time.OffsetDateTime;
+import java.util.List;
+import java.util.UUID;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import com.terab.api.device.domain.Device;
@@ -27,5 +29,10 @@ public class DeviceService {
     }
     
     return deviceRepository.save(device);
+  }
+
+  @Transactional(readOnly = true)
+  public List<Device> findByUserId(UUID userId) {
+    return deviceRepository.findByUserId(userId);
   }
 }
