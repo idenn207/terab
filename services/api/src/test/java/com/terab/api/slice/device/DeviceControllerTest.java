@@ -1,4 +1,4 @@
-package com.terab.api.slice;
+package com.terab.api.slice.device;
 
 import static com.terab.api.support.SecurityTestSupport.*;
 import static org.mockito.ArgumentMatchers.*;

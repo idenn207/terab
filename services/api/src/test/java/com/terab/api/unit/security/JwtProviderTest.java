@@ -1,4 +1,4 @@
-package com.terab.api.unit;
+package com.terab.api.unit.security;
 
 import static org.assertj.core.api.Assertions.*;
 import java.util.List;
