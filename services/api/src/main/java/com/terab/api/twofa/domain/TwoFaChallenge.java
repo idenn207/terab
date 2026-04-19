@@ -59,6 +59,10 @@ public class TwoFaChallenge {
     return "PENDING".equals(status);
   }
 
+  public boolean isExpired() {
+    return OffsetDateTime.now().isAfter(expiresAt);
+  }
+
   public List<String> getOptionsList() {
     return List.of(options.split(","));
   }
