@@ -45,7 +45,7 @@ public class TwoFaChallenge {
   @Column(nullable = false, updatable = false)
   private OffsetDateTime expiresAt;
   
-  @Column(nullable = false)
+  @Column(nullable = false, updatable = false)
   private OffsetDateTime createdAt;
   
   private OffsetDateTime respondedAt;
