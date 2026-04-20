@@ -52,7 +52,7 @@ public class TrustedDeviceService {
 
   @Transactional
   public void revoke(UUID deviceId, UUID userId) {
-    TrustedDevice device = repository.findById(userId)
+    TrustedDevice device = repository.findById(deviceId)
       .orElseThrow(() -> new ApiException(ErrorCode.TRUSTED_DEVICE_NOT_FOUND));
     if(!device.getUser().getId().equals(userId)) {
       throw new ApiException(ErrorCode.FORBIDDEN);
