@@ -7,8 +7,14 @@ interface LoginApiRequest {
 }
 
 interface LoginApiResponse {
+  status?: 'AUTHENTICATED' | '2FA_REQUIRED';
+  // 일반 로그인 성공
   accessToken: string;
   user: User;
+  // 2FA 필요
+  challengeId?: string;
+  options?: string[];
+  expiresAt?: string;
 }
 
 /** @description Login은 accessToken 없이 접근하기 때문에 axios instance 없이 따로 구축 */

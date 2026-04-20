@@ -11,13 +11,13 @@ const renderWithRouter = (children: React.ReactNode) => render(<MemoryRouter ini
 describe('LoginForm', () => {
   afterEach(() => useUserStore.getState().clearAuth());
 
-  it('should return 아이디 and 비밀번호 fields', () => {
+  it('아이디와 비밀번호 입력 필드가 렌더링된다', () => {
     renderWithRouter(<LoginForm />);
     expect(screen.getByLabelText('아이디')).toBeInTheDocument();
     expect(screen.getByLabelText('비밀번호')).toBeInTheDocument();
   });
 
-  it('should show error message on INVALID_CREDENTIALS', async () => {
+  it('INVALID_CREDENTIALS 응답 시 오류 메시지를 표시한다', async () => {
     server.use(
       http.post('/api/auth/login', () =>
         HttpResponse.json({ code: 'INVALID_CREDENTIALS', message: '아이디 또는 비밀번호가 올바르지 않습니다.' }, { status: 401 }),
