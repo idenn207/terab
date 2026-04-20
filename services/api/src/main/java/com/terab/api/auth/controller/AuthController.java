@@ -13,9 +13,11 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import com.terab.api.auth.application.interfaces.IGetCurrentUserUseCase;
 import com.terab.api.auth.application.interfaces.ILoginUseCase;
+import com.terab.api.auth.application.interfaces.ILoginWithBackupCodeUseCase;
 import com.terab.api.auth.application.interfaces.ILogoutUseCase;
 import com.terab.api.auth.application.interfaces.IRefreshTokenUseCase;
 import com.terab.api.auth.dto.AuthResult;
+import com.terab.api.auth.dto.BackupLoginRequest;
 import com.terab.api.auth.dto.LoginRequest;
 import com.terab.api.auth.dto.LoginResponse;
 import com.terab.api.auth.dto.UserResponse;
@@ -30,6 +32,7 @@ import lombok.RequiredArgsConstructor;
 public class AuthController {
 
   private final ILoginUseCase loginUseCase;
+  private final ILoginWithBackupCodeUseCase loginWithBackupCodeUseCase;
   private final IRefreshTokenUseCase refreshTokenUseCase;
   private final ILogoutUseCase logoutUseCase;
   private final IGetCurrentUserUseCase getCurrentUserUseCase;
@@ -41,6 +44,18 @@ public class AuthController {
     HttpServletResponse response
   ) {
     AuthResult result = loginUseCase.execute(request, trustToken);
+    if (result.hasRefreshToken()) {
+      setRefreshTokenCookie(response, result.rawRefreshToken(), result.refreshTokenExpMs());
+    }
+    return ResponseEntity.ok(result.response());
+  }
+
+  @PostMapping("/login/backup")
+  public ResponseEntity<LoginResponse> loginWithBackup(
+    @RequestBody @Valid BackupLoginRequest request,
+    HttpServletResponse response
+  ) {
+    AuthResult result = loginWithBackupCodeUseCase.execute(request);
     if (result.hasRefreshToken()) {
       setRefreshTokenCookie(response, result.rawRefreshToken(), result.refreshTokenExpMs());
     }
