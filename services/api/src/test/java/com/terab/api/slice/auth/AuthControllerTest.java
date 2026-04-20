@@ -21,6 +21,7 @@ import com.terab.api.auth.application.interfaces.ILoginUseCase;
 import com.terab.api.auth.application.interfaces.ILogoutUseCase;
 import com.terab.api.auth.application.interfaces.IRefreshTokenUseCase;
 import com.terab.api.auth.controller.AuthController;
+import com.terab.api.auth.dto.AuthResult;
 import com.terab.api.auth.dto.LoginResponse;
 import com.terab.api.auth.dto.UserResponse;
 import com.terab.api.common.exception.ApiException;
@@ -30,7 +31,7 @@ import com.terab.api.security.JwtProvider;
 import com.terab.api.security.SecurityConfig;
 
 @WebMvcTest(AuthController.class)
-@Import({SecurityConfig.class, GlobalExceptionHandler.class})
+@Import({SecurityConfig.class, GlobalExceptionHandler.class, JwtProvider.class})
 @ActiveProfiles("test")
 class AuthControllerTest {
 
@@ -40,8 +41,7 @@ class AuthControllerTest {
   @MockitoBean IRefreshTokenUseCase refreshTokenUseCase;
   @MockitoBean ILogoutUseCase logoutUseCase;
   @MockitoBean IGetCurrentUserUseCase getCurrentUserUseCase;
-  @MockitoBean JwtProvider jwtProvider;
-  
+
   @Nested
   @DisplayName("POST /api/auth/login")
   class Login {
@@ -50,11 +50,9 @@ class AuthControllerTest {
     @DisplayName("유효한 자격증명이면 200과 accessToken을 반환한다")
     void should_return_200_with_valid_credentials() throws Exception {
       UUID userId = UUID.randomUUID();
+      LoginResponse loginResponse = LoginResponse.authenticated("access-token", new UserResponse(userId, "testuser", "테스트 유저"));
       given(loginUseCase.execute(any(), any()))
-        .willReturn(
-          new LoginResponse("access-token",
-          new UserResponse(userId, "testuser", "테스트 유저"))
-        );
+        .willReturn(AuthResult.withToken(loginResponse, "raw-refresh-token", 604800000L));
 
       mockMvc.perform(
         post("/api/auth/login")
