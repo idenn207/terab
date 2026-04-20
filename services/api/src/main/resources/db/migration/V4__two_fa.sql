@@ -4,7 +4,7 @@ CREATE TABLE IF NOT EXISTS two_fa_challenges (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   options VARCHAR(20) NOT NULL,
-  correct_num CHAR(2) NOT NULL,
+  correct_num VARCHAR(2) NOT NULL,
   status VARCHAR(10) NOT NULL DEFAULT 'PENDING',
   expires_at TIMESTAMPTZ NOT NULL,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
