@@ -16,7 +16,7 @@ services:
     secrets:
       - DB_PASSWORD
     volumes:
-      - /volume2/db:/var/lib/postgresql/data
+      - /volume2/docker/terab/volumes/db:/var/lib/postgresql/data
     networks:
       - terab-net
     healthcheck:
@@ -31,9 +31,9 @@ services:
         constraints:
           - node.role == manager
       restart_policy:
-        condition: on-failure
+        condition: any
         delay: 5s
-        max_attempts: 3
+        window: 120s
 
   # ─── MinIO (S3 호환 오브젝트 스토리지) ───────────────────────
   minio:
@@ -60,7 +60,8 @@ services:
     deploy:
       replicas: 1
       restart_policy:
-        condition: on-failure
+        condition: any
+        window: 60s
 
   # ─── RabbitMQ (메시지 브로커) ─────────────────────────────────
   rabbitmq:
@@ -78,7 +79,7 @@ services:
     secrets:
       - RABBITMQ_PASSWORD
     volumes:
-      - /volume2/rabbitmq:/var/lib/rabbitmq
+      - /volume2/docker/terab/volumes/rabbitmq:/var/lib/rabbitmq
     networks:
       - terab-net
     healthcheck:
@@ -93,8 +94,9 @@ services:
         constraints:
           - node.role == manager
       restart_policy:
-        condition: on-failure
+        condition: any
         delay: 5s
+        window: 120s
 
   # ─── Spring Boot API ──────────────────────────────────────────
   api:
@@ -140,9 +142,9 @@ services:
         order: stop-first
         parallelism: 1
       restart_policy:
-        condition: on-failure
-        delay: 5s
-        max_attempts: 3
+        condition: any
+        delay: 30s
+        window: 180s
 
   # ─── Notification MS ──────────────────────────────────────────
   notification:
@@ -165,8 +167,9 @@ services:
     deploy:
       replicas: 1
       restart_policy:
-        condition: on-failure
-        delay: 5s
+        condition: any
+        delay: 30s
+        window: 120s
 
   # ─── React Frontend ───────────────────────────────────────────
   web:
@@ -190,7 +193,8 @@ services:
       rollback_config:
         order: start-first
       restart_policy:
-        condition: on-failure
+        condition: any
+        window: 60s
 
   # ─── Nginx (리버스 프록시) ─────────────────────────────────────
   nginx:
@@ -210,7 +214,8 @@ services:
     deploy:
       replicas: 1
       restart_policy:
-        condition: on-failure
+        condition: any
+        window: 60s
 
   # ─── Portainer CE (컨테이너 모니터링 UI) ─────────────────────────
   portainer:
@@ -229,7 +234,8 @@ services:
         constraints:
           - node.role == manager
       restart_policy:
-        condition: on-failure
+        condition: any
+        window: 60s
 
   portainer_agent:
     image: portainer/agent:latest
@@ -237,13 +243,14 @@ services:
       AGENT_CLUSTER_ADDR: tasks.portainer_agent
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
-      - /var/lib/docker/volumes:/var/lib/docker/volumes
+      - /volume2/@docker/volumes:/var/lib/docker/volumes
     networks:
       - terab-net
     deploy:
       mode: global
       restart_policy:
-        condition: on-failure
+        condition: any
+        window: 60s
 
 configs:
   DB_NAME: { external: true }
