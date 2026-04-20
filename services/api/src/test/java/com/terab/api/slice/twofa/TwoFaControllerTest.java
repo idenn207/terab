@@ -12,10 +12,14 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
+import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
+import com.terab.api.common.exception.GlobalExceptionHandler;
+import com.terab.api.security.JwtProvider;
+import com.terab.api.security.SecurityConfig;
 import com.terab.api.twofa.application.interfaces.IGetChallengeStatusUseCase;
 import com.terab.api.twofa.application.interfaces.IResendChallengeUseCase;
 import com.terab.api.twofa.application.interfaces.IRespondToChallengeUseCase;
@@ -23,6 +27,7 @@ import com.terab.api.twofa.controller.TwoFaController;
 import com.terab.api.twofa.dto.ChallengeStatusResponse;
 
 @WebMvcTest(TwoFaController.class)
+@Import({SecurityConfig.class, GlobalExceptionHandler.class, JwtProvider.class})
 @ActiveProfiles("test")
 class TwoFaControllerTest {
   
@@ -36,6 +41,7 @@ class TwoFaControllerTest {
   class DescribeGetStatus {
 
     @Test
+    @DisplayName("인증 없이 요청해도 200과 challenge 상태를 반환한다")
     void should_return_200_without_auth() throws Exception {
       given(getChallengeStatusUseCase.execute(any()))
         .willReturn(ChallengeStatusResponse.pending(List.of("47", "82", "13"), 55));
@@ -52,6 +58,7 @@ class TwoFaControllerTest {
   class DescribeRespond {
 
     @Test
+    @DisplayName("인증 없이 요청하면 401을 반환한다")
     void should_return_401_without_auth() throws Exception {
       mockMvc.perform(
         post("/api/auth/2fa/challenge/{id}/respond", UUID.randomUUID())
@@ -63,6 +70,7 @@ class TwoFaControllerTest {
     }
 
     @Test
+    @DisplayName("인증된 요청이면 204를 반환한다")
     void should_return_204_with_valid_auth() throws Exception {
       willDoNothing().given(respondToChallengeUseCase).execute(any(), any(), any());
 

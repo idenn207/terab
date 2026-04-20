@@ -31,6 +31,7 @@ class TwoFaChallengeServiceTest {
   class DescribeCreate {
 
     @Test
+    @DisplayName("사용자가 주어지면 옵션 3개를 포함한 challenge를 생성한다")
     void should_create_challenge_with_three_options_when_user_given() {
       // given
       User user = new User();
@@ -48,6 +49,7 @@ class TwoFaChallengeServiceTest {
     }
 
     @Test
+    @DisplayName("생성된 옵션은 10-99 사이의 두 자리 숫자이다")
     void should_generate_two_digit_numbers_between_10_and_99() {
       // given
       User user = new User();
@@ -70,6 +72,7 @@ class TwoFaChallengeServiceTest {
   class DescriveStatusChange {
 
     @Test
+    @DisplayName("approve 호출 시 status가 APPROVED로 변경된다")
     void should_set_status_approved_when_approve_called() {
       // given
       TwoFaChallenge challenge = new TwoFaChallenge();
@@ -85,6 +88,7 @@ class TwoFaChallengeServiceTest {
     }
 
     @Test
+    @DisplayName("deny 호출 시 status가 DENIED로 변경된다")
     void should_set_status_denied_when_deny_called() {
       // given
       TwoFaChallenge challenge = new TwoFaChallenge();
@@ -100,6 +104,7 @@ class TwoFaChallengeServiceTest {
     }
 
     @Test
+    @DisplayName("markExpired 호출 시 status가 EXPIRED로 변경된다")
     void should_set_status_denied_when_expired_called() {
       // given
       TwoFaChallenge challenge = new TwoFaChallenge();

@@ -24,7 +24,7 @@ import com.terab.api.security.JwtProvider;
 import com.terab.api.security.SecurityConfig;
 
 @WebMvcTest(DeviceController.class)
-@Import({SecurityConfig.class, GlobalExceptionHandler.class})
+@Import({SecurityConfig.class, GlobalExceptionHandler.class, JwtProvider.class})
 @ActiveProfiles("test")
 class DeviceControllerTest {
   

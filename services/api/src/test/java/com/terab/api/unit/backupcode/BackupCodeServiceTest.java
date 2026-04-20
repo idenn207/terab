@@ -29,6 +29,7 @@ class BackupCodeServiceTest {
   class DescribeRegenerate {
 
     @Test
+    @DisplayName("regenerate 호출 시 평문 코드 8개를 반환한다")
     void should_return_8_plain_codes_when_regenerate_called() {
       // given
       User user = new User();
@@ -44,6 +45,7 @@ class BackupCodeServiceTest {
     }
 
     @Test
+    @DisplayName("생성된 코드는 XXXX-XXXX 형식이다")
     void should_generate_codes_in_xxxx_xxxx_format() {
       // given
       User user = new User();
@@ -65,6 +67,7 @@ class BackupCodeServiceTest {
   class DescriveVerify {
 
     @Test
+    @DisplayName("코드가 일치하면 true를 반환하고 사용 처리한다")
     void should_return_true_and_mark_used_when_code_matches() {
       // given
       User user = new User();
@@ -83,13 +86,14 @@ class BackupCodeServiceTest {
     }
 
     @Test
+    @DisplayName("일치하는 코드가 없으면 false를 반환한다")
     void should_return_false_when_no_code_matches() {
       // given
       User user = new User();
       BackupCode bc = new BackupCode();
       bc.setCodeHash("stored-hash");
       given(repository.findByUserAndUsedAtIsNull(user)).willReturn(List.of(bc));
-      given(passwordEncoder.matches(any(), any())).willReturn(true);
+      given(passwordEncoder.matches(any(), any())).willReturn(false);
       
       // when
       boolean result = backupCodeService.verifyAndConsume(user, "WRONG-CODE");
