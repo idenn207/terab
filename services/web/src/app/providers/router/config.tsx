@@ -1,4 +1,5 @@
-import { DrivePage, LoginPage, NavbarPage, SidebarLayoutPage, SidebarPage } from '@/pages';
+import { TwoFactorApprovalPage, TwoFactorBackupEntry, TwoFactorWaiting } from '@/features';
+import { DrivePage, LoginPage } from '@/pages';
 import { AuthLayout } from '@/widgets';
 import { PrivateRoute } from '@shared/router';
 import type { RouteObject } from 'react-router-dom';
@@ -15,7 +16,7 @@ const rootRoutes: RouteObject[] = [
             <ul className="flex flex-col justify-center gap-4 p-6 text-black dark:text-white">
               <a href="/login">login</a>
               <a href="/drive">drive</a>
-              <a href="/test">test</a>
+              <a href="/preview">preview</a>
             </ul>
           </>
         ),
@@ -48,40 +49,13 @@ const appRoutes: RouteObject[] = [
   },
 ];
 
-const testRoutes: RouteObject[] = [
+const previewRoutes: RouteObject[] = [
   {
-    path: '/test',
+    path: '/preview',
     children: [
-      {
-        index: true,
-        element: (
-          <>
-            <ul className="flex flex-col justify-center gap-4 p-6 text-black dark:text-white">
-              <a href="/test/navbar">Navbar</a>
-              <a href="/test/sidebar">Sidebar</a>
-              <a href="/test/layout">Layouts</a>
-            </ul>
-          </>
-        ),
-      },
-      { path: 'navbar', element: <NavbarPage /> },
-      { path: 'sidebar', element: <SidebarPage /> },
-      {
-        path: 'layout',
-        children: [
-          {
-            index: true,
-            element: (
-              <>
-                <ul className="flex flex-col justify-center gap-4 p-6 text-black dark:text-white">
-                  <a href="/test/layout/sidebar">Sidebar Layout</a>
-                </ul>
-              </>
-            ),
-          },
-          { path: 'sidebar', element: <SidebarLayoutPage /> },
-        ],
-      },
+      { index: true, element: <TwoFactorWaiting onApproved={() => {}} /> },
+      { path: '1', element: <TwoFactorApprovalPage /> },
+      { path: '2', element: <TwoFactorBackupEntry /> },
     ],
   },
 ];
@@ -89,6 +63,6 @@ const testRoutes: RouteObject[] = [
 export const routes: RouteObject[] = [
   {
     element: <AppShell />,
-    children: [...rootRoutes, ...authRoutes, ...appRoutes, ...testRoutes],
+    children: [...rootRoutes, ...authRoutes, ...appRoutes, ...previewRoutes],
   },
 ];
