@@ -11,6 +11,8 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.json.AutoConfigureJsonTesters;
+import org.springframework.boot.test.json.JacksonTester;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
@@ -25,13 +27,17 @@ import com.terab.api.twofa.application.interfaces.IResendChallengeUseCase;
 import com.terab.api.twofa.application.interfaces.IRespondToChallengeUseCase;
 import com.terab.api.twofa.controller.TwoFaController;
 import com.terab.api.twofa.dto.ChallengeStatusResponse;
+import com.terab.api.twofa.dto.RespondRequest;
 
 @WebMvcTest(TwoFaController.class)
 @Import({SecurityConfig.class, GlobalExceptionHandler.class, JwtProvider.class})
+@AutoConfigureJsonTesters
 @ActiveProfiles("test")
 class TwoFaControllerTest {
   
   @Autowired MockMvc mockMvc;
+  @Autowired JacksonTester<RespondRequest> respondJson;
+
   @MockitoBean IGetChallengeStatusUseCase getChallengeStatusUseCase;
   @MockitoBean IRespondToChallengeUseCase respondToChallengeUseCase;
   @MockitoBean IResendChallengeUseCase resendChallengeUseCase;
@@ -63,9 +69,9 @@ class TwoFaControllerTest {
       mockMvc.perform(
         post("/api/auth/2fa/challenge/{id}/respond", UUID.randomUUID())
           .contentType(MediaType.APPLICATION_JSON)
-          .content("""
-            {"selectedNumber":"47"}
-          """))
+          .content(respondJson.write(RespondRequest.builder()
+            .selectedNumber("47")
+            .build()).getJson()))
         .andExpect(status().isUnauthorized());
     }
 
@@ -78,9 +84,9 @@ class TwoFaControllerTest {
         post("/api/auth/2fa/challenge/{id}/respond", UUID.randomUUID())
           .with(authenticatedUser(UUID.randomUUID()))
           .contentType(MediaType.APPLICATION_JSON)
-          .content("""
-            {"selectedNumber":"47"}
-          """))
+          .content(respondJson.write(RespondRequest.builder()
+            .selectedNumber("47")
+            .build()).getJson()))
         .andExpect(status().isNoContent());
     }
   }

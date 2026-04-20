@@ -2,7 +2,9 @@ package com.terab.api.device.dto;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
+import lombok.Builder;
 
+@Builder
 public record PushTokenRequest(
   @NotBlank
   String pushToken,
