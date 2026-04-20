@@ -1,6 +1,5 @@
 package com.terab.api.unit.auth;
 
-import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -11,39 +10,32 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import com.terab.api.auth.application.LogoutUseCase;
 import com.terab.api.auth.service.AuthService;
-import jakarta.servlet.http.HttpServletResponse;
 
 @ExtendWith(MockitoExtension.class)
 class LogoutUseCaseTest {
-  
+
   @Mock AuthService authService;
   @InjectMocks LogoutUseCase logoutUseCase;
 
-  
   @Nested
-  @DisplayName("execute(String|null, HttpServletResponse)")
+  @DisplayName("execute(String)")
   class Execute {
 
     @Test
-    @DisplayName("로그아웃 시 RT를 폐기하고 쿠키를 초기화한다")
-    void should_revoke_rt_and_clear_cookie() {
-      HttpServletResponse response = mock(HttpServletResponse.class);
+    @DisplayName("RT가 있으면 폐기 처리한다")
+    void should_revoke_rt_when_present() {
+      // when
+      logoutUseCase.execute("raw-refresh-token");
 
-      logoutUseCase.execute("raw-refresh-token", response);
-
+      // then
       verify(authService).revokeRefreshToken("raw-refresh-token");
-      verify(response).addHeader(
-        eq("Set-Cookie"),
-        contains("refreshToken=")
-      );
     }
 
     @Test
-    @DisplayName("RT가 null이어도 예외 없이 쿠키를 초기화한다")
-    void should_clear_cookie_even_if_rt_null() {
-      HttpServletResponse response = mock(HttpServletResponse.class);
-
-      logoutUseCase.execute(null, response);
+    @DisplayName("RT가 null이어도 예외 없이 완료된다")
+    void should_complete_without_error_when_rt_null() {
+      // when / then — AuthService.revokeRefreshToken은 null을 허용하므로 예외 없음
+      logoutUseCase.execute(null);
 
       verify(authService).revokeRefreshToken(null);
     }
