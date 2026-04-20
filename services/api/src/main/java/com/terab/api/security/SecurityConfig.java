@@ -36,7 +36,6 @@ public class SecurityConfig {
       .cors(cors -> cors.configurationSource(corsConfigurationSource()))
       .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
       .authorizeHttpRequests(auth -> auth
-        // TODO: 자동 주입 방식으로 관리 예정
         .requestMatchers(HttpMethod.GET, "/actuator/health").permitAll()
         .requestMatchers(HttpMethod.POST, "/api/auth/login").permitAll()
         .requestMatchers(HttpMethod.POST, "/api/auth/refresh").permitAll()
@@ -44,6 +43,8 @@ public class SecurityConfig {
         .requestMatchers(HttpMethod.POST, "/api/auth/register").permitAll()
         .requestMatchers(HttpMethod.GET, "/api/auth/invitations/**").permitAll()
         .requestMatchers(HttpMethod.GET, "/api/shares/**").permitAll()
+        .requestMatchers(HttpMethod.GET, "/api/auth/2fa/challenge/*/status").permitAll()
+        .requestMatchers(HttpMethod.POST, "/api/auth/2fa/challenge/*/resend").permitAll()
         .anyRequest().authenticated()
       )
       .exceptionHandling(ex -> ex
