@@ -1,7 +1,8 @@
 import { Button, Field, Input, Label } from '@/shared/ui';
-import { useEffect, type ChangeEvent } from 'react';
+import { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { useNavigate } from 'react-router-dom';
+import { TWO_FACTOR_ERROR_MESSAGES } from '../model/twoFactorErrors';
 import { useBackupLogin, type BackupLoginForm } from '../model/useBackupLogin';
 
 export function TwoFactorBackupEntry() {
@@ -12,6 +13,7 @@ export function TwoFactorBackupEntry() {
     handleSubmit,
     setError,
     clearErrors,
+    setValue,
     formState: { errors },
   } = useForm<BackupLoginForm>();
 
@@ -20,10 +22,14 @@ export function TwoFactorBackupEntry() {
       clearErrors('root');
       return;
     }
-    setError('root', { message: error });
+    setError('root', { message: TWO_FACTOR_ERROR_MESSAGES[error.code] });
   }, [error, setError, clearErrors]);
 
-  const displayError = errors.root?.message;
+  const formatBackupCode = (s: string) => s.toUpperCase().replace(/([A-Z0-9]{4})([A-Z0-9]{1,4})/, '$1-$2');
+
+  const displayError = Object.values(errors)
+    .map((s) => s.message)
+    .find((s) => !!s);
 
   return (
     <form onSubmit={handleSubmit(login)} className="grid w-full max-w-sm grid-cols-1 gap-6">
@@ -34,7 +40,7 @@ export function TwoFactorBackupEntry() {
           id="username"
           type="text"
           autoComplete="username"
-          {...register('username', { required: '아이디를 입력해 주세요.', onChange: resetError })}
+          {...register('username', { required: TWO_FACTOR_ERROR_MESSAGES.USERNAME_REQUIRED, onChange: resetError })}
         />
       </Field>
       <Field>
@@ -44,27 +50,26 @@ export function TwoFactorBackupEntry() {
           id="password"
           type="password"
           autoComplete="current-password"
-          {...register('password', { required: '비밀번호를 입력해 주세요.', onChange: resetError })}
+          {...register('password', { required: TWO_FACTOR_ERROR_MESSAGES.PASSWORD_REQUIRED, onChange: resetError })}
         />
       </Field>
       <Field>
-        <Label htmlFor="backupCode">백업 코드</Label>
+        <Label htmlFor="backupCode">백업코드</Label>
         <Input
           // BackupCode
           id="backupCode"
           type="text"
           placeholder="예: A3K9-MZ7P"
           className="font-mono"
+          transform="uppercase"
+          maxLength={9}
           {...register('backupCode', {
-            required: '백업 코드를 입력해 주세요.',
+            required: TWO_FACTOR_ERROR_MESSAGES.BACKUP_CODE_REQUIRED,
             pattern: {
               value: /^[A-Z0-9]{4}-[A-Z0-9]{4}$/,
-              message: '형식이 올바르지 않습니다. (예: A3K9-MZ7P)',
+              message: TWO_FACTOR_ERROR_MESSAGES.BACKUP_CODE_INVALID_PATTERN,
             },
-            onChange: (e: ChangeEvent<HTMLInputElement>) => {
-              e.target.value = e.target.value.toUpperCase();
-              resetError();
-            },
+            onChange: (e) => setValue('backupCode', formatBackupCode(e.target.value)),
           })}
         />
       </Field>

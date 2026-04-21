@@ -124,7 +124,7 @@ class AuthControllerTest {
           .content(backupLoginJson.write(BackupLoginRequest.builder()
             .username("testuser")
             .password("password123")
-            .backupCpde("A3K9-MZ7P")
+            .backupCode("A3K9-MZ7P")
             .build()).getJson()))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.accessToken").value("access-token"));
@@ -139,7 +139,7 @@ class AuthControllerTest {
           .content(backupLoginJson.write(BackupLoginRequest.builder()
             .username("testuser")
             .password("password123")
-            .backupCpde("WRONG-CODE")
+            .backupCode("WRONG-CODE")
             .build()).getJson()))
         .andExpect(status().isBadRequest());
     }

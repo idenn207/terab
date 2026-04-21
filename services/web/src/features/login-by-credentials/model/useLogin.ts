@@ -36,10 +36,10 @@ export function useLogin() {
         // ...something else
       }
     } catch (err: AxiosError | Error | unknown) {
-      const response = (err as AxiosError<LoginError>)?.response;
+      const { code, message } = (err as AxiosError<LoginError>)?.response?.data ?? {};
       setError({
-        code: response?.data?.code ?? 'UNKNOWN',
-        message: response?.data?.message ?? '로그인에 실패했습니다.',
+        code: code ?? 'UNKNOWN',
+        message: message ?? '로그인에 실패했습니다.',
       });
     } finally {
       setIsLoading(false);

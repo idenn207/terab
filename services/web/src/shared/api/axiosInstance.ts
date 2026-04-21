@@ -1,12 +1,13 @@
 import { useUserStore } from '@/entities';
 import axios, { AxiosError, type InternalAxiosRequestConfig } from 'axios';
 
-const axiosInstance = axios.create({
+/** accessToken 으로 요철 */
+const axiosUser = axios.create({
   baseURL: '/api',
   withCredentials: true,
 });
 
-axiosInstance.interceptors.request.use((config) => {
+axiosUser.interceptors.request.use((config) => {
   const token = useUserStore.getState().accessToken;
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
@@ -28,7 +29,7 @@ const processQueue = (error: unknown, token: string | null = null) => {
   failedQueue = [];
 };
 
-axiosInstance.interceptors.response.use(
+axiosUser.interceptors.response.use(
   (response) => response,
   async (error: AxiosError | unknown) => {
     // AxiosError
@@ -44,7 +45,7 @@ axiosInstance.interceptors.response.use(
           failedQueue.push({ resolve, reject });
         }).then((token) => {
           originalRequest.headers.Authorization = `Bearer ${token}`;
-          return axiosInstance(originalRequest);
+          return axiosUser(originalRequest);
         });
       }
 
@@ -56,7 +57,7 @@ axiosInstance.interceptors.response.use(
         useUserStore.getState().setAccessToken(data.accessToken);
         processQueue(null, data.accessToken);
         originalRequest.headers.Authorization = `Bearer ${data.accessToken}`;
-        return axiosInstance(originalRequest);
+        return axiosUser(originalRequest);
       } catch (refreshError) {
         processQueue(refreshError, null);
         useUserStore.getState().clearAuth();
@@ -73,4 +74,4 @@ axiosInstance.interceptors.response.use(
   },
 );
 
-export { axiosInstance };
+export { axiosUser };

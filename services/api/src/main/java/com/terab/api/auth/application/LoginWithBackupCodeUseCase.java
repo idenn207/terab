@@ -29,7 +29,7 @@ public class LoginWithBackupCodeUseCase implements ILoginWithBackupCodeUseCase {
     User user = userService.findByUsername(request.username());
     authService.validateCredentials(user, request.password());
 
-    if(!backupCodeService.verifyAndConsume(user, request.backupCpde())) {
+    if(!backupCodeService.verifyAndConsume(user, request.backupCode())) {
       throw new ApiException(ErrorCode.BACKUP_CODE_INVALID);
     }
 

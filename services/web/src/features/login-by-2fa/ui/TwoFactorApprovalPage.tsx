@@ -35,7 +35,7 @@ export function TwoFactorApprovalPage() {
           <button
             key={opt}
             onClick={() => respond(opt)}
-            className="h-20w20 flex items-center justify-center rounded-lg border-2 text-2xl font-bold hover:bg-blue-50 active:bg-blue-100"
+            className="flex h-20 w-20 items-center justify-center rounded-lg border-2 text-2xl font-bold hover:bg-blue-50 active:bg-blue-100"
           >
             {opt}
           </button>

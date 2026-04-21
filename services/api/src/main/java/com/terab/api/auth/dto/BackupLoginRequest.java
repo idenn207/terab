@@ -8,5 +8,5 @@ import lombok.Builder;
 public record BackupLoginRequest(
   @NotBlank String username,
   @NotBlank String password,
-  @NotBlank @Pattern(regexp = "[A-Z0-9]{4}-[A-Z0-9]{4}") String backupCpde
+  @NotBlank @Pattern(regexp = "[A-Z0-9]{4}-[A-Z0-9]{4}") String backupCode
 ) {}

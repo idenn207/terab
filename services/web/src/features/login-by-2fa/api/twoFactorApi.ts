@@ -1,5 +1,5 @@
 import type { User } from '@/entities';
-import { axiosInstance } from '@/shared/api';
+import { axiosUser } from '@/shared/api';
 import axios from 'axios';
 
 // PC 폴링 응답 타입
@@ -46,7 +46,7 @@ const twoFactorApi = {
     axios.post<ResendResponse>(`/api/auth/2fa/challenge/${challengeId}/resend`, null, { withCredentials: true }).then((r) => r.data),
 
   respond: (challengeId: string, selectedNumber: string): Promise<void> =>
-    axiosInstance.post(`/api/auth/2fa/challenge/${challengeId}/respond`, { selectedNumber }).then(() => {}),
+    axiosUser.post(`/api/auth/2fa/challenge/${challengeId}/respond`, { selectedNumber }).then(() => {}),
 
   backupLogin: (data: BackupLoginRequest): Promise<BackupLoginResponse> =>
     axios.post<BackupLoginResponse>('/api/auth/login/backup', data, { withCredentials: true }).then((r) => r.data),

@@ -3,19 +3,25 @@ import type { AxiosError } from 'axios';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { twoFactorApi } from '../api/twoFactorApi';
+import type { ApiErrorCode } from './twoFactorErrors';
 
-interface BackupLoginForm {
+export interface BackupLoginForm {
   username: string;
   password: string;
   backupCode: string;
 }
 
-function useBackupLogin() {
+interface LoginError {
+  code: ApiErrorCode;
+  message: string;
+}
+
+export function useBackupLogin() {
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<LoginError | null>(null);
+  const resetError = () => setError(null);
   const navigate = useNavigate();
   const setAuth = useUserStore((s) => s.setAuth);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const resetError = () => setError(null);
 
   const login = async (form: BackupLoginForm) => {
     setIsLoading(true);
@@ -25,8 +31,11 @@ function useBackupLogin() {
       setAuth(data.accessToken, data.user);
       navigate('/drive');
     } catch (err) {
-      const msg = (err as AxiosError<{ message: string }>)?.response?.data?.message;
-      setError(msg ?? '로그인에 실패했습니다.');
+      const { code, message } = (err as AxiosError<LoginError>)?.response?.data ?? {};
+      setError({
+        code: code ?? 'UNKNOWN',
+        message: message ?? '로그인에 실패했습니다.',
+      });
     } finally {
       setIsLoading(false);
     }
@@ -34,6 +43,3 @@ function useBackupLogin() {
 
   return { login, isLoading, error, resetError };
 }
-
-export { useBackupLogin };
-export type { BackupLoginForm };
