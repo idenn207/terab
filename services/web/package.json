@@ -12,9 +12,11 @@
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "cap:sync": "tsc -b && vite build && npx cap sync",
-    "cap:sync:dev":  "tsc -b && vite build && cross-env CAPACITOR_ENV=dev npx cap sync",
+    "cap:sync:dev": "tsc -b && vite build && cross-env CAPACITOR_ENV=dev npx cap sync",
     "cap:sync:prod": "tsc -b && vite build && cross-env CAPACITOR_ENV=prod npx cap sync",
-    "cap:android": "npx cap run android"
+    "cap:android": "npx cap run android",
+    "cap:android:dev": "cross-env CAPACITOR_ENV=dev npx cap run android",
+    "cap:android:prod": "cross-env CAPACITOR_ENV=prod npx cap run android"
   },
   "dependencies": {
     "@capacitor/android": "^8.2.0",

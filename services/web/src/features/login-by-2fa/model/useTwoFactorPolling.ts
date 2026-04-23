@@ -5,14 +5,15 @@ const POLL_INTERVAL_MS = 3000; // 3초마다
 
 type PollStatus = 'polling' | 'approved' | 'denied';
 
-interface ApprovedData {
+export interface ApprovedData {
   accessToken: string;
   user: { id: string; username: string; nickname: string };
 }
 
-function useTwoFactorPolling(initialChallengeId: string) {
+export function useTwoFactorPolling(initialChallengeId: string) {
   const [challengeId, setChallengeId] = useState(initialChallengeId);
   const [options, setOptions] = useState<string[]>([]);
+  const [correctNum, setCorrectNum] = useState<string>('');
   const [remainingSeconds, setRemainingSeconds] = useState(60);
   const [pollStatus, setPollStatus] = useState<PollStatus>('polling');
   const [approvedData, setApprovedData] = useState<ApprovedData | null>(null);
@@ -24,6 +25,7 @@ function useTwoFactorPolling(initialChallengeId: string) {
         const data: ChallengeStatus = await twoFactorApi.getStatus(challengeId);
         if (data.status === 'PENDING') {
           setOptions(data.options);
+          setCorrectNum(data.correctNum);
           setRemainingSeconds(data.remainingSeconds);
         } else if (data.status === 'APPROVED') {
           setPollStatus('approved');
@@ -51,8 +53,5 @@ function useTwoFactorPolling(initialChallengeId: string) {
     setPollStatus('polling');
   };
 
-  return { options, remainingSeconds, pollStatus, approvedData, resend };
+  return { options, correctNum, remainingSeconds, pollStatus, approvedData, resend };
 }
-
-export { useTwoFactorPolling };
-export type { ApprovedData };

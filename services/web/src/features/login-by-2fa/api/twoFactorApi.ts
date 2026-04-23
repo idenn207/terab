@@ -6,6 +6,7 @@ import axios from 'axios';
 interface ChallengeStatusPending {
   status: 'PENDING';
   options: string[];
+  correctNum: string;
   remainingSeconds: number;
 }
 

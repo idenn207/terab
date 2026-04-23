@@ -1,0 +1,31 @@
+import { Button, Heading, Text } from '@/shared/ui';
+import { useTrustedDevice } from '../model/useTrustedDevice';
+
+export function TrustedDeviceSection() {
+  const { devices, revoke } = useTrustedDevice();
+
+  return (
+    <section>
+      <Heading level={2} className="mb-4 text-lg font-semibold">
+        신뢰된 기기
+      </Heading>
+      {devices.length === 0 ? (
+        <Text className="text-sm text-gray-500">등록된 신뢰기기가 없습니다.</Text>
+      ) : (
+        <ul className="flex flex-col gap-3">
+          {devices.map((device) => (
+            <li key={device.id} className="px4 flex items-center justify-between rounded-2xl border py-3">
+              <div>
+                <Text className="text-sm font-medium">{device.userAgent ?? '알 수 없는 기기'}</Text>
+                <Text className="text-xs text-gray-500">만료: {new Date(device.expiresAt).toLocaleDateString('ko-KR')}</Text>
+              </div>
+              <Button onClick={() => revoke(device.id)} className="text-sm text-red-500 underline" plain>
+                해제
+              </Button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
+  );
+}

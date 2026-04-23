@@ -1,3 +1,4 @@
+import { Button, Heading, Text } from '@/shared/ui';
 import { useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useTwoFactorPolling, type ApprovedData } from '../model/useTwoFactorPolling';
@@ -10,7 +11,7 @@ export function TwoFactorWaiting({ onApproved }: TwoFactorWaitingProps) {
   const [searchParams] = useSearchParams();
   const challengeId = searchParams.get('id') ?? '';
   const navigate = useNavigate();
-  const { options, remainingSeconds, pollStatus, approvedData, resend } = useTwoFactorPolling(challengeId);
+  const { correctNum, remainingSeconds, pollStatus, approvedData, resend } = useTwoFactorPolling(challengeId);
 
   useEffect(() => {
     if (pollStatus === 'approved' && approvedData) {
@@ -20,7 +21,7 @@ export function TwoFactorWaiting({ onApproved }: TwoFactorWaitingProps) {
 
   useEffect(() => {
     if (pollStatus === 'denied') {
-      navigate('login');
+      navigate('/login');
     }
   }, [pollStatus, navigate]);
 
@@ -29,26 +30,24 @@ export function TwoFactorWaiting({ onApproved }: TwoFactorWaitingProps) {
 
   return (
     <div className="flex flex-col">
-      <h1 className="text-xl font-bold">Push 2FA</h1>
-      <p className="text-center text-sm text-gray-600">모바일 기기에서 아래 숫자 중 올바른 숫자를 선택해 주세요.</p>
-      <div className="flex gap-4">
-        {options.map((opt) => (
-          <div key={opt} className="flex h-20 w-20 items-center justify-center rounded-lg border-2 text-2xl font-bold">
-            {opt}
-          </div>
-        ))}
+      <Heading level={1} className="text-xl font-bold">
+        Push 2FA
+      </Heading>
+      <Text className="text-center text-sm text-gray-600">모바일 기기에서 아래 숫자를 선택해 주세요.</Text>
+      <div className="flex h-24 w-24 items-center justify-center rounded-lg border-2 text-4xl font-bold">
+        {correctNum}
       </div>
-      <p className="text-sm text-gray-500">
+      <Text className="text-sm text-gray-500">
         남은 시간: {minutes}:{seconds}
-      </p>
+      </Text>
       <div className="flex gap-4 text-sm">
-        <button onClick={resend} className="text-blue-600 underline">
+        <Button onClick={resend} className="text-blue-600 underline" plain>
           재전송
-        </button>
+        </Button>
         <span>.</span>
-        <button onClick={() => navigate('/login/backup')} className="text-blue-600 underline">
+        <Button onClick={() => navigate('/login/backup')} className="text-blue-600 underline" plain>
           백업 코드 사용
-        </button>
+        </Button>
       </div>
     </div>
   );

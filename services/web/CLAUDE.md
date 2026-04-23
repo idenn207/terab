@@ -108,17 +108,11 @@ export const Sample = () => {};
 
 ### export 위치 규칙
 
-- `.tsx` 또는 단일 export: 선언부에 바로 `export` 붙임
-- `.ts` 또는 다중 export: 파일 하단에 `export { }` 로 일괄 내보냄
+- 선언부에 바로 `export` 붙임
 
 ```ts
 // sample.tsx — 선언과 동시에 export
 export function Sample() {}
-
-// utils.ts — 하단 일괄 export
-function formatSize() {}
-function parseDate() {}
-export { formatSize, parseDate };
 ```
 
 ## 상태관리 컨벤션
@@ -187,7 +181,7 @@ interface AuthState {
   clearAuth: () => void;
 }
 
-const useUserStore = create<AuthState>((set) => ({
+export const useUserStore = create<AuthState>((set) => ({
   accessToken: null,
   user: null,
   setAuth: (accessToken, user) => set({ accessToken, user }),
@@ -199,7 +193,6 @@ export { useUserStore };
 ```
 
 - 도메인 타입(`User`, `File` 등)은 `types.ts`에, 스토어 인터페이스는 `store.ts`에 선언
-- `types.ts`의 타입은 `export type { }` 패턴으로 내보냄
 - 액션은 스토어 내부에 정의 — 외부에서 `setState()` 직접 호출 금지
 
 ```ts

@@ -3,7 +3,7 @@ import { twoFactorApi } from '../api/twoFactorApi';
 
 type RespondStatus = 'loading' | 'selecting' | 'done' | 'expired';
 
-function useTwoFactorRespond(challengeId: string) {
+export function useTwoFactorRespond(challengeId: string) {
   const [options, setOptions] = useState<string[]>([]);
   const [respondStatus, setRespondStatus] = useState<RespondStatus>('loading');
 
@@ -28,5 +28,3 @@ function useTwoFactorRespond(challengeId: string) {
 
   return { options, respondStatus, respond };
 }
-
-export { useTwoFactorRespond };

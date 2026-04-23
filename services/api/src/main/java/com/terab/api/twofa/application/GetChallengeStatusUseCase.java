@@ -34,7 +34,7 @@ public class GetChallengeStatusUseCase implements IGetChallengeStatusUseCase {
     return switch (challenge.getStatus()) {
       case "PENDING" -> {
         long seconds = Duration.between(OffsetDateTime.now(), challenge.getExpiresAt()).toSeconds();
-        yield ChallengeStatusResponse.pending(challenge.getOptionsList(), (int) Math.max(0, seconds));
+        yield ChallengeStatusResponse.pending(challenge.getOptionsList(), challenge.getCorrectNum(), (int) Math.max(0, seconds));
       }
       case "APPROVED" -> {
         // LAZY 로드 - @Transactional 내에서 안전

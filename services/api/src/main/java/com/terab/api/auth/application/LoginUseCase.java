@@ -34,7 +34,8 @@ public class LoginUseCase implements ILoginUseCase {
     User user = userService.findByUsername(request.username());
     authService.validateCredentials(user, request.password());
 
-    // 등록된 Push 기기가 없으면 2FA 없이 즉시 로그인
+    // 등록된 Push 기기가 없고 platform이 mobile(android, ios)면 2FA 없이 즉시 로그인
+    // TODO: 추후 모바일 기기일 경우 지문인식 추가, 새로운 기기에서 요청시 이미 로그인된 스마트폰으로 '로그인 시도' 알림 추가
     List<Device> devices = deviceService.findByUserId(user.getId());
     boolean hasPushDevice = devices.stream().anyMatch(d -> d.getPushToken() != null);
     if (!hasPushDevice) {
@@ -49,7 +50,7 @@ public class LoginUseCase implements ILoginUseCase {
     // Push 2FA 챌린지 생성 및 FCM Push 발송
     CreateChallengeResponse challenge = createChallengeUseCase.execute(user);
     return AuthResult.withoutToken(
-        LoginResponse.twoFactorRequired(challenge.challengeId(), challenge.options(), challenge.expiresAt())
+      LoginResponse.twoFactorRequired(challenge.challengeId(), challenge.options(), challenge.expiresAt())
     );
   }
 
@@ -58,9 +59,9 @@ public class LoginUseCase implements ILoginUseCase {
     String rawRefreshToken = authService.issueRefreshToken(user);
 
     return AuthResult.withToken(
-        LoginResponse.authenticated(accessToken, new UserResponse(user.getId(), user.getUsername(), user.getNickname())),
-        rawRefreshToken,
-        authService.getRefreshTokenExpMs()
+      LoginResponse.authenticated(accessToken, new UserResponse(user.getId(), user.getUsername(), user.getNickname())),
+      rawRefreshToken,
+      authService.getRefreshTokenExpMs()
     );
   }
 }
