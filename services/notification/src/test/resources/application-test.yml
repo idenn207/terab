@@ -1,2 +1,0 @@
-# @WebMvcTest 슬라이스 테스트용 설정
-# DB 불필요 (서비스는 @MockBean으로 대체)
