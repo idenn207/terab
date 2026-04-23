@@ -1,5 +1,5 @@
 import { useUserStore } from '@/entities';
-import { renderHook, waitFor } from '@testing-library/react';
+import { act, renderHook, waitFor } from '@testing-library/react';
 import { usePushNotification } from '../model/usePushNotification';
 
 const { mockRequestPermissions, mockRegister, mockRemove, mockRegisterPushToken } = vi.hoisted(() => ({
@@ -9,7 +9,7 @@ const { mockRequestPermissions, mockRegister, mockRemove, mockRegisterPushToken 
   mockRegisterPushToken: vi.fn().mockResolvedValue({ deviceId: 'test-device-id' }),
 }));
 
-let capturedRegistrationCallback: ((token: { value: string }) => void) | null = null;
+let capturedRegistrationCallback: ((token: { value: string }) => Promise<void>) | null = null;
 
 vi.mock('@capacitor/core', () => ({
   Capacitor: { isNativePlatform: vi.fn().mockReturnValue(true) },
@@ -32,7 +32,9 @@ vi.mock('../api/deviceApi', () => ({
 
 describe('usePushNotification', () => {
   afterEach(() => {
-    useUserStore.getState().clearAuth();
+    act(() => {
+      useUserStore.getState().clearAuth();
+    });
     capturedRegistrationCallback = null;
     vi.clearAllMocks();
   });
@@ -70,7 +72,9 @@ describe('usePushNotification', () => {
     renderHook(() => usePushNotification());
 
     await waitFor(() => capturedRegistrationCallback !== null);
-    await capturedRegistrationCallback!({ value: 'fcm-token-abc123' });
+    await act(async () => {
+      await capturedRegistrationCallback!({ value: 'fcm-token-abc123' });
+    });
 
     await waitFor(() => {
       expect(mockRegisterPushToken).toHaveBeenCalledWith({
@@ -107,10 +111,12 @@ describe('usePushNotification', () => {
     expect(mockRegisterPushToken).not.toHaveBeenCalled();
 
     // 로그인 → accessToken 변경 → pendingToken useEffect 트리거
-    useUserStore.getState().setAuth('test-access-token', {
-      id: 'user-1',
-      username: 'testuser',
-      nickname: '테스트',
+    act(() => {
+      useUserStore.getState().setAuth('test-access-token', {
+        id: 'user-1',
+        username: 'testuser',
+        nickname: '테스트',
+      });
     });
     rerender();
 

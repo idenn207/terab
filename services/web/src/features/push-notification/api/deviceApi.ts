@@ -1,4 +1,4 @@
-import { axiosInstance } from '@/shared/api';
+import { axiosUser } from '@/shared/api';
 
 interface RegisterPushTokenRequest {
   pushToken: string;
@@ -11,7 +11,7 @@ interface RegisterPushTokenResponse {
 }
 
 const deviceApi = {
-  registerPushToken: (data: RegisterPushTokenRequest) => axiosInstance.post<RegisterPushTokenResponse>('/auth/devices/push-token', data).then((r) => r.data),
+  registerPushToken: (data: RegisterPushTokenRequest) => axiosUser.post<RegisterPushTokenResponse>('/auth/devices/push-token', data).then((r) => r.data),
 };
 
 export { deviceApi };

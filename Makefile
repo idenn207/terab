@@ -131,8 +131,16 @@ web:
 
 # ─── 안드로이드 ────────────────────────────────────────────────────
 .PHONY: android
-android:
+android: build-android
 	cd services/web && npm run cap:android
+
+.PHONY: android-dev
+android-dev: build-android-dev
+	cd services/web && npm run cap:android:dev
+
+.PHONY: android-prod
+android-prod: build-android-prod
+	cd services/web && npm run cap:android:prod
 
 .PHONY: android-open
 android-open:

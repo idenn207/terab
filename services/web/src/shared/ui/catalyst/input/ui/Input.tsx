@@ -29,6 +29,7 @@ export const Input = React.forwardRef(function Input(
   }: {
     className?: string;
     type?: 'email' | 'number' | 'password' | 'search' | 'tel' | 'text' | 'url' | DateType;
+    transform?: 'uppercase' | 'lowercase';
   } & Omit<Headless.InputProps, 'as' | 'className'>,
   ref: React.ForwardedRef<HTMLInputElement>,
 ) {
@@ -53,6 +54,8 @@ export const Input = React.forwardRef(function Input(
         ref={ref}
         {...props}
         className={cn([
+          // Text Transform
+          props.transform,
           // Date classes
           props.type &&
             dateTypes.includes(props.type) && [

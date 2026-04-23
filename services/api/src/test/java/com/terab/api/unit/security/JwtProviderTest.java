@@ -1,4 +1,4 @@
-package com.terab.api.unit;
+package com.terab.api.unit.security;
 
 import static org.assertj.core.api.Assertions.*;
 import java.util.List;
@@ -27,6 +27,7 @@ class JwtProviderTest {
   class GenerateAccessToken {
 
     @Test
+    @DisplayName("생성된 토큰의 subject에 userId가 포함된다")
     void should_contain_userId_as_subject() {
       UUID userId = UUID.randomUUID();
       String token = jwtProvider.generateAccessToken(userId, "testuser", List.of("USER"), List.of("file:read"));
@@ -35,6 +36,7 @@ class JwtProviderTest {
     }
 
     @Test
+    @DisplayName("생성된 토큰에 username과 permissions 클레임이 포함된다")
     void should_contain_username_and_permissions_claims() {
       UUID userId = UUID.randomUUID();
       String token = jwtProvider.generateAccessToken(userId, "testuser", List.of("USER"), List.of("file:read", "file:write"));
@@ -50,6 +52,7 @@ class JwtProviderTest {
   class Validate {
 
     @Test
+    @DisplayName("만료된 토큰 검증 시 JwtException을 던진다")
     void should_throw_on_expired_token() {
       JwtProvider shortLived = new JwtProvider(SECRET, -1000L, 604_800_000L);
       String token = shortLived.generateAccessToken(UUID.randomUUID(), "user", List.of(), List.of());
@@ -57,6 +60,7 @@ class JwtProviderTest {
     }
 
     @Test
+    @DisplayName("변조된 토큰 검증 시 JwtException을 던진다")
     void should_throw_on_tampered_token() {
       String token = jwtProvider.generateAccessToken(UUID.randomUUID(), "user", List.of(), List.of());
       String tampered = token.substring(0, token.length() - 5) + "XXXXX";
@@ -69,6 +73,7 @@ class JwtProviderTest {
   class GenerateRefreshToken {
 
     @Test
+    @DisplayName("생성된 RT의 subject에 userId가 포함된다")
     void should_contain_userId_as_subject() {
       UUID userId = UUID.randomUUID();
       String token = jwtProvider.generateRefreshToken(userId);

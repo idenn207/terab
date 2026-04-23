@@ -1,4 +1,4 @@
-package com.terab.api.slice;
+package com.terab.api.slice.device;
 
 import static com.terab.api.support.SecurityTestSupport.*;
 import static org.mockito.ArgumentMatchers.*;
@@ -10,6 +10,8 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.json.AutoConfigureJsonTesters;
+import org.springframework.boot.test.json.JacksonTester;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
@@ -19,16 +21,19 @@ import org.springframework.test.web.servlet.MockMvc;
 import com.terab.api.common.exception.GlobalExceptionHandler;
 import com.terab.api.device.application.interfaces.IRegisterPushTokenUseCase;
 import com.terab.api.device.controller.DeviceController;
+import com.terab.api.device.dto.PushTokenRequest;
 import com.terab.api.device.dto.PushTokenResponse;
 import com.terab.api.security.JwtProvider;
 import com.terab.api.security.SecurityConfig;
 
 @WebMvcTest(DeviceController.class)
-@Import({SecurityConfig.class, GlobalExceptionHandler.class})
+@Import({SecurityConfig.class, GlobalExceptionHandler.class, JwtProvider.class})
+@AutoConfigureJsonTesters
 @ActiveProfiles("test")
 class DeviceControllerTest {
   
   @Autowired MockMvc mockMvc;
+  @Autowired JacksonTester<PushTokenRequest> pushTokenJson;
 
   @MockitoBean IRegisterPushTokenUseCase registerPushTokenUseCase;
   @MockitoBean JwtProvider jwtProvider;
@@ -49,9 +54,11 @@ class DeviceControllerTest {
         post("/api/auth/devices/push-token")
           .with(authenticatedUser(userId))
           .contentType(MediaType.APPLICATION_JSON)
-          .content("""
-              {"pushToken":"fcm-token-abc123","platform":"android","name":"Galaxy S24"}
-            """))
+          .content(pushTokenJson.write(PushTokenRequest.builder()
+            .pushToken("fcm-token-abc123")
+            .platform("android")
+            .name("Galaxy S24")
+            .build()).getJson()))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.deviceId").value(deviceId.toString()));
     }
@@ -62,10 +69,11 @@ class DeviceControllerTest {
       mockMvc.perform(
         post("/api/auth/devices/push-token")
           .contentType(MediaType.APPLICATION_JSON)
-          .content("""
-            {"pushToken":"token","platform":"android"}
-          """)
-      ).andExpect(status().isUnauthorized());
+          .content(pushTokenJson.write(PushTokenRequest.builder()
+            .pushToken("token")
+            .platform("android")
+            .build()).getJson()))
+        .andExpect(status().isUnauthorized());
     }
 
     @Test
@@ -76,10 +84,11 @@ class DeviceControllerTest {
         post("/api/auth/devices/push-token")
           .with(authenticatedUser(userId))
           .contentType(MediaType.APPLICATION_JSON)
-          .content("""
-            {"pushToken":"token","platform":"windows"}
-          """)
-      ).andExpect(status().isBadRequest());
+          .content(pushTokenJson.write(PushTokenRequest.builder()
+            .pushToken("token")
+            .platform("windows")
+            .build()).getJson()))
+        .andExpect(status().isBadRequest());
     }
   }
 

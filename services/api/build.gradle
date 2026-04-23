@@ -113,6 +113,7 @@ configurations {
 // Unit + Slice 테스트: ./gradlew test
 tasks.named('test') {
   useJUnitPlatform()
+  jvmArgs "-Xshare:off"
   maxParallelForks = Runtime.runtime.availableProcessors().intdiv(2) ?: 1
   // 템플릿 파일은 테스트 실행 대상에서 제외
   exclude '**/_*Template*'
@@ -132,6 +133,7 @@ tasks.register('integrationTest', Test) {
   testClassesDirs = sourceSets.intTest.output.classesDirs
   classpath = sourceSets.intTest.runtimeClasspath
   useJUnitPlatform()
+  jvmArgs "-Xshare:off"
   // 템플릿 파일은 테스트 실행 대상에서 제외
   exclude '**/_*Template*'
   // 실행 가능한 테스트 클래스가 없으면 태스크 skip (Gradle 9.0 호환)

@@ -1,7 +1,8 @@
 {
   "$schema": "https://json.schemastore.org/claude-code-settings.json",
   "env": {
-    "ENABLE_TOOL_SEARCH": "auto:3"
+    "ENABLE_TOOL_SEARCH": "auto:3",
+    "CLAUDE_CODE_MAX_OUTPUT_TOKENS": "64000"
   },
   "model": "opusplan",
   "enabledPlugins": {},
@@ -9,4 +10,3 @@
   "effortLevel": "medium",
   "autoUpdatesChannel": "latest"
 }
-

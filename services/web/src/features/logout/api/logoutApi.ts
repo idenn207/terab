@@ -1,7 +1,7 @@
-import { axiosInstance } from '@/shared/api';
+import { axiosUser } from '@/shared/api';
 
 const logoutApi = {
-  logout: () => axiosInstance.post('/auth/logout'),
+  logout: () => axiosUser.post('/auth/logout'),
 };
 
 export { logoutApi };

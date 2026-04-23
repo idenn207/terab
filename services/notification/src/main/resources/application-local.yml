@@ -4,9 +4,8 @@ spring:
       - 'optional:configtree:./run/'
 
 server:
-  port: 9092
+  port: 19092
 
 firebase:
   # 로컬 Gradle 실행 시 setup-local.sh가 secrets.env의 FIREBASE_CREDENTIAL_JSON 내용을 run/ 에 기록
   credentials-path: ./run/FIREBASE_CREDENTIAL_JSON
-

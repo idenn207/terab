@@ -32,12 +32,16 @@ services:
         condition: on-failure
 
   # ─── MinIO ───────────────────────────────────────────────────
+  # MinIO는 _FILE 환경변수를 지원하지 않으므로 엔트리포인트에서 직접 읽어 주입
   minio:
     image: minio/minio:latest
-    command: server /data --console-address ":9001"
-    environment:
-      MINIO_ROOT_USER_FILE: /run/configs/MINIO_ROOT_USER
-      MINIO_ROOT_PASSWORD_FILE: /run/secrets/MINIO_PASSWORD
+    entrypoint:
+      - /bin/sh
+      - -c
+      - |
+        export MINIO_ROOT_USER=$$(cat /run/configs/MINIO_ROOT_USER)
+        export MINIO_ROOT_PASSWORD=$$(cat /run/secrets/MINIO_PASSWORD)
+        exec minio server /data --console-address ":9001"
     configs:
       - { source: MINIO_ROOT_USER, target: /run/configs/MINIO_ROOT_USER }
     secrets:
@@ -57,7 +61,7 @@ services:
     deploy:
       replicas: 1
       restart_policy:
-        condition: on-failure
+        condition: any
 
   # ─── RabbitMQ ────────────────────────────────────────────────
   # RabbitMQ 3.13은 _FILE 환경변수를 제거했으므로 엔트리포인트에서 직접 읽어 주입
@@ -90,7 +94,7 @@ services:
     deploy:
       replicas: 1
       restart_policy:
-        condition: on-failure
+        condition: any
 
 networks:
   terab-net:

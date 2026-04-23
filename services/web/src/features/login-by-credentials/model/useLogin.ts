@@ -27,13 +27,19 @@ export function useLogin() {
     setError(null);
     try {
       const data = await loginApi.login(credentials);
-      setAuth(data.accessToken, data.user);
-      navigate('/drive');
+      if (data.status === 'AUTHENTICATED') {
+        setAuth(data.accessToken!, data.user!);
+        navigate('/drive');
+      } else if (data.status === '2FA_REQUIRED') {
+        navigate(`/login/2fa?id=${data.challengeId}`);
+      } else {
+        // ...something else
+      }
     } catch (err: AxiosError | Error | unknown) {
-      const response = (err as AxiosError<LoginError>)?.response;
+      const { code, message } = (err as AxiosError<LoginError>)?.response?.data ?? {};
       setError({
-        code: response?.data?.code ?? 'UNKNOWN',
-        message: response?.data?.message ?? '로그인에 실패했습니다.',
+        code: code ?? 'UNKNOWN',
+        message: message ?? '로그인에 실패했습니다.',
       });
     } finally {
       setIsLoading(false);

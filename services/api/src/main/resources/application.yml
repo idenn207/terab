@@ -69,4 +69,3 @@ app:
     username: ${OWNER_USERNAME:owner}
     nickname: ${OWNER_NICKNAME:Owner}
     password: ${OWNER_PASSWORD:}
-

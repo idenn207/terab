@@ -1,12 +1,18 @@
-import { DrivePage, LoginPage, NavbarPage, SidebarLayoutPage, SidebarPage } from '@/pages';
+import { BackupCodeSection, TrustedDeviceSection, TrustThisDeviceCheckbox, TwoFactorApprovalPage, TwoFactorBackupEntry, TwoFactorWaiting } from '@/features';
+import { DrivePage, Link2TwoFAAuth, LoginPage, TwoFAApprovalPage, TwoFABackupPage, TwoFAWaitPage } from '@/pages';
 import { AuthLayout } from '@/widgets';
 import { PrivateRoute } from '@shared/router';
-import type { RouteObject } from 'react-router-dom';
+import { Outlet, type RouteObject } from 'react-router-dom';
 import { AppShell } from '../AppShell';
 
 const rootRoutes: RouteObject[] = [
   {
     path: '/',
+    element: (
+      <main className="pt-safe-top">
+        <Outlet />
+      </main>
+    ),
     children: [
       {
         index: true,
@@ -15,7 +21,8 @@ const rootRoutes: RouteObject[] = [
             <ul className="flex flex-col justify-center gap-4 p-6 text-black dark:text-white">
               <a href="/login">login</a>
               <a href="/drive">drive</a>
-              <a href="/test">test</a>
+              <a href="/preview">preview</a>
+              <a href="/preview/2fa-auth">2fa auth</a>
             </ul>
           </>
         ),
@@ -28,7 +35,11 @@ const authRoutes: RouteObject[] = [
   {
     path: '/login',
     element: <AuthLayout />,
-    children: [{ index: true, element: <LoginPage /> }],
+    children: [
+      { index: true, element: <LoginPage /> },
+      { path: '2fa', element: <TwoFAWaitPage /> },
+      { path: 'backup', element: <TwoFABackupPage /> },
+    ],
   },
 ];
 
@@ -37,6 +48,7 @@ const appRoutes: RouteObject[] = [
     path: '/drive',
     element: (
       <PrivateRoute>
+        <Link2TwoFAAuth />
         <DrivePage />
       </PrivateRoute>
     ),
@@ -46,42 +58,23 @@ const appRoutes: RouteObject[] = [
       // { path: ':folderId', element: <div>Drive/:folderId</div> },
     ],
   },
+  {
+    path: '/auth/2fa/:id',
+    element: <TwoFAApprovalPage />,
+  },
 ];
 
-const testRoutes: RouteObject[] = [
+const previewRoutes: RouteObject[] = [
   {
-    path: '/test',
+    path: '/preview',
     children: [
-      {
-        index: true,
-        element: (
-          <>
-            <ul className="flex flex-col justify-center gap-4 p-6 text-black dark:text-white">
-              <a href="/test/navbar">Navbar</a>
-              <a href="/test/sidebar">Sidebar</a>
-              <a href="/test/layout">Layouts</a>
-            </ul>
-          </>
-        ),
-      },
-      { path: 'navbar', element: <NavbarPage /> },
-      { path: 'sidebar', element: <SidebarPage /> },
-      {
-        path: 'layout',
-        children: [
-          {
-            index: true,
-            element: (
-              <>
-                <ul className="flex flex-col justify-center gap-4 p-6 text-black dark:text-white">
-                  <a href="/test/layout/sidebar">Sidebar Layout</a>
-                </ul>
-              </>
-            ),
-          },
-          { path: 'sidebar', element: <SidebarLayoutPage /> },
-        ],
-      },
+      { index: true, element: <TwoFactorWaiting onApproved={() => {}} /> },
+      { path: '1', element: <TwoFactorApprovalPage /> },
+      { path: '2', element: <TwoFactorBackupEntry /> },
+      { path: '3', element: <BackupCodeSection /> },
+      { path: '4', element: <TrustedDeviceSection /> },
+      { path: '5', element: <TrustThisDeviceCheckbox checked={false} onChange={() => {}} /> },
+      { path: '2fa-auth', element: <Link2TwoFAAuth /> },
     ],
   },
 ];
@@ -89,6 +82,6 @@ const testRoutes: RouteObject[] = [
 export const routes: RouteObject[] = [
   {
     element: <AppShell />,
-    children: [...rootRoutes, ...authRoutes, ...appRoutes, ...testRoutes],
+    children: [...rootRoutes, ...authRoutes, ...appRoutes, ...previewRoutes],
   },
 ];
