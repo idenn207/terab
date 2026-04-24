@@ -27,9 +27,8 @@ RUN sed -i 's/\r$//' /usr/local/bin/docker-entrypoint.sh && chmod +x /usr/local/
 
 # 보안: non-root 사용자
 RUN addgroup -S appgroup && adduser -S appuser -G appgroup
-USER appuser
 
-# 프로덕션 의존성만 설치
+# 프로덕션 의존성만 설치 (root 상태에서 실행 후 소유권 이전)
 COPY package*.json ./
 RUN npm ci --omit=dev --ignore-scripts
 
@@ -37,6 +36,9 @@ RUN npm ci --omit=dev --ignore-scripts
 COPY --from=builder /app/dist ./dist
 COPY drizzle ./drizzle
 
+RUN chown -R appuser:appgroup /app
+USER appuser
+
 EXPOSE 3000
 
-ENTRYPOINT ["docker-entrypoint.sh"]
+ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]
