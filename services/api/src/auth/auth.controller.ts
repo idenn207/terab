@@ -50,7 +50,12 @@ export class AuthController {
   async logout(@Req() req: Request, @Res({ passthrough: true }) res: Response): Promise<void> {
     const rawRefreshToken = req.cookies?.[REFRESH_TOKEN_COOKIE] as string | undefined;
     await this.authService.logout(rawRefreshToken);
-    res.clearCookie(REFRESH_TOKEN_COOKIE, { path: COOKIE_PATH });
+    res.clearCookie(REFRESH_TOKEN_COOKIE, {
+      httpOnly: true,
+      secure: true,
+      sameSite: 'strict',
+      path: COOKIE_PATH,
+    });
   }
 
   @Get('me')
