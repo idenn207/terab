@@ -1,0 +1,66 @@
+import { Controller, Post, Get, Body, Res, Req, HttpCode, HttpStatus } from '@nestjs/common';
+import { Request, Response } from 'express';
+import { AuthService } from './auth.service.js';
+import { LoginDto } from './dto/login.dto.js';
+import { BackupLoginDto } from './dto/backup-login.dto.js';
+import { LoginResponseDto } from './dto/login-response.dto.js';
+import { UserResponseDto } from './dto/user-response.dto.js';
+import { Public } from '../common/decorators/public.decorator.js';
+import { CurrentUser } from '../common/decorators/current-user.decorator.js';
+import { AuthUser } from './types/auth-user.type.js';
+
+const REFRESH_TOKEN_COOKIE = 'refreshToken';
+const COOKIE_PATH = '/api/auth';
+
+@Controller('api/auth')
+export class AuthController {
+  constructor(private readonly authService: AuthService) {}
+
+  @Public()
+  @Post('login')
+  async login(@Body() dto: LoginDto, @Res({ passthrough: true }) res: Response): Promise<LoginResponseDto> {
+    const { response, rawRefreshToken, refreshTokenExpMs } = await this.authService.login(dto);
+    this.setRefreshTokenCookie(res, rawRefreshToken, refreshTokenExpMs);
+    return response;
+  }
+
+  @Public()
+  @Post('login/backup')
+  async loginWithBackup(@Body() dto: BackupLoginDto, @Res({ passthrough: true }) res: Response): Promise<LoginResponseDto> {
+    const { response, rawRefreshToken, refreshTokenExpMs } = await this.authService.loginWithBackupCode(dto);
+    this.setRefreshTokenCookie(res, rawRefreshToken, refreshTokenExpMs);
+    return response;
+  }
+
+  @Public()
+  @Post('refresh')
+  async refresh(@Req() req: Request, @Res({ passthrough: true }) res: Response): Promise<LoginResponseDto> {
+    const rawRefreshToken = req.cookies?.[REFRESH_TOKEN_COOKIE] as string | undefined;
+    const { response, rawRefreshToken: newRt, refreshTokenExpMs } = await this.authService.refresh(rawRefreshToken);
+    this.setRefreshTokenCookie(res, newRt, refreshTokenExpMs);
+    return response;
+  }
+
+  @Post('logout')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async logout(@Req() req: Request, @Res({ passthrough: true }) res: Response): Promise<void> {
+    const rawRefreshToken = req.cookies?.[REFRESH_TOKEN_COOKIE] as string | undefined;
+    await this.authService.logout(rawRefreshToken);
+    res.clearCookie(REFRESH_TOKEN_COOKIE, { path: COOKIE_PATH });
+  }
+
+  @Get('me')
+  async me(@CurrentUser() user: AuthUser): Promise<UserResponseDto> {
+    return this.authService.getCurrentUser(user.userId);
+  }
+
+  private setRefreshTokenCookie(res: Response, rawToken: string, maxAgeMs: number): void {
+    res.cookie(REFRESH_TOKEN_COOKIE, rawToken, {
+      httpOnly: true,
+      secure: true,
+      sameSite: 'strict',
+      maxAge: maxAgeMs,
+      path: COOKIE_PATH,
+    });
+  }
+}
