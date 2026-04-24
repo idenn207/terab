@@ -18,6 +18,7 @@ export class AuthController {
 
   @Public()
   @Post('login')
+  @HttpCode(HttpStatus.OK)
   async login(@Body() dto: LoginDto, @Res({ passthrough: true }) res: Response): Promise<LoginResponseDto> {
     const { response, rawRefreshToken, refreshTokenExpMs } = await this.authService.login(dto);
     this.setRefreshTokenCookie(res, rawRefreshToken, refreshTokenExpMs);
@@ -26,6 +27,7 @@ export class AuthController {
 
   @Public()
   @Post('login/backup')
+  @HttpCode(HttpStatus.OK)
   async loginWithBackup(@Body() dto: BackupLoginDto, @Res({ passthrough: true }) res: Response): Promise<LoginResponseDto> {
     const { response, rawRefreshToken, refreshTokenExpMs } = await this.authService.loginWithBackupCode(dto);
     this.setRefreshTokenCookie(res, rawRefreshToken, refreshTokenExpMs);
@@ -34,6 +36,7 @@ export class AuthController {
 
   @Public()
   @Post('refresh')
+  @HttpCode(HttpStatus.OK)
   async refresh(@Req() req: Request, @Res({ passthrough: true }) res: Response): Promise<LoginResponseDto> {
     const rawRefreshToken = req.cookies?.[REFRESH_TOKEN_COOKIE] as string | undefined;
     const { response, rawRefreshToken: newRt, refreshTokenExpMs } = await this.authService.refresh(rawRefreshToken);
@@ -41,6 +44,7 @@ export class AuthController {
     return response;
   }
 
+  @Public()
   @Post('logout')
   @HttpCode(HttpStatus.NO_CONTENT)
   async logout(@Req() req: Request, @Res({ passthrough: true }) res: Response): Promise<void> {
