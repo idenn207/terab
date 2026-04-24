@@ -4,6 +4,13 @@ import { ConfigService } from '@nestjs/config';
 import { AuthService } from './auth.service.js';
 import { AuthRepository } from './auth.repository.js';
 import { ApiException } from '../common/exceptions/api.exception.js';
+import * as bcrypt from 'bcryptjs';
+
+jest.mock('bcryptjs', () => ({
+  ...jest.requireActual('bcryptjs'),
+  compare: jest.fn(),
+  hash: jest.fn(),
+}));
 
 const mockAuthRepository = {
   findUserWithPermissionsByUsername: jest.fn(),
@@ -64,8 +71,7 @@ describe('AuthService', () => {
     });
 
     it('비활성 계정은 ApiException(ACCOUNT_DISABLED)을 던진다', async () => {
-      const bcrypt = require('bcryptjs');
-      jest.spyOn(bcrypt, 'compare').mockResolvedValue(true as any);
+      (bcrypt.compare as jest.Mock).mockResolvedValue(true);
 
       await expect(
         service.validateCredentials(

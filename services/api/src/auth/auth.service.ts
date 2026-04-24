@@ -10,6 +10,8 @@ import { UserResponseDto } from './dto/user-response.dto.js';
 import { LoginDto } from './dto/login.dto.js';
 import { BackupLoginDto } from './dto/backup-login.dto.js';
 
+const BCRYPT_ROUNDS = 10;
+
 interface AuthTokens {
   accessToken: string;
   rawRefreshToken: string;
@@ -168,13 +170,17 @@ export class AuthService implements OnModuleInit {
     const ownerRole = await this.authRepository.findRoleByName('OWNER');
     if (!ownerRole) throw new Error('OWNER role 없음 — 마이그레이션 실행 여부를 확인하세요');
 
-    const hashedPassword = await bcrypt.hash(this.pepperPassword(ownerPassword), 10);
-    const newUser = await this.authRepository.insertUser({
-      username: ownerUsername,
-      nickname: ownerNickname,
-      password: hashedPassword,
-    });
-    await this.authRepository.insertUserRole(newUser.id, ownerRole.id);
+    const hashedPassword = await bcrypt.hash(this.pepperPassword(ownerPassword), BCRYPT_ROUNDS);
+    try {
+      const newUser = await this.authRepository.insertUser({
+        username: ownerUsername,
+        nickname: ownerNickname,
+        password: hashedPassword,
+      });
+      await this.authRepository.insertUserRole(newUser.id, ownerRole.id);
+    } catch {
+      // 동시 기동 시 UNIQUE 충돌 무시 (다른 인스턴스가 먼저 생성)
+    }
   }
 
   // ─── 암호화 유틸 ─────────────────────────────────────────────────────
