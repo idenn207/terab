@@ -23,3 +23,7 @@ volumes/storage/
 # OS
 .DS_Store
 Thumbs.db
+
+api.env
+web.env
+infra.env
