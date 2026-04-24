@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, InternalServerErrorException } from '@nestjs/common';
 import { and, eq, gt, isNull } from 'drizzle-orm';
 import { DatabaseService } from '../database/database.service.js';
 import {
@@ -136,6 +136,7 @@ export class AuthRepository {
       .insert(users)
       .values(data)
       .returning({ id: users.id });
+    if (!row) throw new InternalServerErrorException('사용자 생성 실패');
     return row;
   }
 
