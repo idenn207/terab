@@ -8,8 +8,8 @@ async function bootstrap(): Promise<void> {
   const app = await NestFactory.create(AppModule);
   const configService = app.get(ConfigService);
 
-  app.use(cookieParser());
   app.use(helmet());
+  app.use(cookieParser());
 
   const allowedOrigins = configService
     .getOrThrow<string>('CORS_ALLOWED_ORIGINS')
@@ -23,4 +23,7 @@ async function bootstrap(): Promise<void> {
 
   await app.listen(process.env.PORT ?? 3000);
 }
-bootstrap();
+bootstrap().catch((err: unknown) => {
+  console.error('Application failed to start', err);
+  process.exit(1);
+});
