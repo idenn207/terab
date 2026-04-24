@@ -1,10 +1,10 @@
-import { Test } from '@nestjs/testing';
-import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
-import { AuthService } from './auth.service.js';
-import { AuthRepository } from './auth.repository.js';
+import { JwtService } from '@nestjs/jwt';
+import { Test } from '@nestjs/testing';
+import bcrypt from 'bcryptjs';
 import { ApiException } from '../common/exceptions/api.exception.js';
-import * as bcrypt from 'bcryptjs';
+import { AuthRepository } from './auth.repository.js';
+import { AuthService } from './auth.service.js';
 
 jest.mock('bcryptjs', () => ({
   ...jest.requireActual('bcryptjs'),
@@ -84,7 +84,11 @@ describe('AuthService', () => {
 
   describe('generateAccessToken', () => {
     it('JwtService.sign을 호출하고 AT를 반환한다', () => {
-      const user = { id: 'uuid-1', username: 'user1', permissions: ['file:read'] };
+      const user = {
+        id: 'uuid-1',
+        username: 'user1',
+        permissions: ['file:read'],
+      };
       const token = service.generateAccessToken(user as any);
       expect(mockJwtService.sign).toHaveBeenCalledWith(
         { sub: 'uuid-1', username: 'user1', permissions: ['file:read'] },

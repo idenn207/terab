@@ -3,7 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { drizzle, NodePgDatabase } from 'drizzle-orm/node-postgres';
 import { migrate } from 'drizzle-orm/node-postgres/migrator';
 import { Pool } from 'pg';
-import * as schema from './schema/index.js';
+import schema from './schema/index.js';
 
 @Injectable()
 export class DatabaseService implements OnModuleInit, OnModuleDestroy {
