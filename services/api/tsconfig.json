@@ -22,10 +22,9 @@
     "types": ["node", "jest"],
     "paths": {
       "@terab/common": ["./src/common"],
-      "@terab/common/*": ["./src/common/*"],
-      "@terab/decorator": ["./src/common/decorators/index.ts"],
-      "@terab/guard": ["./src/common/guards/index.ts"],
-      "@terab/db": ["./src/database/index.ts"]
+      "@terab/common/*": ["./src/common/index.ts"],
+      "@terab/db": ["./src/database/index.ts"],
+      "@terab/test": ["./src/test/index.ts"]
     },
 
     /* Strict Type-Checking Options */
