@@ -1,4 +1,5 @@
 {
+  /* @link https://www.typescriptlang.org/tsconfig/#compilerOptions */
   "compilerOptions": {
     "module": "nodenext",
     "moduleResolution": "nodenext",
@@ -13,13 +14,29 @@
     "target": "ES2023",
     "sourceMap": true,
     "outDir": "./dist",
-    "baseUrl": "./",
     "incremental": true,
     "skipLibCheck": true,
     "strictNullChecks": true,
     "forceConsistentCasingInFileNames": true,
-    "noImplicitAny": false,
-    "strictBindCallApply": false,
-    "noFallthroughCasesInSwitch": false
-  }
+
+    "types": ["node", "jest"],
+    "paths": {
+      "@terab/common": ["./src/common"],
+      "@terab/common/*": ["./src/common/*"],
+      "@terab/decorator": ["./src/common/decorators/index.ts"],
+      "@terab/guard": ["./src/common/guards/index.ts"],
+      "@terab/db": ["./src/database/index.ts"]
+    },
+
+    /* Strict Type-Checking Options */
+    "strict": true
+    // "noImplicitAny": true,
+    // "strictNullChecks": true,
+    // "strictFunctionTypes": true,
+    // "strictBindCallApply": true,
+    // "strictPropertyInitialization": true,
+    // "noImplicitThis": true,
+    // "alwaysStrict": true,
+  },
+  "exclude": ["node_modules"]
 }
