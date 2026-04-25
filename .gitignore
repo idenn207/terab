@@ -1,11 +1,10 @@
 # 환경 설정 (절대 커밋 금지)
 .claude/*.local.*
 secrets/
-configs.env
-secrets.env
 runner.env
-services/api/run/
-services/notification/run/
+api.env
+web.env
+infra.env
 
 # Anroid Release Key
 google-services.json
@@ -25,29 +24,3 @@ volumes/storage/
 # OS
 .DS_Store
 Thumbs.db
-
-# Java build output
-services/api/target/
-services/api/.gradle/
-services/api/build/
-services/api/bin/
-services/api/src/main/resources/META-INF/
-
-services/notification/.gradle/
-services/notification/build/
-services/notification/bin/
-services/notification/src/main/resources/META-INF/
-
-# Node
-services/web/node_modules/
-services/web/dist/
-services/web/build/
-
-# Android — 민감 파일 및 빌드 캐시
-services/web/android/app/google-services.json
-services/web/android/.gradle/
-services/web/android/app/.cxx/
-services/web/android/app/build/
-
-# rollup-plugin-visualizer
-services/web/stats.html

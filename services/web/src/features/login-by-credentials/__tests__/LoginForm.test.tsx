@@ -30,6 +30,6 @@ describe('LoginForm', () => {
     await user.type(screen.getByLabelText('비밀번호'), 'wrong');
     await user.click(screen.getByRole('button', { name: '로그인' }));
 
-    expect(await screen.findByText('ID 또는 비밀번호가 올바르지 않습니다')).toBeInTheDocument();
+    expect(await screen.findByText('아이디 또는 비밀번호가 올바르지 않습니다')).toBeInTheDocument();
   });
 });

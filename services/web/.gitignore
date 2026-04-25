@@ -1,3 +1,6 @@
+# 환경변수
+.env
+
 # Logs
 logs
 *.log
@@ -11,6 +14,9 @@ node_modules
 dist
 dist-ssr
 *.local
+
+# rollup-plugin-visualizer
+services/web/stats.html
 
 # Editor directories and files
 .vscode/*

@@ -4,19 +4,20 @@
 
 NAS에서 동작하는 셀프호스팅 파일 관리 서비스.
 
-| 레이어 | 기술 |
-|--------|------|
-| API | Spring Boot 4.x / Java 25 |
-| Web | React 19 + Vite / TypeScript |
-| Mobile | Capacitor (Android WebView) |
-| Notification MS | Spring Boot 4.x / RabbitMQ + Firebase FCM |
-| DB | PostgreSQL 16 |
-| Object Storage | MinIO (S3 호환) |
-| 인프라 | Docker Swarm + Nginx |
+| 레이어         | 기술                                  |
+| -------------- | ------------------------------------- |
+| API            | Node 24.x / Nestjs 11 + Drizzle       |
+| MQ             | Node 24.x / Nestjs 11 + Redis(BullMQ) |
+| Web            | React 19 + Vite / TypeScript          |
+| Mobile         | Capacitor (Android WebView)           |
+| DB             | PostgreSQL 16                         |
+| Object Storage | MinIO (S3 호환)                       |
+| 인프라         | Docker Swarm + Nginx                  |
 
 ### 주요 명령어
 
 **로컬 개발**
+
 ```bash
 make setup-local  # 최초 클론 후 1회 실행 (local.env → properties 변환)
 make infra        # DB/MinIO 컨테이너 기동
@@ -26,6 +27,7 @@ make notification # Notification MS 개발 서버 실행
 ```
 
 **운영 (NAS)**
+
 ```bash
 make setup        # Docker Config/Secret 등록 (configs.env + secrets.env 필요)
 make stack-deploy # Docker Swarm 스택 배포
@@ -50,15 +52,15 @@ scripts/        # 빌드/배포 자동화 스크립트
 
 코드, 주석, 커밋 메시지에서 아래 명칭을 일관되게 사용한다.
 
-| 한글 | 영문 (코드) | 설명 |
-|------|------------|------|
-| 파일 | File | 사용자가 업로드한 개별 파일 |
-| 폴더 | Folder | 파일을 담는 디렉토리 단위 |
-| 드라이브 | Drive | 사용자에게 할당된 최상위 저장 공간 |
-| 사용자 | User | 서비스 계정 |
-| 권한 | Permission | 파일/폴더에 대한 접근 권한 |
-| 역할 | Role | RBAC 기반 사용자 역할 |
-| 공유 | Share | 파일/폴더를 타 사용자에게 공유하는 행위 |
+| 한글     | 영문 (코드) | 설명                                    |
+| -------- | ----------- | --------------------------------------- |
+| 파일     | File        | 사용자가 업로드한 개별 파일             |
+| 폴더     | Folder      | 파일을 담는 디렉토리 단위               |
+| 드라이브 | Drive       | 사용자에게 할당된 최상위 저장 공간      |
+| 사용자   | User        | 서비스 계정                             |
+| 권한     | Permission  | 파일/폴더에 대한 접근 권한              |
+| 역할     | Role        | RBAC 기반 사용자 역할                   |
+| 공유     | Share       | 파일/폴더를 타 사용자에게 공유하는 행위 |
 
 ## 코드 컨벤션
 

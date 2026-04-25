@@ -67,7 +67,7 @@ export function DrivePage() {
                 </div>
                 <nav className="flex flex-1 flex-col">
                   <ul role="list" className="-mx-2 flex-1 space-y-1">
-                    {navigation.map(item => (
+                    {navigation.map((item) => (
                       <li key={item.name}>
                         <a
                           href={item.href}
@@ -95,7 +95,7 @@ export function DrivePage() {
           </div>
           <nav className="relative mt-8">
             <ul role="list" className="flex flex-col items-center space-y-1">
-              {navigation.map(item => (
+              {navigation.map((item) => (
                 <li key={item.name}>
                   <a
                     href={item.href}
@@ -163,7 +163,7 @@ export function DrivePage() {
                     transition
                     className="absolute right-0 z-10 mt-2.5 w-32 origin-top-right rounded-md bg-white py-2 shadow-lg outline outline-gray-900/5 transition data-closed:scale-95 data-closed:transform data-closed:opacity-0 data-enter:duration-100 data-enter:ease-out data-leave:duration-75 data-leave:ease-in dark:bg-gray-800 dark:shadow-none dark:-outline-offset-1 dark:outline-white/10"
                   >
-                    {userNavigation.map(item => (
+                    {userNavigation.map((item) => (
                       <Headless.MenuItem key={item.name}>
                         <a
                           href={item.href}
