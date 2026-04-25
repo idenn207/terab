@@ -14,6 +14,9 @@ import { JwtStrategy } from './strategies/jwt.strategy';
       imports: [ConfigModule],
       inject: [ConfigService],
       useFactory: (configService: ConfigService) => ({
+        signOptions: {
+          algorithm: 'HS256',
+        },
         secret: configService.getOrThrow<string>('JWT_SECRET'),
         // signOptions는 AuthService.generateAccessToken에서 개별 설정
       }),

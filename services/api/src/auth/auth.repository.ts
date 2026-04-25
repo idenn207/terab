@@ -1,7 +1,6 @@
 import { Injectable, InternalServerErrorException } from '@nestjs/common';
-import { and, eq, gt, isNull } from 'drizzle-orm';
-import { DatabaseService } from '../database/database.service';
 import {
+  DatabaseService,
   backupCodes,
   permissions,
   refreshTokens,
@@ -9,7 +8,8 @@ import {
   roles,
   userRoles,
   users,
-} from '../database/schema/index';
+} from '@terab/db';
+import { and, eq, gt, isNull } from 'drizzle-orm';
 
 export interface UserWithPermissions {
   id: string;
@@ -81,11 +81,15 @@ export class AuthRepository {
     return this.aggregateUser(rows);
   }
 
-  async findActiveRefreshTokens(now: Date): Promise<RefreshTokenRow[]> {
-    return this.database.db
+  async findActiveRefreshTokenByHash(tokenHash: string, now: Date): Promise<RefreshTokenRow | null> {
+    const rows = await this.database.db
       .select()
       .from(refreshTokens)
-      .where(and(isNull(refreshTokens.revokedAt), gt(refreshTokens.expiresAt, now)));
+      .where(
+        and(eq(refreshTokens.tokenHash, tokenHash), isNull(refreshTokens.revokedAt), gt(refreshTokens.expiresAt, now)),
+      )
+      .limit(1);
+    return rows[0] ?? null;
   }
 
   async insertRefreshToken(userId: string, tokenHash: string, expiresAt: Date): Promise<void> {

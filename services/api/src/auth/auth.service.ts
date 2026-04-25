@@ -1,9 +1,9 @@
 import { Injectable, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
+import { ApiException } from '@terab/common';
 import bcrypt from 'bcryptjs';
 import crypto from 'node:crypto';
-import { ApiException } from '../common/exceptions/api.exception.js';
 import { AuthRepository, UserWithPermissions } from './auth.repository.js';
 import { BackupLoginDto } from './dto/backup-login.dto.js';
 import { LoginResponseDto } from './dto/login-response.dto.js';
@@ -94,12 +94,12 @@ export class AuthService implements OnModuleInit {
     if (!rawRefreshToken) throw new ApiException('REFRESH_TOKEN_INVALID');
 
     const now = new Date();
-    const activeTokens = await this.authRepository.findActiveRefreshTokens(now);
-    const matched = activeTokens.find((rt) => this.compareTokenHash(rawRefreshToken, rt.tokenHash));
+    const tokenHash = this.hashToken(rawRefreshToken);
+    // UUID 기반 토큰은 userId 클레임이 없으므로 family invalidation 불가
+    // TODO: RT를 JWT로 변경하면 subject에서 userId 추출 후 전체 폐기 가능
+    const matched = await this.authRepository.findActiveRefreshTokenByHash(tokenHash, now);
 
     if (!matched) {
-      // UUID 기반 토큰은 userId 클레임이 없으므로 family invalidation 불가
-      // TODO: RT를 JWT로 변경하면 subject에서 userId 추출 후 전체 폐기 가능
       throw new ApiException('REFRESH_TOKEN_INVALID');
     }
 
@@ -125,8 +125,8 @@ export class AuthService implements OnModuleInit {
   async logout(rawRefreshToken: string | undefined): Promise<void> {
     if (!rawRefreshToken) return;
     const now = new Date();
-    const activeTokens = await this.authRepository.findActiveRefreshTokens(now);
-    const matched = activeTokens.find((rt) => this.compareTokenHash(rawRefreshToken, rt.tokenHash));
+    const tokenHash = this.hashToken(rawRefreshToken);
+    const matched = await this.authRepository.findActiveRefreshTokenByHash(tokenHash, now);
     if (matched) {
       await this.authRepository.revokeRefreshTokenById(matched.id, now);
     }
@@ -142,14 +142,14 @@ export class AuthService implements OnModuleInit {
 
   // ─── 내부 인증 로직 ──────────────────────────────────────────────────
 
-  async validateCredentials(user: UserWithPermissions, rawPassword: string): Promise<void> {
+  private async validateCredentials(user: UserWithPermissions, rawPassword: string): Promise<void> {
     const pepperedPassword = this.pepperPassword(rawPassword);
     const valid = await bcrypt.compare(pepperedPassword, user.password);
     if (!valid) throw new ApiException('INVALID_CREDENTIALS');
     if (!user.active) throw new ApiException('ACCOUNT_DISABLED');
   }
 
-  generateAccessToken(user: Pick<UserWithPermissions, 'id' | 'username' | 'permissions'>): string {
+  private generateAccessToken(user: Pick<UserWithPermissions, 'id' | 'username' | 'permissions'>): string {
     return this.jwtService.sign(
       { sub: user.id, username: user.username, permissions: user.permissions },
       { expiresIn: Math.floor(this.accessExpMs / 1000) },
@@ -173,14 +173,16 @@ export class AuthService implements OnModuleInit {
 
   private async verifyAndConsumeBackupCode(userId: string, inputCode: string): Promise<void> {
     const codes = await this.authRepository.findUnusedBackupCodes(userId);
+    // 타이밍 오라클 방지 — 매칭 여부와 무관하게 모든 코드를 순회
+    let matchedId: string | null = null;
     for (const code of codes) {
       const match = await bcrypt.compare(inputCode, code.codeHash);
-      if (match) {
-        await this.authRepository.markBackupCodeUsed(code.id, new Date());
-        return;
+      if (match && matchedId === null) {
+        matchedId = code.id;
       }
     }
-    throw new ApiException('BACKUP_CODE_INVALID');
+    if (matchedId === null) throw new ApiException('BACKUP_CODE_INVALID');
+    await this.authRepository.markBackupCodeUsed(matchedId, new Date());
   }
 
   // ─── Owner 계정 초기화 ───────────────────────────────────────────────
@@ -206,7 +208,8 @@ export class AuthService implements OnModuleInit {
         password: hashedPassword,
       });
       await this.authRepository.insertUserRole(newUser.id, ownerRole.id);
-    } catch {
+    } catch (err) {
+      if ((err as { code?: string }).code !== '23505') throw err;
       // 동시 기동 시 UNIQUE 충돌 무시 (다른 인스턴스가 먼저 생성)
     }
   }
@@ -219,12 +222,5 @@ export class AuthService implements OnModuleInit {
 
   private hashToken(rawToken: string): string {
     return crypto.createHash('sha256').update(rawToken).digest('hex');
-  }
-
-  private compareTokenHash(rawToken: string, storedHash: string): boolean {
-    const a = Buffer.from(this.hashToken(rawToken));
-    const b = Buffer.from(storedHash);
-    if (a.length !== b.length) return false;
-    return crypto.timingSafeEqual(a, b);
   }
 }
