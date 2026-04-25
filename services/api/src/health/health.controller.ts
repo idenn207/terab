@@ -1,6 +1,6 @@
 import { Controller, Get, HttpCode, HttpStatus } from '@nestjs/common';
 import { HealthCheckService } from '@nestjs/terminus';
-import { Public } from '@terab/decorator';
+import { Public } from '@terab/common';
 import { DatabaseHealthIndicator } from './indicators/database.health';
 import { ServerHealthIndicator } from './indicators/server.health';
 
