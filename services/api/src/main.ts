@@ -1,3 +1,4 @@
+import { ConsoleLogger, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { NestFactory } from '@nestjs/core';
 import cookieParser from 'cookie-parser';
@@ -5,7 +6,11 @@ import helmet from 'helmet';
 import { AppModule } from './app.module';
 
 async function bootstrap(): Promise<void> {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create(AppModule, {
+    logger: new ConsoleLogger({
+      logLevels: ['error', 'warn'],
+    }),
+  });
   const configService = app.get(ConfigService);
   const host = configService.get<string>('HOST') || '0.0.0.0';
   const port = configService.get<string>('PORT') || '3000';
@@ -24,9 +29,9 @@ async function bootstrap(): Promise<void> {
   });
 
   await app.listen(port, host);
-  console.log(`Application is running on: ${await app.getUrl()}`);
+  Logger.log(`Application is running on: ${await app.getUrl()}`);
 }
 bootstrap().catch((err: unknown) => {
-  console.error('Application failed to start', err);
+  Logger.error('Application failed to start', err);
   process.exit(1);
 });
