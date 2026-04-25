@@ -1,6 +1,6 @@
 import { ArgumentsHost, Catch, ExceptionFilter, HttpException, HttpStatus, Logger } from '@nestjs/common';
+import { ApiException, HttpStatusMessage } from '@terab/common';
 import { Request, Response } from 'express';
-import { ApiException } from '../exceptions/api.exception';
 
 @Catch()
 export class ApiExceptionFilter implements ExceptionFilter {
@@ -20,9 +20,12 @@ export class ApiExceptionFilter implements ExceptionFilter {
     }
 
     if (exception instanceof HttpException) {
-      response.status(exception.getStatus()).json({
+      const status = exception.getStatus();
+      // 내부 메시지 노출 방지 — status code 기반 제네릭 메시지만 응답, 상세 오류는 로그에만 기록
+      this.logger.warn(exception.message, { url: request.url, status });
+      response.status(status).json({
         errorCode: 'HTTP_ERROR',
-        message: exception.message,
+        message: HttpStatusMessage[status] ?? 'HTTP Error',
       });
       return;
     }

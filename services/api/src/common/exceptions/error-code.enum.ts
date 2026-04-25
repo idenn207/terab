@@ -1,5 +1,19 @@
 import { HttpStatus } from '@nestjs/common';
 
+export const HttpStatusMessage: Partial<Record<HttpStatus | number, string>> = {
+  [HttpStatus.BAD_REQUEST]: 'Bad Request',
+  [HttpStatus.UNAUTHORIZED]: 'Unauthorized',
+  [HttpStatus.FORBIDDEN]: 'Forbidden',
+  [HttpStatus.NOT_FOUND]: 'Not Found',
+  [HttpStatus.METHOD_NOT_ALLOWED]: 'Method Not Allowed',
+  [HttpStatus.CONFLICT]: 'Conflict',
+  [HttpStatus.UNPROCESSABLE_ENTITY]: 'Unprocessable Entity',
+  [HttpStatus.TOO_MANY_REQUESTS]: 'Too Many Requests',
+  [HttpStatus.INTERNAL_SERVER_ERROR]: 'Internal Server Error',
+  [HttpStatus.BAD_GATEWAY]: 'Bad Gateway',
+  [HttpStatus.SERVICE_UNAVAILABLE]: 'Service Unavailable',
+};
+
 export interface ErrorCodeDefinition {
   message: string;
   status: HttpStatus;
