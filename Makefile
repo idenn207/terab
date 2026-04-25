@@ -6,12 +6,8 @@ endif
 
 # ─── 환경 설정 ────────────────────────────────────────────────────
 .PHONY: setup
-setup: ## 운영 Docker Config/Secret 등록 (NAS에서 실행, configs.env + secrets.env + secrets/ 필요)
-	@bash scripts/setup.sh
-
-.PHONY: setup-local
-setup-local: ## 로컬 개발 초기 설정 (최초 클론 후 1회, configs.env/secrets.env 변경 시 재실행)
-	@bash scripts/setup-local.sh
+setup: ## 로컬/운영 개발 초기 설정 (최초 클론 후 1회, api.env/web.env 변경 시 재실행)
+	@bash scripts/setu.sh
 
 # ─── 로컬 인프라 (DB + MinIO + RabbitMQ) ──────────────────────────
 .PHONY: infra
@@ -32,12 +28,25 @@ infra-reset:
 
 # ─── 개발 환경 (전체 서비스, 로컬 빌드) ──────────────────────────
 .PHONY: dev
-dev: infra build-local
-	docker stack deploy -c docker-stack.app.local.yml terab
+dev: infra-down build-local
+	docker stack deploy -c docker-stack.yml -c docker-stack.local.yml --resolve-image=never terab-dev
 
 .PHONY: dev-down
-dev-down: infra-down
-	docker stack rm terab
+dev-down:
+	docker stack rm terab-dev
+
+.PHONY: dev-update
+dev-update: 
+	docker service update \
+		--image terab-api:local \
+		--with-registry-auth \
+		--force \
+		terab_api \
+	&& docker service update \
+		--image terab-web:local \
+		--with-registry-auth \
+		--force \
+		terab_web \
 
 # ─── Docker Swarm 운영 환경 ────────────────────────────────────────
 .PHONY: ensure-volumes
@@ -68,27 +77,17 @@ stack-update:
 		--with-registry-auth \
 		--force \
 		terab_web \
-	&& docker service update \
-		--image ghcr.io/idenn207/terab-notification:latest \
-		--with-registry-auth \
-		--force \
-		terab_notification
 
-# ─── 로컬 이미지 빌드 ─────────────────────────────────────────────
+# ─── docker 이미지 빌드 ─────────────────────────────────────────────
 .PHONY: build-local
 build-local:
 	docker build -t terab-api:local ./services/api
-	docker build -t terab-notification:local ./services/notification
 	docker build -t terab-web:local ./services/web
 
 # ─── 빌드 ────────────────────────────────────────────────────────
 .PHONY: build-api
 build-api:
-	cd services/api && ./gradlew build
-
-.PHONY: build-notification
-build-notification:
-	cd services/notification && ./gradlew build
+	cd services/api && npm run build
 
 .PHONY: build-web
 build-web:
@@ -109,20 +108,7 @@ build-android-prod:
 # ─── 백엔드 ────────────────────────────────────────────────────────
 .PHONY: api
 api:
-	cd services/api && ./gradlew bootRun --args='--spring.profiles.active=local'
-
-.PHONY: notification
-notification:
-	cd services/notification && ./gradlew bootRun --args='--spring.profiles.active=local'
-
-.PHONY: stop-api
-stop-api:
-	cd services/api && ./gradlew --stop
-
-.PHONY: stop-notification
-stop-notification:
-	cd services/notification && ./gradlew --stop
-
+	cd services/api && npm run start:dev
 
 # ─── 프론트엔드 ────────────────────────────────────────────────────
 .PHONY: web
@@ -148,31 +134,11 @@ android-open:
 
 # ─── 테스트 ────────────────────────────────────────────────────────
 .PHONY: test
-test: test-api test-notification test-web
+test: test-api test-web
 
 .PHONY: test-api
 test-api:
-	cd services/api && ./gradlew check
-
-.PHONY: test-api-unit
-test-api-unit:
-	cd services/api && ./gradlew test
-
-.PHONY: test-api-integration
-test-api-integration:
-	cd services/api && ./gradlew integrationTest
-
-.PHONY: test-notification
-test-notification:
-	cd services/notification && ./gradlew check
-
-.PHONY: test-notification-unit
-test-notification-unit:
-	cd services/notification && ./gradlew test
-
-.PHONY: test-notification-integration
-test-notification-integration:
-	cd services/notification && ./gradlew integrationTest
+	cd services/api && npm test
 
 .PHONY: test-web
 test-web:
