@@ -1,11 +1,10 @@
 import { Module, ValidationPipe } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { APP_FILTER, APP_GUARD, APP_PIPE } from '@nestjs/core';
+import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
+import { ApiExceptionFilter, JwtAuthGuard, PermissionGuard } from '@terab/common';
+import { DatabaseModule } from '@terab/db';
 import { AuthModule } from './auth/auth.module';
-import { ApiExceptionFilter } from './common/filters/api-exception.filter';
-import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
-import { PermissionGuard } from './common/guards/permission.guard';
-import { DatabaseModule } from './database/database.module';
 import { HealthModule } from './health/health.module';
 
 @Module({
@@ -13,12 +12,14 @@ import { HealthModule } from './health/health.module';
     ConfigModule.forRoot({
       isGlobal: true,
     }),
+    ThrottlerModule.forRoot([{ ttl: 60000, limit: 60 }]),
     DatabaseModule,
     HealthModule,
     AuthModule,
   ],
   providers: [
-    // 전역 Guard: JwtAuthGuard(401) → PermissionGuard(403) 순서 보장
+    // 전역 Guard: ThrottlerGuard → JwtAuthGuard(401) → PermissionGuard(403) 순서 보장
+    { provide: APP_GUARD, useClass: ThrottlerGuard },
     { provide: APP_GUARD, useClass: JwtAuthGuard },
     { provide: APP_GUARD, useClass: PermissionGuard },
     // 전역 Exception Filter
