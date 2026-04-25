@@ -2,7 +2,7 @@
 
 import { LogoUrl } from '@/shared/assets';
 import { cn } from '@/shared/lib';
-import Headless from '@headlessui/react';
+import * as Headless from '@headlessui/react';
 import {
   Bars3Icon,
   BellIcon,
