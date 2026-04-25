@@ -1,8 +1,9 @@
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { Test } from '@nestjs/testing';
+import { ApiException } from '@terab/common';
+import { mockConfigService, mockUser } from '@terab/test';
 import bcrypt from 'bcryptjs';
-import { ApiException } from '../common/exceptions/api.exception';
 import { AuthRepository } from './auth.repository';
 import { AuthService } from './auth.service';
 
@@ -15,7 +16,7 @@ jest.mock('bcryptjs', () => ({
 const mockAuthRepository = {
   findUserWithPermissionsByUsername: jest.fn(),
   findUserWithPermissionsById: jest.fn(),
-  findActiveRefreshTokens: jest.fn(),
+  findActiveRefreshTokenByHash: jest.fn(),
   insertRefreshToken: jest.fn(),
   revokeRefreshTokenById: jest.fn(),
   findUnusedBackupCodes: jest.fn(),
@@ -28,19 +29,6 @@ const mockAuthRepository = {
 
 const mockJwtService = {
   sign: jest.fn().mockReturnValue('mock.access.token'),
-};
-
-const mockConfigService = {
-  getOrThrow: jest.fn((key: string) => {
-    const config: Record<string, string> = {
-      JWT_SECRET: 'test-secret',
-      JWT_ACCESS_EXPIRY_MS: '900000',
-      JWT_REFRESH_EXPIRY_MS: '604800000',
-      PASSWORD_PEPPER: 'test-pepper',
-    };
-    return config[key];
-  }),
-  get: jest.fn().mockReturnValue(undefined),
 };
 
 describe('AuthService', () => {
@@ -58,37 +46,44 @@ describe('AuthService', () => {
 
     service = module.get(AuthService);
     jest.clearAllMocks();
+    mockAuthRepository.insertRefreshToken.mockResolvedValue(undefined);
   });
 
-  describe('validateCredentials', () => {
+  describe('login', () => {
     it('비밀번호 불일치 시 ApiException(INVALID_CREDENTIALS)을 던진다', async () => {
-      await expect(
-        service.validateCredentials({ password: '$2a$10$wronghash', active: true } as any, 'wrong-password'),
-      ).rejects.toThrow(ApiException);
+      mockAuthRepository.findUserWithPermissionsByUsername.mockResolvedValue(mockUser);
+      (bcrypt.compare as jest.Mock).mockResolvedValue(false);
+
+      await expect(service.login({ username: 'user1', password: 'wrong' })).rejects.toThrow(ApiException);
     });
 
     it('비활성 계정은 ApiException(ACCOUNT_DISABLED)을 던진다', async () => {
+      mockAuthRepository.findUserWithPermissionsByUsername.mockResolvedValue({ ...mockUser, active: false });
       (bcrypt.compare as jest.Mock).mockResolvedValue(true);
 
-      await expect(
-        service.validateCredentials({ password: 'hash', active: false } as any, 'any-password'),
-      ).rejects.toThrow(ApiException);
+      await expect(service.login({ username: 'user1', password: 'any' })).rejects.toThrow(ApiException);
     });
-  });
 
-  describe('generateAccessToken', () => {
-    it('JwtService.sign을 호출하고 AT를 반환한다', () => {
-      const user = {
-        id: 'uuid-1',
-        username: 'user1',
-        permissions: ['file:read'],
-      };
-      const token = service.generateAccessToken(user as any);
+    it('존재하지 않는 사용자는 ApiException(INVALID_CREDENTIALS)을 던진다', async () => {
+      mockAuthRepository.findUserWithPermissionsByUsername.mockResolvedValue(null);
+
+      await expect(service.login({ username: 'ghost', password: 'any' })).rejects.toThrow(ApiException);
+    });
+
+    it('인증 성공 시 accessToken과 rawRefreshToken을 반환하고 JwtService.sign을 호출한다', async () => {
+      mockAuthRepository.findUserWithPermissionsByUsername.mockResolvedValue(mockUser);
+      (bcrypt.compare as jest.Mock).mockResolvedValue(true);
+
+      const result = await service.login({ username: 'user1', password: 'correct' });
+
+      expect(result.response.accessToken).toBe('mock.access.token');
+      expect(result.rawRefreshToken).toBeDefined();
       expect(mockJwtService.sign).toHaveBeenCalledWith(
-        { sub: 'uuid-1', username: 'user1', permissions: ['file:read'] },
+        { sub: mockUser.id, username: mockUser.username, permissions: mockUser.permissions },
         expect.objectContaining({ expiresIn: expect.any(Number) }),
       );
-      expect(token).toBe('mock.access.token');
+      expect(mockAuthRepository.insertRefreshToken).toHaveBeenCalledTimes(1);
     });
   });
 });
+

@@ -1,18 +1,7 @@
 import { Test } from '@nestjs/testing';
-import { DatabaseService } from '../database/database.service';
+import { DatabaseService } from '@terab/db';
+import { mockDatabaseService, mockDbLimit, setupMockDbSelectChain } from '@terab/test';
 import { AuthRepository } from './auth.repository';
-
-const mockSelect = jest.fn();
-const mockInsert = jest.fn();
-const mockUpdate = jest.fn();
-
-const mockDatabaseService = {
-  db: {
-    select: mockSelect,
-    insert: mockInsert,
-    update: mockUpdate,
-  },
-};
 
 describe('AuthRepository', () => {
   let repo: AuthRepository;
@@ -24,9 +13,56 @@ describe('AuthRepository', () => {
 
     repo = module.get(AuthRepository);
     jest.clearAllMocks();
+    setupMockDbSelectChain();
   });
 
   it('인스턴스가 생성된다', () => {
     expect(repo).toBeDefined();
+  });
+
+  describe('findActiveRefreshTokenByHash', () => {
+    const now = new Date('2025-01-01T00:00:00.000Z');
+
+    const activeToken = {
+      id: 'token-uuid-1',
+      userId: 'user-uuid-1',
+      tokenHash: 'valid-hash',
+      expiresAt: new Date('2025-01-02T00:00:00.000Z'), // now 이후
+      revokedAt: null,
+    };
+
+    it('유효한 hash와 만료되지 않은 토큰이 있으면 해당 행을 반환한다', async () => {
+      mockDbLimit.mockResolvedValue([activeToken]);
+
+      const result = await repo.findActiveRefreshTokenByHash('valid-hash', now);
+
+      expect(result).toEqual(activeToken);
+    });
+
+    it('일치하는 hash가 없으면 null을 반환한다', async () => {
+      mockDbLimit.mockResolvedValue([]);
+
+      const result = await repo.findActiveRefreshTokenByHash('wrong-hash', now);
+
+      expect(result).toBeNull();
+    });
+
+    it('토큰이 만료된 경우(expiresAt < now) null을 반환한다', async () => {
+      // where 절에서 gt(expiresAt, now) 조건으로 DB가 행을 반환하지 않는 상황을 시뮬레이션
+      mockDbLimit.mockResolvedValue([]);
+
+      const result = await repo.findActiveRefreshTokenByHash('valid-hash', now);
+
+      expect(result).toBeNull();
+    });
+
+    it('이미 revoke된 토큰(revokedAt이 있음)이면 null을 반환한다', async () => {
+      // where 절에서 isNull(revokedAt) 조건으로 DB가 행을 반환하지 않는 상황을 시뮬레이션
+      mockDbLimit.mockResolvedValue([]);
+
+      const result = await repo.findActiveRefreshTokenByHash('valid-hash', now);
+
+      expect(result).toBeNull();
+    });
   });
 });
