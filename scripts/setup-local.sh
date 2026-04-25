@@ -7,24 +7,6 @@ SERVICES=("api" "web")
 
 # ─── 헬퍼 함수 ──────────────────────────────────────────────────────────
 # 운영체제에 맞는 심볼릭 링크 생성
-# create_symlink() {
-#     local src="$1"
-#     local dest="$2"
-    
-#     # 디렉토리 생성 (없을 경우)
-#     mkdir -p "$(dirname "$dest")"
-    
-#     # 기존 파일/링크 삭제
-#     rm -f "$dest"
-
-#     if [[ "$OSTYPE" == "msys" || "$OSTYPE" == "win32" ]]; then
-#         # Windows: mklink 사용 (경로 구분자를 역슬래시로 변환)
-#         cmd //c mklink "${dest//\//\\}" "${src//\//\\}"
-#     else
-#         # Linux/macOS: ln -sf 사용
-#         ln -sf "$src" "$dest"
-#     fi
-# }
 create_symlink() {
   local src="$1"
   local dest="$2"
