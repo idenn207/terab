@@ -1,5 +1,5 @@
 import { HttpException } from '@nestjs/common';
-import { ErrorCode, ErrorCodeKey } from './error-code.enum.js';
+import { ErrorCode, ErrorCodeKey } from './error-code.enum';
 
 export class ApiException extends HttpException {
   readonly errorCode: ErrorCodeKey;

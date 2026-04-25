@@ -1,6 +1,6 @@
 import { Test } from '@nestjs/testing';
-import { AuthRepository } from './auth.repository.js';
-import { DatabaseService } from '../database/database.service.js';
+import { DatabaseService } from '../database/database.service';
+import { AuthRepository } from './auth.repository';
 
 const mockSelect = jest.fn();
 const mockInsert = jest.fn();
@@ -19,10 +19,7 @@ describe('AuthRepository', () => {
 
   beforeEach(async () => {
     const module = await Test.createTestingModule({
-      providers: [
-        AuthRepository,
-        { provide: DatabaseService, useValue: mockDatabaseService },
-      ],
+      providers: [AuthRepository, { provide: DatabaseService, useValue: mockDatabaseService }],
     }).compile();
 
     repo = module.get(AuthRepository);

@@ -1,15 +1,15 @@
 import { Injectable, InternalServerErrorException } from '@nestjs/common';
 import { and, eq, gt, isNull } from 'drizzle-orm';
-import { DatabaseService } from '../database/database.service.js';
+import { DatabaseService } from '../database/database.service';
 import {
-  users,
-  roles,
-  permissions,
-  userRoles,
-  rolePermissions,
-  refreshTokens,
   backupCodes,
-} from '../database/schema/index.js';
+  permissions,
+  refreshTokens,
+  rolePermissions,
+  roles,
+  userRoles,
+  users,
+} from '../database/schema/index';
 
 export interface UserWithPermissions {
   id: string;
@@ -93,10 +93,7 @@ export class AuthRepository {
   }
 
   async revokeRefreshTokenById(id: string, revokedAt: Date): Promise<void> {
-    await this.database.db
-      .update(refreshTokens)
-      .set({ revokedAt })
-      .where(eq(refreshTokens.id, id));
+    await this.database.db.update(refreshTokens).set({ revokedAt }).where(eq(refreshTokens.id, id));
   }
 
   async findUnusedBackupCodes(userId: string): Promise<BackupCodeRow[]> {
@@ -107,10 +104,7 @@ export class AuthRepository {
   }
 
   async markBackupCodeUsed(id: string, usedAt: Date): Promise<void> {
-    await this.database.db
-      .update(backupCodes)
-      .set({ usedAt })
-      .where(eq(backupCodes.id, id));
+    await this.database.db.update(backupCodes).set({ usedAt }).where(eq(backupCodes.id, id));
   }
 
   async findUserByUsername(username: string): Promise<{ id: string } | null> {
@@ -123,19 +117,12 @@ export class AuthRepository {
   }
 
   async findRoleByName(name: string): Promise<{ id: string } | null> {
-    const rows = await this.database.db
-      .select({ id: roles.id })
-      .from(roles)
-      .where(eq(roles.name, name))
-      .limit(1);
+    const rows = await this.database.db.select({ id: roles.id }).from(roles).where(eq(roles.name, name)).limit(1);
     return rows[0] ?? null;
   }
 
   async insertUser(data: { username: string; nickname: string; password: string }): Promise<{ id: string }> {
-    const [row] = await this.database.db
-      .insert(users)
-      .values(data)
-      .returning({ id: users.id });
+    const [row] = await this.database.db.insert(users).values(data).returning({ id: users.id });
     if (!row) throw new InternalServerErrorException('사용자 생성 실패');
     return row;
   }
@@ -156,9 +143,7 @@ export class AuthRepository {
     }>,
   ): UserWithPermissions {
     const first = rows[0];
-    const permSet = new Set(
-      rows.filter((r) => r.resource && r.action).map((r) => `${r.resource}:${r.action}`),
-    );
+    const permSet = new Set(rows.filter((r) => r.resource && r.action).map((r) => `${r.resource}:${r.action}`));
     return {
       id: first.id,
       username: first.username,

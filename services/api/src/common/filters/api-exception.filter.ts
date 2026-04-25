@@ -1,6 +1,6 @@
 import { ArgumentsHost, Catch, ExceptionFilter, HttpException, HttpStatus, Logger } from '@nestjs/common';
 import { Request, Response } from 'express';
-import { ApiException } from '../exceptions/api.exception.js';
+import { ApiException } from '../exceptions/api.exception';
 
 @Catch()
 export class ApiExceptionFilter implements ExceptionFilter {
@@ -27,7 +27,9 @@ export class ApiExceptionFilter implements ExceptionFilter {
       return;
     }
 
-    this.logger.error('예상치 못한 오류', exception instanceof Error ? exception.stack : String(exception), { url: request.url });
+    this.logger.error('예상치 못한 오류', exception instanceof Error ? exception.stack : String(exception), {
+      url: request.url,
+    });
     response.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
       errorCode: 'INTERNAL_SERVER_ERROR',
       message: '서버 내부 오류가 발생했습니다.',

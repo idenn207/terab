@@ -2,11 +2,13 @@ import { ConfigService } from '@nestjs/config';
 import { NestFactory } from '@nestjs/core';
 import cookieParser from 'cookie-parser';
 import helmet from 'helmet';
-import { AppModule } from './app.module.js';
+import { AppModule } from './app.module';
 
 async function bootstrap(): Promise<void> {
   const app = await NestFactory.create(AppModule);
   const configService = app.get(ConfigService);
+  const host = configService.get<string>('HOST') || '0.0.0.0';
+  const port = configService.get<string>('PORT') || '3000';
 
   app.use(helmet());
   app.use(cookieParser());
@@ -21,7 +23,8 @@ async function bootstrap(): Promise<void> {
     credentials: true,
   });
 
-  await app.listen(process.env.PORT ?? 3000);
+  await app.listen(port, host);
+  console.log(`Application is running on: ${await app.getUrl()}`);
 }
 bootstrap().catch((err: unknown) => {
   console.error('Application failed to start', err);

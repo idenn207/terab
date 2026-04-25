@@ -1,13 +1,13 @@
-import { Controller, Post, Get, Body, Res, Req, HttpCode, HttpStatus } from '@nestjs/common';
-import { Request, Response } from 'express';
-import { AuthService } from './auth.service.js';
-import { LoginDto } from './dto/login.dto.js';
-import { BackupLoginDto } from './dto/backup-login.dto.js';
-import { LoginResponseDto } from './dto/login-response.dto.js';
-import { UserResponseDto } from './dto/user-response.dto.js';
-import { Public } from '../common/decorators/public.decorator.js';
-import { CurrentUser } from '../common/decorators/current-user.decorator.js';
-import { AuthUser } from './types/auth-user.type.js';
+import { Body, Controller, Get, HttpCode, HttpStatus, Post, Req, Res } from '@nestjs/common';
+import type { Request, Response } from 'express';
+import { CurrentUser } from '../common/decorators/current-user.decorator';
+import { Public } from '../common/decorators/public.decorator';
+import { AuthService } from './auth.service';
+import { BackupLoginDto } from './dto/backup-login.dto';
+import { LoginResponseDto } from './dto/login-response.dto';
+import { LoginDto } from './dto/login.dto';
+import { UserResponseDto } from './dto/user-response.dto';
+import type { AuthUser } from './types/auth-user.type';
 
 const REFRESH_TOKEN_COOKIE = 'refreshToken';
 const COOKIE_PATH = '/api/auth';
@@ -28,7 +28,10 @@ export class AuthController {
   @Public()
   @Post('login/backup')
   @HttpCode(HttpStatus.OK)
-  async loginWithBackup(@Body() dto: BackupLoginDto, @Res({ passthrough: true }) res: Response): Promise<LoginResponseDto> {
+  async loginWithBackup(
+    @Body() dto: BackupLoginDto,
+    @Res({ passthrough: true }) res: Response,
+  ): Promise<LoginResponseDto> {
     const { response, rawRefreshToken, refreshTokenExpMs } = await this.authService.loginWithBackupCode(dto);
     this.setRefreshTokenCookie(res, rawRefreshToken, refreshTokenExpMs);
     return response;

@@ -1,6 +1,6 @@
 import { HttpStatus } from '@nestjs/common';
-import { ApiExceptionFilter } from './api-exception.filter.js';
-import { ApiException } from '../exceptions/api.exception.js';
+import { ApiException } from '../exceptions/api.exception';
+import { ApiExceptionFilter } from './api-exception.filter';
 
 const mockJson = jest.fn();
 const mockStatus = jest.fn().mockReturnValue({ json: mockJson });

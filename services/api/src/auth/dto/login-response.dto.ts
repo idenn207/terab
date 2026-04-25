@@ -1,7 +1,7 @@
-import { UserResponseDto } from './user-response.dto.js';
+import { UserResponseDto } from './user-response.dto';
 
 export class LoginResponseDto {
-  status: 'AUTHENTICATED' | '2FA_REQUIRED';
+  status!: 'AUTHENTICATED' | '2FA_REQUIRED';
   accessToken?: string;
   user?: UserResponseDto;
 

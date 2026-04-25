@@ -1,12 +1,12 @@
-import { Module } from '@nestjs/common';
+import { Module, ValidationPipe } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { APP_FILTER, APP_GUARD, APP_PIPE } from '@nestjs/core';
-import { ValidationPipe } from '@nestjs/common';
-import { AuthModule } from './auth/auth.module.js';
-import { DatabaseModule } from './database/database.module.js';
-import { JwtAuthGuard } from './common/guards/jwt-auth.guard.js';
-import { PermissionGuard } from './common/guards/permission.guard.js';
-import { ApiExceptionFilter } from './common/filters/api-exception.filter.js';
+import { AuthModule } from './auth/auth.module';
+import { ApiExceptionFilter } from './common/filters/api-exception.filter';
+import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
+import { PermissionGuard } from './common/guards/permission.guard';
+import { DatabaseModule } from './database/database.module';
+import { HealthModule } from './health/health.module';
 
 @Module({
   imports: [
@@ -14,6 +14,7 @@ import { ApiExceptionFilter } from './common/filters/api-exception.filter.js';
       isGlobal: true,
     }),
     DatabaseModule,
+    HealthModule,
     AuthModule,
   ],
   providers: [

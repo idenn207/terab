@@ -1,7 +1,7 @@
 import { ExecutionContext, ForbiddenException } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
-import { PermissionGuard } from './permission.guard.js';
-import { AuthUser } from '../../auth/types/auth-user.type.js';
+import { AuthUser } from '../../auth/types/auth-user.type';
+import { PermissionGuard } from './permission.guard';
 
 function mockContext(user: AuthUser | undefined, handler: object = {}): ExecutionContext {
   return {
@@ -36,13 +36,21 @@ describe('PermissionGuard', () => {
 
   it('사용자가 필요한 권한을 보유하면 통과한다', () => {
     jest.spyOn(reflector, 'getAllAndOverride').mockReturnValueOnce(false).mockReturnValueOnce(['file:read']);
-    const ctx = mockContext({ userId: '1', username: 'u', permissions: ['file:read', 'file:write'] });
+    const ctx = mockContext({
+      userId: '1',
+      username: 'u',
+      permissions: ['file:read', 'file:write'],
+    });
     expect(guard.canActivate(ctx)).toBe(true);
   });
 
   it('사용자가 권한이 없으면 ForbiddenException을 던진다', () => {
     jest.spyOn(reflector, 'getAllAndOverride').mockReturnValueOnce(false).mockReturnValueOnce(['system:config']);
-    const ctx = mockContext({ userId: '1', username: 'u', permissions: ['file:read'] });
+    const ctx = mockContext({
+      userId: '1',
+      username: 'u',
+      permissions: ['file:read'],
+    });
     expect(() => guard.canActivate(ctx)).toThrow(ForbiddenException);
   });
 });

@@ -2,9 +2,9 @@ import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { Test } from '@nestjs/testing';
 import bcrypt from 'bcryptjs';
-import { ApiException } from '../common/exceptions/api.exception.js';
-import { AuthRepository } from './auth.repository.js';
-import { AuthService } from './auth.service.js';
+import { ApiException } from '../common/exceptions/api.exception';
+import { AuthRepository } from './auth.repository';
+import { AuthService } from './auth.service';
 
 jest.mock('bcryptjs', () => ({
   ...jest.requireActual('bcryptjs'),
@@ -63,10 +63,7 @@ describe('AuthService', () => {
   describe('validateCredentials', () => {
     it('비밀번호 불일치 시 ApiException(INVALID_CREDENTIALS)을 던진다', async () => {
       await expect(
-        service.validateCredentials(
-          { password: '$2a$10$wronghash', active: true } as any,
-          'wrong-password',
-        ),
+        service.validateCredentials({ password: '$2a$10$wronghash', active: true } as any, 'wrong-password'),
       ).rejects.toThrow(ApiException);
     });
 
@@ -74,10 +71,7 @@ describe('AuthService', () => {
       (bcrypt.compare as jest.Mock).mockResolvedValue(true);
 
       await expect(
-        service.validateCredentials(
-          { password: 'hash', active: false } as any,
-          'any-password',
-        ),
+        service.validateCredentials({ password: 'hash', active: false } as any, 'any-password'),
       ).rejects.toThrow(ApiException);
     });
   });

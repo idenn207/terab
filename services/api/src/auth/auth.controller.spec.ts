@@ -12,7 +12,10 @@ const mockResponse = () => {
 };
 
 const loginResult = {
-  response: LoginResponseDto.authenticated('at.token', new UserResponseDto('uid', 'user1', 'User')),
+  response: LoginResponseDto.authenticated(
+    'at.token',
+    new UserResponseDto('uid', 'user1', 'User'),
+  ),
   rawRefreshToken: 'raw.rt',
   refreshTokenExpMs: 604800000,
 };
@@ -22,7 +25,9 @@ const mockAuthService = {
   loginWithBackupCode: jest.fn().mockResolvedValue(loginResult),
   refresh: jest.fn().mockResolvedValue(loginResult),
   logout: jest.fn().mockResolvedValue(undefined),
-  getCurrentUser: jest.fn().mockResolvedValue(new UserResponseDto('uid', 'user1', 'User')),
+  getCurrentUser: jest
+    .fn()
+    .mockResolvedValue(new UserResponseDto('uid', 'user1', 'User')),
 };
 
 describe('AuthController', () => {
@@ -40,8 +45,15 @@ describe('AuthController', () => {
 
   it('POST /login — RT 쿠키를 설정하고 LoginResponseDto를 반환한다', async () => {
     const res = mockResponse();
-    const result = await controller.login({ username: 'u', password: 'p' } as any, res);
-    expect(res.cookie).toHaveBeenCalledWith('refreshToken', 'raw.rt', expect.objectContaining({ httpOnly: true }));
+    const result = await controller.login(
+      { username: 'u', password: 'p' } as any,
+      res,
+    );
+    expect(res.cookie).toHaveBeenCalledWith(
+      'refreshToken',
+      'raw.rt',
+      expect.objectContaining({ httpOnly: true }),
+    );
     expect(result.status).toBe('AUTHENTICATED');
   });
 
@@ -49,11 +61,18 @@ describe('AuthController', () => {
     const res = mockResponse();
     const mockReq = { cookies: { refreshToken: 'raw.rt' } } as any;
     await controller.logout(mockReq, res);
-    expect(res.clearCookie).toHaveBeenCalledWith('refreshToken', expect.objectContaining({ path: '/api/auth' }));
+    expect(res.clearCookie).toHaveBeenCalledWith(
+      'refreshToken',
+      expect.objectContaining({ path: '/api/auth' }),
+    );
   });
 
   it('GET /me — UserResponseDto를 반환한다', async () => {
-    const result = await controller.me({ userId: 'uid', username: 'user1', permissions: [] });
+    const result = await controller.me({
+      userId: 'uid',
+      username: 'user1',
+      permissions: [],
+    });
     expect(result.id).toBe('uid');
   });
 });

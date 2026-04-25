@@ -4,15 +4,15 @@ export class BackupLoginDto {
   @IsString()
   @IsNotEmpty()
   @MaxLength(50)
-  username: string;
+  username!: string;
 
   @IsString()
   @IsNotEmpty()
   @MaxLength(255)
-  password: string;
+  password!: string;
 
   @IsString()
   @IsNotEmpty()
   @MaxLength(20)
-  backupCode: string;
+  backupCode!: string;
 }
