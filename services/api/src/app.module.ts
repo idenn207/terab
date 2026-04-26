@@ -6,6 +6,7 @@ import { ApiExceptionFilter, JwtAuthGuard, PermissionGuard } from '@terab/common
 import { DatabaseModule } from '@terab/db';
 import { AuthModule } from './auth/auth.module';
 import { HealthModule } from './health/health.module';
+import { DeviceModule } from './device/device.module';
 
 @Module({
   imports: [
@@ -16,6 +17,7 @@ import { HealthModule } from './health/health.module';
     DatabaseModule,
     HealthModule,
     AuthModule,
+    DeviceModule,
   ],
   providers: [
     // 전역 Guard: ThrottlerGuard → JwtAuthGuard(401) → PermissionGuard(403) 순서 보장
