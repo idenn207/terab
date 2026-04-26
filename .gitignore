@@ -1,5 +1,4 @@
 # 환경 설정 (절대 커밋 금지)
-.claude/*.local.*
 secrets/
 runner.env
 api.env
@@ -20,6 +19,8 @@ volumes/storage/
 .vscode/
 .superpowers/
 .worktrees/
+.claude/*.local.*
+.claude/skills/
 
 # OS
 .DS_Store
