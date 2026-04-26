@@ -8,10 +8,6 @@ export default defineConfig({
     url: process.env.DATABASE_URL!,
   },
 
-  introspect: {
-    casing: 'camel',
-  },
-
   migrations: {
     prefix: 'index',
     table: '__drizzle_migrations__',

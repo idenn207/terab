@@ -1,143 +1,107 @@
--- Drizzle 베이스라인: Flyway V2~V4 적용 후 최종 스키마
--- 기존 DB에서도 안전하게 실행되도록 IF NOT EXISTS 사용
-
-CREATE TABLE IF NOT EXISTS users (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  username VARCHAR(50) NOT NULL UNIQUE,
-  nickname VARCHAR(100) NOT NULL,
-  email VARCHAR(255) UNIQUE,
-  password VARCHAR(255) NOT NULL,
-  active BOOLEAN NOT NULL DEFAULT true,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+CREATE TABLE "backup_codes" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"user_id" uuid NOT NULL,
+	"code_hash" varchar(60) NOT NULL,
+	"used_at" timestamp with time zone,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL
 );
-
-CREATE UNIQUE INDEX IF NOT EXISTS idx_users_username ON users(username);
-CREATE INDEX IF NOT EXISTS idx_users_nickname ON users(nickname);
-CREATE INDEX IF NOT EXISTS idx_users_created_at ON users(created_at);
-
-CREATE TABLE IF NOT EXISTS roles (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  name VARCHAR(50) NOT NULL UNIQUE,
-  is_system BOOLEAN NOT NULL DEFAULT false,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+--> statement-breakpoint
+CREATE TABLE "devices" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"user_id" uuid NOT NULL,
+	"push_token" text NOT NULL,
+	"user_agent" varchar(500),
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	CONSTRAINT "devices_push_token_unique" UNIQUE("push_token")
 );
-
-CREATE TABLE IF NOT EXISTS permissions (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  resource VARCHAR(50) NOT NULL,
-  action VARCHAR(50) NOT NULL,
-  UNIQUE(resource, action)
+--> statement-breakpoint
+CREATE TABLE "permissions" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"resource" varchar(50) NOT NULL,
+	"action" varchar(50) NOT NULL,
+	CONSTRAINT "permissions_resource_action_unique" UNIQUE("resource","action")
 );
-
-CREATE TABLE IF NOT EXISTS role_permissions (
-  role_id UUID NOT NULL REFERENCES roles(id) ON DELETE CASCADE,
-  permission_id UUID NOT NULL REFERENCES permissions(id) ON DELETE CASCADE,
-  PRIMARY KEY (role_id, permission_id)
+--> statement-breakpoint
+CREATE TABLE "refresh_tokens" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"user_id" uuid NOT NULL,
+	"token_hash" varchar(255) NOT NULL,
+	"device_id" uuid,
+	"expires_at" timestamp with time zone NOT NULL,
+	"revoked_at" timestamp with time zone
 );
-
-CREATE TABLE IF NOT EXISTS user_roles (
-  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  role_id UUID NOT NULL REFERENCES roles(id) ON DELETE CASCADE,
-  PRIMARY KEY (user_id, role_id)
+--> statement-breakpoint
+CREATE TABLE "role_permissions" (
+	"role_id" uuid NOT NULL,
+	"permission_id" uuid NOT NULL,
+	CONSTRAINT "role_permissions_role_id_permission_id_pk" PRIMARY KEY("role_id","permission_id")
 );
-
-CREATE TABLE IF NOT EXISTS refresh_tokens (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  token_hash VARCHAR(255) NOT NULL,
-  device_id UUID,
-  expires_at TIMESTAMPTZ NOT NULL,
-  revoked_at TIMESTAMPTZ
+--> statement-breakpoint
+CREATE TABLE "roles" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"name" varchar(50) NOT NULL,
+	"is_system" boolean DEFAULT false NOT NULL,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	CONSTRAINT "roles_name_unique" UNIQUE("name")
 );
-
-CREATE INDEX IF NOT EXISTS idx_refresh_tokens_user_id ON refresh_tokens(user_id);
-CREATE INDEX IF NOT EXISTS idx_refresh_tokens_token_hash ON refresh_tokens(token_hash);
-
-CREATE TABLE IF NOT EXISTS devices (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  name VARCHAR(200),
-  push_token VARCHAR(500),
-  platform VARCHAR(10) NOT NULL,
-  last_seen_at TIMESTAMPTZ,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+--> statement-breakpoint
+CREATE TABLE "trusted_devices" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"user_id" uuid NOT NULL,
+	"token_hash" varchar(64) NOT NULL,
+	"user_agent" varchar(500),
+	"expires_at" timestamp with time zone NOT NULL,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL
 );
-
-CREATE INDEX IF NOT EXISTS idx_devices_user_id ON devices(user_id);
-CREATE INDEX IF NOT EXISTS idx_devices_push_token ON devices(push_token);
-
-CREATE TABLE IF NOT EXISTS two_fa_challenges (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  options VARCHAR(20) NOT NULL,
-  correct_num VARCHAR(2) NOT NULL,
-  status VARCHAR(10) NOT NULL DEFAULT 'PENDING',
-  expires_at TIMESTAMPTZ NOT NULL,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-  responded_at TIMESTAMPTZ
+--> statement-breakpoint
+CREATE TABLE "two_fa_challenges" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"user_id" uuid NOT NULL,
+	"options" varchar(20) NOT NULL,
+	"correct_num" varchar(2) NOT NULL,
+	"status" varchar(10) DEFAULT 'PENDING',
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	"expires_at" timestamp with time zone NOT NULL,
+	"responded_at" timestamp with time zone
 );
-
-CREATE INDEX IF NOT EXISTS idx_two_fa_challenges_user_id ON two_fa_challenges(user_id);
-CREATE INDEX IF NOT EXISTS idx_two_fa_challenges_status ON two_fa_challenges(status);
-
-CREATE TABLE IF NOT EXISTS backup_codes (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  code_hash VARCHAR(60) NOT NULL,
-  used_at TIMESTAMPTZ,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+--> statement-breakpoint
+CREATE TABLE "user_roles" (
+	"user_id" uuid NOT NULL,
+	"role_id" uuid NOT NULL,
+	CONSTRAINT "user_roles_user_id_role_id_pk" PRIMARY KEY("user_id","role_id")
 );
-
-CREATE INDEX IF NOT EXISTS idx_backup_codes_user_id ON backup_codes(user_id);
-
-CREATE TABLE IF NOT EXISTS trusted_devices (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  token_hash VARCHAR(64) NOT NULL,
-  user_agent VARCHAR(500),
-  expires_at TIMESTAMPTZ NOT NULL,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+--> statement-breakpoint
+CREATE TABLE "users" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"username" varchar(50) NOT NULL,
+	"nickname" varchar(100) NOT NULL,
+	"email" varchar(255),
+	"password" varchar(255) NOT NULL,
+	"active" boolean DEFAULT true NOT NULL,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	"updated_at" timestamp with time zone DEFAULT now() NOT NULL,
+	CONSTRAINT "users_username_unique" UNIQUE("username"),
+	CONSTRAINT "users_email_unique" UNIQUE("email")
 );
-
-CREATE INDEX IF NOT EXISTS idx_trusted_devices_user_id ON trusted_devices(user_id);
-CREATE INDEX IF NOT EXISTS idx_trusted_devices_token_hash ON trusted_devices(token_hash);
-
--- RBAC 시드 데이터 (멱등성: INSERT ... WHERE NOT EXISTS)
-INSERT INTO permissions (resource, action)
-SELECT * FROM (VALUES
-  ('file', 'read'), ('file', 'write'), ('file', 'delete'),
-  ('share', 'create'), ('share', 'manage'),
-  ('user', 'read'), ('user', 'invite'), ('user', 'manage'), ('user', 'role'),
-  ('storage', 'read'), ('storage', 'manage'),
-  ('system', 'monitor'), ('system', 'config'),
-  ('audit', 'read')
-) AS v(resource, action)
-WHERE NOT EXISTS (SELECT 1 FROM permissions WHERE resource = v.resource AND action = v.action);
-
-INSERT INTO roles (name, is_system)
-SELECT * FROM (VALUES ('OWNER', true), ('ADMIN', true), ('USER', true)) AS v(name, is_system)
-WHERE NOT EXISTS (SELECT 1 FROM roles WHERE name = v.name);
-
-INSERT INTO role_permissions (role_id, permission_id)
-SELECT r.id, p.id FROM roles r, permissions p
-WHERE r.name = 'USER'
-  AND (p.resource || ':' || p.action) IN (
-    'file:read','file:write','file:delete','share:create','storage:read'
-  )
-ON CONFLICT DO NOTHING;
-
-INSERT INTO role_permissions (role_id, permission_id)
-SELECT r.id, p.id FROM roles r, permissions p
-WHERE r.name = 'ADMIN'
-  AND (p.resource || ':' || p.action) IN (
-    'file:read','file:write','file:delete','share:create','storage:read',
-    'share:manage','user:read','user:invite','user:manage','storage:manage',
-    'system:monitor','audit:read'
-  )
-ON CONFLICT DO NOTHING;
-
-INSERT INTO role_permissions (role_id, permission_id)
-SELECT r.id, p.id FROM roles r, permissions p
-WHERE r.name = 'OWNER'
-ON CONFLICT DO NOTHING;
+--> statement-breakpoint
+ALTER TABLE "backup_codes" ADD CONSTRAINT "backup_codes_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "devices" ADD CONSTRAINT "devices_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "refresh_tokens" ADD CONSTRAINT "refresh_tokens_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "role_permissions" ADD CONSTRAINT "role_permissions_role_id_roles_id_fk" FOREIGN KEY ("role_id") REFERENCES "public"."roles"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "role_permissions" ADD CONSTRAINT "role_permissions_permission_id_permissions_id_fk" FOREIGN KEY ("permission_id") REFERENCES "public"."permissions"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "trusted_devices" ADD CONSTRAINT "trusted_devices_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "two_fa_challenges" ADD CONSTRAINT "two_fa_challenges_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "user_roles" ADD CONSTRAINT "user_roles_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "user_roles" ADD CONSTRAINT "user_roles_role_id_roles_id_fk" FOREIGN KEY ("role_id") REFERENCES "public"."roles"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+CREATE INDEX "backup_codes_user_id_index" ON "backup_codes" USING btree ("user_id");--> statement-breakpoint
+CREATE INDEX "devices_user_id_index" ON "devices" USING btree ("user_id");--> statement-breakpoint
+CREATE INDEX "devices_push_token_index" ON "devices" USING btree ("push_token");--> statement-breakpoint
+CREATE INDEX "refresh_tokens_user_id_index" ON "refresh_tokens" USING btree ("user_id");--> statement-breakpoint
+CREATE INDEX "refresh_tokens_token_hash_index" ON "refresh_tokens" USING btree ("token_hash");--> statement-breakpoint
+CREATE INDEX "trusted_devices_user_id_index" ON "trusted_devices" USING btree ("user_id");--> statement-breakpoint
+CREATE INDEX "trusted_devices_token_hash_index" ON "trusted_devices" USING btree ("token_hash");--> statement-breakpoint
+CREATE INDEX "two_fa_challenges_user_id_index" ON "two_fa_challenges" USING btree ("user_id");--> statement-breakpoint
+CREATE INDEX "two_fa_challenges_status_index" ON "two_fa_challenges" USING btree ("status");--> statement-breakpoint
+CREATE UNIQUE INDEX "users_username_index" ON "users" USING btree ("username");--> statement-breakpoint
+CREATE INDEX "users_nickname_index" ON "users" USING btree ("nickname");--> statement-breakpoint
+CREATE INDEX "users_created_at_index" ON "users" USING btree ("created_at");
