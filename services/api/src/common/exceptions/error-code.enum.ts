@@ -52,6 +52,18 @@ export const ErrorCode = {
     message: '유효하지 않은 백업 코드입니다.',
     status: HttpStatus.UNAUTHORIZED,
   },
+  TWO_FA_CHALLENGE_NOT_FOUND: {
+    message: '2FA 챌린지를 찾을 수 없습니다.',
+    status: HttpStatus.NOT_FOUND,
+  },
+  DEVICE_NOT_FOUND: {
+    message: '등록되지 않은 디바이스입니다.',
+    status: HttpStatus.NOT_FOUND,
+  },
+  TRUSTED_DEVICE_NOT_FOUND: {
+    message: '등록되지 않은 신뢰기기입니다.',
+    status: HttpStatus.NOT_FOUND,
+  },
 } as const satisfies Record<string, ErrorCodeDefinition>;
 
 export type ErrorCodeKey = keyof typeof ErrorCode;
