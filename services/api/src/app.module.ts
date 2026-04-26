@@ -7,6 +7,7 @@ import { DatabaseModule } from '@terab/db';
 import { AuthModule } from './auth/auth.module';
 import { HealthModule } from './health/health.module';
 import { DeviceModule } from './device/device.module';
+import { TrustedDeviceModule } from './trusted-device/trusted-device.module';
 
 @Module({
   imports: [
@@ -18,6 +19,7 @@ import { DeviceModule } from './device/device.module';
     HealthModule,
     AuthModule,
     DeviceModule,
+    TrustedDeviceModule,
   ],
   providers: [
     // 전역 Guard: ThrottlerGuard → JwtAuthGuard(401) → PermissionGuard(403) 순서 보장
