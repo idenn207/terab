@@ -35,8 +35,11 @@ services:
   # 주의: docker stack deploy는 build를 지원하지 않으므로 make dev가 배포 전 이미지를 빌드함
   api:
     image: terab-api:local
-    networks:
-      - terab-net
+    deploy:
+      replicas: 1
+
+  mq:
+    image: terab-mq:local
     deploy:
       replicas: 1
 

@@ -14,17 +14,14 @@ import { TwoFaModule } from './twofa/twofa.module';
 
 @Module({
   imports: [
-    ConfigModule.forRoot({
-      isGlobal: true,
-    }),
+    ConfigModule.forRoot({ isGlobal: true }),
     ThrottlerModule.forRoot([{ ttl: 60000, limit: 60 }]),
     BullModule.forRootAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
       useFactory: (config: ConfigService) => ({
         connection: {
-          host: config.getOrThrow<string>('REDIS_HOST'),
-          port: Number(config.getOrThrow<string>('REDIS_PORT')),
+          url: config.getOrThrow<string>('REDIS_URL'),
         },
       }),
     }),

@@ -49,12 +49,11 @@ services:
 
   # ─── Redis (BullMQ 브로커) ────────────────────────────────────
   redis:
-    image: redis:7-alpine
-    command: redis-server --appendonly yes
-    env_file:
-      - infra.env
+    image: redis:8-alpine
+    command: redis-server /usr/local/etc/redis/redis.conf
     volumes:
       - ./volumes/redis:/data
+      - ./redis.conf:/usr/local/etc/redis/redis.conf:ro
     ports:
       - '6379:6379'
     networks:

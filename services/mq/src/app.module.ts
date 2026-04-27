@@ -12,8 +12,7 @@ import { PushModule } from './push/push.module';
       inject: [ConfigService],
       useFactory: (config: ConfigService) => ({
         connection: {
-          host: config.getOrThrow<string>('REDIS_HOST'),
-          port: Number(config.getOrThrow<string>('REDIS_PORT')),
+          url: config.getOrThrow<string>('REDIS_URL'),
         },
       }),
     }),
