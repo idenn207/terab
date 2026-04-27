@@ -5,7 +5,7 @@ import { DeviceService } from './device.service';
 import { DeviceResponseDto } from './dto/device-response.dto';
 import { RegisterDeviceDto } from './dto/register-device.dto';
 
-@Controller('api/device')
+@Controller('api/devices')
 export class DeviceController {
   constructor(private readonly deviceService: DeviceService) {}
 
