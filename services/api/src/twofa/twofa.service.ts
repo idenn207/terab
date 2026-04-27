@@ -33,7 +33,7 @@ export class TwoFaService {
 
     if (challenge.status === 'PENDING') {
       const remainingSeconds = Math.max(0, Math.floor((challenge.expiresAt.getTime() - Date.now()) / 1000));
-      return ChallengeStatusResponseDto.pending(challenge.options.split(','), remainingSeconds);
+      return ChallengeStatusResponseDto.pending(challenge.options.split(','), challenge.correctNum, remainingSeconds);
     }
 
     if (challenge.status === 'APPROVED') {
@@ -49,7 +49,7 @@ export class TwoFaService {
     return ChallengeStatusResponseDto.denied();
   }
 
-  async respond(challengeId: string, userId: string, selectedNumber: string, _trustDevice: boolean): Promise<void> {
+  async respond(challengeId: string, userId: string, selectedNumber: string): Promise<void> {
     const challenge = await this.twoFaRepository.findById(challengeId);
     if (!challenge) throw new ApiException('TWO_FA_CHALLENGE_NOT_FOUND');
     if (challenge.userId !== userId) throw new ApiException('FORBIDDEN');
@@ -62,6 +62,13 @@ export class TwoFaService {
     } else {
       await this.twoFaRepository.updateStatus(challengeId, 'DENIED', new Date());
     }
+  }
+
+  async claimApprovedChallenge(challengeId: string): Promise<string> {
+    const challenge = await this.twoFaRepository.findById(challengeId);
+    if (!challenge || challenge.status !== 'APPROVED') throw new ApiException('TWO_FA_CHALLENGE_NOT_FOUND');
+    await this.twoFaRepository.updateStatus(challengeId, 'EXPIRED');
+    return challenge.userId;
   }
 
   async resend(oldChallengeId: string): Promise<{ id: string; options: string[]; expiresAt: Date }> {

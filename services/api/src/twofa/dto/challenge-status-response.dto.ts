@@ -3,14 +3,16 @@ import type { UserResponseDto } from '../../auth/dto/user-response.dto';
 export class ChallengeStatusResponseDto {
   status!: 'PENDING' | 'APPROVED' | 'DENIED' | 'EXPIRED';
   options?: string[];
+  correctNum?: string;
   remainingSeconds?: number;
   accessToken?: string;
   user?: UserResponseDto;
 
-  static pending(options: string[], remainingSeconds: number): ChallengeStatusResponseDto {
+  static pending(options: string[], correctNum: string, remainingSeconds: number): ChallengeStatusResponseDto {
     const dto = new ChallengeStatusResponseDto();
     dto.status = 'PENDING';
     dto.options = options;
+    dto.correctNum = correctNum;
     dto.remainingSeconds = remainingSeconds;
     return dto;
   }
