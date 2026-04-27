@@ -12,8 +12,6 @@ const servers: Record<CapacitorEnv, CapacitorConfig['server']> = {
   prod: { url: 'https://drive.skypark207.com', androidScheme: 'https' },
 };
 
-console.log('env: ', env);
-
 const config: CapacitorConfig = {
   appId: 'com.skypark207.drive',
   appName: 'TeraB',
