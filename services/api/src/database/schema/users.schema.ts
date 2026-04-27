@@ -15,3 +15,6 @@ export const users = table(
   },
   (table) => [t.uniqueIndex().on(table.username), t.index().on(table.nickname), t.index().on(table.createdAt)],
 );
+
+export type Users$Insert = typeof users.$inferInsert;
+export type Users$Select = typeof users.$inferSelect;

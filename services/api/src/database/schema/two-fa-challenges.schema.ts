@@ -12,10 +12,16 @@ export const twoFaChallenges = table(
       .references(() => users.id, { onDelete: 'cascade' }),
     options: t.varchar('options', { length: 20 }).notNull(),
     correctNum: t.varchar('correct_num', { length: 2 }).notNull(),
-    status: t.varchar('status', { length: 10, enum: ['PENDING', 'APPROVED', 'DENIED'] }).default('PENDING'),
+    status: t
+      .varchar('status', { length: 10, enum: ['PENDING', 'APPROVED', 'DENIED', 'EXPIRED'] })
+      .notNull()
+      .default('PENDING'),
     createdAt: t.timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     expiresAt: t.timestamp('expires_at', { withTimezone: true }).notNull(),
     respondedAt: t.timestamp('responded_at', { withTimezone: true }),
   },
   (table) => [t.index().on(table.userId), t.index().on(table.status)],
 );
+
+export type TwoFaChallenge$Insert = typeof twoFaChallenges.$inferInsert;
+export type TwoFaChallenge$Select = typeof twoFaChallenges.$inferSelect;

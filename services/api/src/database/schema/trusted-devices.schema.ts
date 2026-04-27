@@ -17,3 +17,6 @@ export const trustedDevices = table(
   },
   (table) => [t.index().on(table.userId), t.index().on(table.tokenHash)],
 );
+
+export type TrustedDevices$Insert = typeof trustedDevices.$inferInsert;
+export type TrustedDevices$Select = typeof trustedDevices.$inferSelect;

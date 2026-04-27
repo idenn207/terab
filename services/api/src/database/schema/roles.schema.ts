@@ -7,3 +7,6 @@ export const roles = table('roles', {
   isSystem: t.boolean('is_system').notNull().default(false),
   createdAt: t.timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 });
+
+export type Roles$Insert = typeof roles.$inferInsert;
+export type Roles$Select = typeof roles.$inferSelect;

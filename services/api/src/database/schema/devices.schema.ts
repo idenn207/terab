@@ -16,3 +16,6 @@ export const devices = table(
   },
   (table) => [t.index().on(table.userId), t.index().on(table.pushToken)],
 );
+
+export type Devices$Insert = typeof devices.$inferInsert;
+export type Devices$Select = typeof devices.$inferSelect;

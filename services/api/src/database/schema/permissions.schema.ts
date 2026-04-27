@@ -10,3 +10,6 @@ export const permissions = table(
   },
   (table) => [t.unique().on(table.resource, table.action)],
 );
+
+export type Permissions$Insert = typeof permissions.$inferInsert;
+export type Permissions$Select = typeof permissions.$inferSelect;

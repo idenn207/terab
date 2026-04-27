@@ -16,3 +16,6 @@ export const backupCodes = table(
   },
   (table) => [t.index().on(table.userId)],
 );
+
+export type BackupCodes$Insert = typeof backupCodes.$inferInsert;
+export type BackupCodes$Select = typeof backupCodes.$inferSelect;

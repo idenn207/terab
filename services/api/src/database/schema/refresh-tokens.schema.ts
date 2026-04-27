@@ -18,3 +18,6 @@ export const refreshTokens = table(
   },
   (table) => [t.index().on(table.userId), t.index().on(table.tokenHash)],
 );
+
+export type RefreshTokens$Insert = typeof refreshTokens.$inferInsert;
+export type RefreshTokens$Select = typeof refreshTokens.$inferSelect;

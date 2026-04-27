@@ -17,3 +17,6 @@ export const rolePermissions = table(
   },
   (table) => [t.primaryKey({ columns: [table.roleId, table.permissionId] })],
 );
+
+export type RolePermissions$Insert = typeof rolePermissions.$inferInsert;
+export type RolePermissions$Select = typeof rolePermissions.$inferSelect;
