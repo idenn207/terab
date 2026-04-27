@@ -14,7 +14,7 @@ export function usePushNotification() {
     if (!accessToken || !pendingTokenRef.current) return;
     const token = pendingTokenRef.current;
     pendingTokenRef.current = null;
-    deviceApi.registerPushToken({ pushToken: token, platform: 'android' });
+    deviceApi.registerPushToken({ pushToken: token });
   }, [accessToken]);
 
   useEffect(() => {
@@ -32,7 +32,7 @@ export function usePushNotification() {
       const h1 = await PushNotifications.addListener('registration', async (token) => {
         const accessToken = useUserStore.getState().accessToken;
         if (accessToken) {
-          await deviceApi.registerPushToken({ pushToken: token.value, platform: 'android' });
+          await deviceApi.registerPushToken({ pushToken: token.value });
         } else {
           // 아직 로그인 전이면 토큰을 보관해두고 로그인 후 위의 useEffect에서 호출
           pendingTokenRef.current = token.value;
