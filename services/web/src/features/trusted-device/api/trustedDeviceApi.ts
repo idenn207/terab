@@ -7,7 +7,7 @@ export interface TrustedDeviceItem {
 }
 
 export const trustedDeviceApi = {
-  list: (): Promise<TrustedDeviceItem[]> => axiosUser.get<TrustedDeviceItem[]>('/api/auth/trusted-devices').then((r) => r.data),
-  register: (): Promise<TrustedDeviceItem> => axiosUser.post<TrustedDeviceItem>('/api/auth/trusted-devices').then((r) => r.data),
-  revoke: (id: string): Promise<void> => axiosUser.delete(`/api/auth/trusted-devices/${id}`).then(() => {}),
+  list: (): Promise<TrustedDeviceItem[]> => axiosUser.get<TrustedDeviceItem[]>('/trusted-device').then((r) => r.data),
+  register: (): Promise<void> => axiosUser.post('/trusted-device').then(() => {}),
+  revoke: (id: string): Promise<void> => axiosUser.delete(`/trusted-device/${id}`).then(() => {}),
 };

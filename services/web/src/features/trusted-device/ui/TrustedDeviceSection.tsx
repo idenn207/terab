@@ -1,8 +1,15 @@
+import { useEffect, useState } from 'react';
 import { Button, Heading, Text } from '@/shared/ui';
+import { trustedDeviceApi, type TrustedDeviceItem } from '../api/trustedDeviceApi';
 import { useTrustedDevice } from '../model/useTrustedDevice';
 
 export function TrustedDeviceSection() {
-  const { devices, revoke } = useTrustedDevice();
+  const [devices, setDevices] = useState<TrustedDeviceItem[]>([]);
+  const { revoke } = useTrustedDevice();
+
+  useEffect(() => {
+    trustedDeviceApi.list().then(setDevices);
+  }, []);
 
   return (
     <section>
@@ -19,7 +26,14 @@ export function TrustedDeviceSection() {
                 <Text className="text-sm font-medium">{device.userAgent ?? '알 수 없는 기기'}</Text>
                 <Text className="text-xs text-gray-500">만료: {new Date(device.expiresAt).toLocaleDateString('ko-KR')}</Text>
               </div>
-              <Button onClick={() => revoke(device.id)} className="text-sm text-red-500 underline" plain>
+              <Button
+                onClick={async () => {
+                  await revoke(device.id);
+                  setDevices((prev) => prev.filter((d) => d.id !== device.id));
+                }}
+                className="text-sm text-red-500 underline"
+                plain
+              >
                 해제
               </Button>
             </li>
