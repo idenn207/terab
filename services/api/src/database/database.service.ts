@@ -5,6 +5,7 @@ import { migrate } from 'drizzle-orm/node-postgres/migrator';
 import { join } from 'path';
 import { Pool } from 'pg';
 import * as schema from './schema';
+import { seedRbac } from './seed';
 
 @Injectable()
 export class DatabaseService implements OnModuleInit, OnModuleDestroy {
@@ -17,7 +18,7 @@ export class DatabaseService implements OnModuleInit, OnModuleDestroy {
       max: 5,
       idleTimeoutMillis: 60000,
     });
-    this.db = drizzle(this.pool, { schema });
+    this.db = drizzle(this.pool, { schema, casing: 'snake_case' });
   }
 
   async onModuleInit(): Promise<void> {
@@ -28,6 +29,7 @@ export class DatabaseService implements OnModuleInit, OnModuleDestroy {
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
       try {
         await migrate(this.db, { migrationsFolder });
+        await this.seed();
         return;
       } catch (error) {
         if (attempt === maxRetries) throw error;
@@ -38,6 +40,10 @@ export class DatabaseService implements OnModuleInit, OnModuleDestroy {
 
   async ping(): Promise<void> {
     await this.pool.query('SELECT 1');
+  }
+
+  private async seed(): Promise<void> {
+    await seedRbac(this.db);
   }
 
   async onModuleDestroy(): Promise<void> {

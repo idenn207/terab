@@ -42,4 +42,3 @@ describe('HealthController', () => {
     expect(mockHealthCheckService.check).toHaveBeenCalledWith([expect.any(Function), expect.any(Function)]);
   });
 });
-

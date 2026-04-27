@@ -1,10 +1,6 @@
 # 환경 설정 (절대 커밋 금지)
-.claude/*.local.*
 secrets/
-runner.env
-api.env
-web.env
-infra.env
+*.env
 
 # Anroid Release Key
 google-services.json
@@ -12,7 +8,7 @@ google-services.json
 
 # 데이터 볼륨
 volumes/db/
-volumes/rabbitmq/
+volumes/redis/
 volumes/storage/
 
 # IDE
@@ -20,6 +16,8 @@ volumes/storage/
 .vscode/
 .superpowers/
 .worktrees/
+.claude/*.local.*
+.claude/skills/
 
 # OS
 .DS_Store

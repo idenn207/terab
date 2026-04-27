@@ -51,22 +51,20 @@ services:
         condition: any
         window: 60s
 
-  # ─── RabbitMQ (메시지 브로커) ─────────────────────────────────
-  rabbitmq:
-    image: rabbitmq:3.13-management
-    env_file:
-      - infra.env
-    hostname: rabbitmq
+  # ─── Redis (BullMQ 브로커) ────────────────────────────────────
+  redis:
+    image: redis:7
+    command: redis-server --appendonly yes
+    # hostname: redis
     volumes:
-      - /volume2/docker/terab/volumes/rabbitmq:/var/lib/rabbitmq
+      - /volume2/docker/terab/volumes/redis:/data
     networks:
       - terab-net
     healthcheck:
-      test: ['CMD', 'rabbitmq-diagnostics', 'ping']
+      test: ['CMD', 'redis-cli', 'ping']
       interval: 10s
       timeout: 5s
       retries: 5
-      start_period: 30s
     deploy:
       replicas: 1
       placement:
@@ -75,7 +73,7 @@ services:
       restart_policy:
         condition: any
         delay: 5s
-        window: 120s
+        window: 60s
 
   # ─── Spring Boot API ──────────────────────────────────────────
   api:
@@ -103,33 +101,37 @@ services:
         parallelism: 1
       restart_policy:
         condition: any
-        delay: 30s
+        delay: 10s
         window: 180s
 
-  # ─── Notification MS ──────────────────────────────────────────
-  # notification:
-  #   image: ghcr.io/idenn207/terab-notification:latest
-  #   configs:
-  #     - { source: RABBITMQ_HOST, target: /run/configs/RABBITMQ_HOST }
-  #     - { source: RABBITMQ_PORT, target: /run/configs/RABBITMQ_PORT }
-  #     - { source: RABBITMQ_USERNAME, target: /run/configs/RABBITMQ_USERNAME }
-  #   secrets:
-  #     - RABBITMQ_PASSWORD
-  #     - FIREBASE_CREDENTIAL_JSON
-  #   networks:
-  #     - terab-net
-  #   healthcheck:
-  #     test: ['CMD-SHELL', 'wget -qO /dev/null http://localhost:8082/actuator/health || exit 1']
-  #     interval: 15s
-  #     timeout: 10s
-  #     retries: 3
-  #     start_period: 60s
-  #   deploy:
-  #     replicas: 1
-  #     restart_policy:
-  #       condition: any
-  #       delay: 30s
-  #       window: 120s
+  # ─── MQ 서비스 (BullMQ Worker) ──────────────────────────────────────────
+  mq:
+    image: ghcr.io/idenn207/terab-mq:latest
+    env_file:
+      - mq.env
+    networks:
+      - terab-net
+    healthcheck:
+      test: ['CMD-SHELL', 'wget -qO /dev/null http://0.0.0.0:3001/health || exit 1']
+      interval: 15s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    deploy:
+      replicas: 1
+      update_config:
+        order: stop-first
+        parallelism: 1
+        failure_action: rollback
+        delay: 10s
+        monitor: 120s
+      rollback_config:
+        order: stop-first
+        parallelism: 1
+      restart_policy:
+        condition: any
+        delay: 10s
+        window: 120s
 
   # ─── React Frontend ───────────────────────────────────────────
   web:

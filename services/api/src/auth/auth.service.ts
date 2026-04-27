@@ -1,9 +1,12 @@
 import { Injectable, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { JwtService } from '@nestjs/jwt';
 import { ApiException } from '@terab/common';
+import { TokenService } from '@terab/core';
 import bcrypt from 'bcryptjs';
-import crypto from 'node:crypto';
+import { DeviceService } from '../device/device.service.js';
+import { TrustedDeviceService } from '../trusted-device/trusted-device.service.js';
+import { PushChallengePublisher } from '../twofa/push-challenge.publisher.js';
+import { TwoFaService } from '../twofa/twofa.service.js';
 import { AuthRepository, UserWithPermissions } from './auth.repository.js';
 import { BackupLoginDto } from './dto/backup-login.dto.js';
 import { LoginResponseDto } from './dto/login-response.dto.js';
@@ -20,19 +23,15 @@ interface AuthTokens {
 
 @Injectable()
 export class AuthService implements OnModuleInit {
-  private readonly accessExpMs: number;
-  private readonly refreshExpMs: number;
-  private readonly pepper: string;
-
   constructor(
-    private readonly authRepository: AuthRepository,
-    private readonly jwtService: JwtService,
+    private readonly pushChallengePublisher: PushChallengePublisher,
     private readonly configService: ConfigService,
-  ) {
-    this.accessExpMs = Number(this.configService.getOrThrow<string>('JWT_ACCESS_EXPIRY_MS'));
-    this.refreshExpMs = Number(this.configService.getOrThrow<string>('JWT_REFRESH_EXPIRY_MS'));
-    this.pepper = this.configService.getOrThrow<string>('PASSWORD_PEPPER');
-  }
+    private readonly tokenService: TokenService,
+    private readonly deviceService: DeviceService,
+    private readonly twoFaService: TwoFaService,
+    private readonly trustedDeviceService: TrustedDeviceService,
+    private readonly authRepository: AuthRepository,
+  ) {}
 
   async onModuleInit(): Promise<void> {
     await this.initOwnerAccount();
@@ -40,23 +39,79 @@ export class AuthService implements OnModuleInit {
 
   // ─── Login ───────────────────────────────────────────────────────────
 
-  async login(dto: LoginDto): Promise<{
+  async login(
+    dto: LoginDto,
+    trustToken: string | undefined,
+    userAgent: string | undefined,
+  ): Promise<{
     response: LoginResponseDto;
-    rawRefreshToken: string;
-    refreshTokenExpMs: number;
+    rawRefreshToken?: string;
+    refreshTokenExpMs?: number;
   }> {
     const user = await this.authRepository.findUserWithPermissionsByUsername(dto.username);
     if (!user) throw new ApiException('INVALID_CREDENTIALS');
     await this.validateCredentials(user, dto.password);
 
-    // Push 기기 존재 시 2FA 챌린지 발급 (device, twofa 도메인 구현 후 추가)
-    const tokens = await this.issueTokenPair(user);
-    const response = LoginResponseDto.authenticated(
-      tokens.accessToken,
-      new UserResponseDto(user.id, user.username, user.nickname),
+    // 신뢰기기 쿠키 유효 시 2FA 스킵
+    if (trustToken && (await this.trustedDeviceService.verify(trustToken, user.id))) {
+      const tokens = await this.issueTokenPair(user);
+      return {
+        response: LoginResponseDto.authenticated(
+          tokens.accessToken,
+          new UserResponseDto(user.id, user.username, user.nickname),
+        ),
+        rawRefreshToken: tokens.rawRefreshToken,
+        refreshTokenExpMs: tokens.refreshTokenExpMs,
+      };
+    }
+
+    // pushToken 없으면 2FA 스킵
+    const pushTokens = await this.deviceService.findPushTokensByUserId(user.id);
+    if (pushTokens.length === 0) {
+      const tokens = await this.issueTokenPair(user);
+      return {
+        response: LoginResponseDto.authenticated(
+          tokens.accessToken,
+          new UserResponseDto(user.id, user.username, user.nickname),
+        ),
+        rawRefreshToken: tokens.rawRefreshToken,
+        refreshTokenExpMs: tokens.refreshTokenExpMs,
+      };
+    }
+
+    // 2FA 챌린지 생성 + BullMQ 발행
+    const challenge = await this.twoFaService.createChallenge(user.id);
+    await Promise.all(
+      pushTokens.map((pushToken) =>
+        this.pushChallengePublisher.publish({
+          userId: user.id,
+          pushToken,
+          challengeId: challenge.id,
+          options: challenge.options,
+          expiresAt: challenge.expiresAt.toISOString(),
+        }),
+      ),
     );
+
     return {
-      response,
+      response: LoginResponseDto.twoFactorRequired(challenge.id, challenge.options.split(','), challenge.expiresAt),
+    };
+  }
+
+  async completeTwoFa(challengeId: string): Promise<{
+    response: LoginResponseDto;
+    rawRefreshToken: string;
+    refreshTokenExpMs: number;
+  }> {
+    const userId = await this.twoFaService.claimApprovedChallenge(challengeId);
+    const user = await this.authRepository.findUserWithPermissionsById(userId);
+    if (!user) throw new ApiException('TWO_FA_CHALLENGE_NOT_FOUND');
+    const tokens = await this.issueTokenPair(user);
+    return {
+      response: LoginResponseDto.authenticated(
+        tokens.accessToken,
+        new UserResponseDto(user.id, user.username, user.nickname),
+      ),
       rawRefreshToken: tokens.rawRefreshToken,
       refreshTokenExpMs: tokens.refreshTokenExpMs,
     };
@@ -94,7 +149,7 @@ export class AuthService implements OnModuleInit {
     if (!rawRefreshToken) throw new ApiException('REFRESH_TOKEN_INVALID');
 
     const now = new Date();
-    const tokenHash = this.hashToken(rawRefreshToken);
+    const tokenHash = this.tokenService.hashToken(rawRefreshToken);
     // UUID 기반 토큰은 userId 클레임이 없으므로 family invalidation 불가
     // TODO: RT를 JWT로 변경하면 subject에서 userId 추출 후 전체 폐기 가능
     const matched = await this.authRepository.findActiveRefreshTokenByHash(tokenHash, now);
@@ -125,7 +180,7 @@ export class AuthService implements OnModuleInit {
   async logout(rawRefreshToken: string | undefined): Promise<void> {
     if (!rawRefreshToken) return;
     const now = new Date();
-    const tokenHash = this.hashToken(rawRefreshToken);
+    const tokenHash = this.tokenService.hashToken(rawRefreshToken);
     const matched = await this.authRepository.findActiveRefreshTokenByHash(tokenHash, now);
     if (matched) {
       await this.authRepository.revokeRefreshTokenById(matched.id, now);
@@ -141,33 +196,24 @@ export class AuthService implements OnModuleInit {
   }
 
   // ─── 내부 인증 로직 ──────────────────────────────────────────────────
-
   private async validateCredentials(user: UserWithPermissions, rawPassword: string): Promise<void> {
-    const pepperedPassword = this.pepperPassword(rawPassword);
+    const pepperedPassword = this.tokenService.pepperPassword(rawPassword);
     const valid = await bcrypt.compare(pepperedPassword, user.password);
     if (!valid) throw new ApiException('INVALID_CREDENTIALS');
     if (!user.active) throw new ApiException('ACCOUNT_DISABLED');
   }
 
-  private generateAccessToken(user: Pick<UserWithPermissions, 'id' | 'username' | 'permissions'>): string {
-    return this.jwtService.sign(
-      { sub: user.id, username: user.username, permissions: user.permissions },
-      { expiresIn: Math.floor(this.accessExpMs / 1000) },
-    );
-  }
-
   // ─── 내부 비즈니스 로직 ──────────────────────────────────────────────
 
   private async issueTokenPair(user: UserWithPermissions): Promise<AuthTokens> {
-    const accessToken = this.generateAccessToken(user);
-    const rawRefreshToken = crypto.randomUUID() + '-' + crypto.randomUUID();
-    const tokenHash = this.hashToken(rawRefreshToken);
-    const expiresAt = new Date(Date.now() + this.refreshExpMs);
+    const accessToken = this.tokenService.generateAccessToken(user.id, user.username, user.permissions);
+    const { rawRefreshToken, tokenHash, expiresAt } = this.tokenService.issueRefreshToken();
+    const refreshTokenExpMs = this.tokenService.refreshExpMs;
     await this.authRepository.insertRefreshToken(user.id, tokenHash, expiresAt);
     return {
       accessToken,
       rawRefreshToken,
-      refreshTokenExpMs: this.refreshExpMs,
+      refreshTokenExpMs,
     };
   }
 
@@ -200,7 +246,7 @@ export class AuthService implements OnModuleInit {
     const ownerRole = await this.authRepository.findRoleByName('OWNER');
     if (!ownerRole) throw new Error('OWNER role 없음 — 마이그레이션 실행 여부를 확인하세요');
 
-    const hashedPassword = await bcrypt.hash(this.pepperPassword(ownerPassword), BCRYPT_ROUNDS);
+    const hashedPassword = await bcrypt.hash(this.tokenService.pepperPassword(ownerPassword), BCRYPT_ROUNDS);
     try {
       const newUser = await this.authRepository.insertUser({
         username: ownerUsername,
@@ -212,15 +258,5 @@ export class AuthService implements OnModuleInit {
       if ((err as { code?: string }).code !== '23505') throw err;
       // 동시 기동 시 UNIQUE 충돌 무시 (다른 인스턴스가 먼저 생성)
     }
-  }
-
-  // ─── 암호화 유틸 ─────────────────────────────────────────────────────
-
-  private pepperPassword(rawPassword: string): string {
-    return crypto.createHmac('sha256', this.pepper).update(rawPassword).digest('hex');
-  }
-
-  private hashToken(rawToken: string): string {
-    return crypto.createHash('sha256').update(rawToken).digest('hex');
   }
 }

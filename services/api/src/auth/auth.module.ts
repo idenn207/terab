@@ -1,7 +1,10 @@
+import { BullModule } from '@nestjs/bullmq';
 import { Module } from '@nestjs/common';
-import { ConfigModule, ConfigService } from '@nestjs/config';
-import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
+import { DeviceModule } from '../device/device.module';
+import { TrustedDeviceModule } from '../trusted-device/trusted-device.module';
+import { PUSH_CHALLENGE_QUEUE } from '../twofa/push-challenge.publisher';
+import { TwoFaModule } from '../twofa/twofa.module';
 import { AuthController } from './auth.controller';
 import { AuthRepository } from './auth.repository';
 import { AuthService } from './auth.service';
@@ -10,17 +13,10 @@ import { JwtStrategy } from './strategies/jwt.strategy';
 @Module({
   imports: [
     PassportModule,
-    JwtModule.registerAsync({
-      imports: [ConfigModule],
-      inject: [ConfigService],
-      useFactory: (configService: ConfigService) => ({
-        signOptions: {
-          algorithm: 'HS256',
-        },
-        secret: configService.getOrThrow<string>('JWT_SECRET'),
-        // signOptions는 AuthService.generateAccessToken에서 개별 설정
-      }),
-    }),
+    BullModule.registerQueue({ name: PUSH_CHALLENGE_QUEUE }),
+    DeviceModule,
+    TwoFaModule,
+    TrustedDeviceModule,
   ],
   controllers: [AuthController],
   providers: [AuthService, AuthRepository, JwtStrategy],

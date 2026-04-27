@@ -20,6 +20,11 @@ interface ChallengeStatusDenied {
   status: 'DENIED';
 }
 
+interface CompleteTwoFaResponse {
+  accessToken: string;
+  user: User;
+}
+
 interface BackupLoginRequest {
   username: string;
   password: string;
@@ -47,7 +52,10 @@ const twoFactorApi = {
     axios.post<ResendResponse>(`/api/auth/2fa/challenge/${challengeId}/resend`, null, { withCredentials: true }).then((r) => r.data),
 
   respond: (challengeId: string, selectedNumber: string): Promise<void> =>
-    axiosUser.post(`/api/auth/2fa/challenge/${challengeId}/respond`, { selectedNumber }).then(() => {}),
+    axiosUser.post(`/auth/2fa/challenge/${challengeId}/respond`, { selectedNumber }).then(() => {}),
+
+  complete: (challengeId: string): Promise<CompleteTwoFaResponse> =>
+    axios.post<CompleteTwoFaResponse>(`/api/auth/2fa/challenge/${challengeId}/complete`, null, { withCredentials: true }).then((r) => r.data),
 
   backupLogin: (data: BackupLoginRequest): Promise<BackupLoginResponse> =>
     axios.post<BackupLoginResponse>('/api/auth/login/backup', data, { withCredentials: true }).then((r) => r.data),

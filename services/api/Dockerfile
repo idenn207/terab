@@ -6,9 +6,8 @@ WORKDIR /app
 COPY package*.json ./
 RUN npm ci --ignore-scripts
 
-COPY tsconfig*.json nest-cli.json ./
+COPY tsconfig*.json nest-cli.json .swcrc ./
 COPY src ./src
-COPY .swcrc ./.swcrc
 RUN npm run build
 
 # ─── Stage 2: Runtime ────────────────────────────────────────────

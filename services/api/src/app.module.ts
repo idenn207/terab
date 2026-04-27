@@ -1,21 +1,37 @@
+import { BullModule } from '@nestjs/bullmq';
 import { Module, ValidationPipe } from '@nestjs/common';
-import { ConfigModule } from '@nestjs/config';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 import { APP_FILTER, APP_GUARD, APP_PIPE } from '@nestjs/core';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { ApiExceptionFilter, JwtAuthGuard, PermissionGuard } from '@terab/common';
+import { CoreModule } from '@terab/core';
 import { DatabaseModule } from '@terab/db';
 import { AuthModule } from './auth/auth.module';
+import { DeviceModule } from './device/device.module';
 import { HealthModule } from './health/health.module';
+import { TrustedDeviceModule } from './trusted-device/trusted-device.module';
+import { TwoFaModule } from './twofa/twofa.module';
 
 @Module({
   imports: [
-    ConfigModule.forRoot({
-      isGlobal: true,
-    }),
+    ConfigModule.forRoot({ isGlobal: true }),
     ThrottlerModule.forRoot([{ ttl: 60000, limit: 60 }]),
+    BullModule.forRootAsync({
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: (config: ConfigService) => ({
+        connection: {
+          url: config.getOrThrow<string>('REDIS_URL'),
+        },
+      }),
+    }),
     DatabaseModule,
+    CoreModule,
     HealthModule,
     AuthModule,
+    DeviceModule,
+    TrustedDeviceModule,
+    TwoFaModule,
   ],
   providers: [
     // 전역 Guard: ThrottlerGuard → JwtAuthGuard(401) → PermissionGuard(403) 순서 보장

@@ -1,19 +1,7 @@
-import { useEffect, useState } from 'react';
-import { trustedDeviceApi, type TrustedDeviceItem } from '../api/trustedDeviceApi';
+import { trustedDeviceApi } from '../api/trustedDeviceApi';
 
 export function useTrustedDevice() {
-  const [devices, setDevices] = useState<TrustedDeviceItem[]>([]);
-
-  useEffect(() => {
-    trustedDeviceApi.list().then(setDevices);
-  }, []);
-
-  const register = async () => await trustedDeviceApi.register();
-
-  const revoke = async (id: string) => {
-    await trustedDeviceApi.revoke(id);
-    setDevices((prev) => prev.filter((d) => d.id !== id));
-  };
-
-  return { devices, register, revoke };
+  const register = () => trustedDeviceApi.register();
+  const revoke = (id: string) => trustedDeviceApi.revoke(id);
+  return { register, revoke };
 }

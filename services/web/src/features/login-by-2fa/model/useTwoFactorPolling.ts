@@ -28,9 +28,14 @@ export function useTwoFactorPolling(initialChallengeId: string) {
           setCorrectNum(data.correctNum);
           setRemainingSeconds(data.remainingSeconds);
         } else if (data.status === 'APPROVED') {
-          setPollStatus('approved');
-          setApprovedData({ accessToken: data.accessToken, user: data.user });
           clearInterval(pollRef.current);
+          try {
+            const completed = await twoFactorApi.complete(challengeId);
+            setApprovedData({ accessToken: completed.accessToken, user: completed.user });
+            setPollStatus('approved');
+          } catch {
+            setPollStatus('denied');
+          }
         } else {
           setPollStatus('denied');
           clearInterval(pollRef.current);

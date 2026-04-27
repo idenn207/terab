@@ -3,7 +3,7 @@ set -e
 
 # ─── 설정 영역 ──────────────────────────────────────────────────────────
 # 추가할 서비스가 있다면 이 배열에 이름만 추가하세요
-SERVICES=("api" "web")
+SERVICES=("api" "mq" "web")
 
 # ─── 헬퍼 함수 ──────────────────────────────────────────────────────────
 # 운영체제에 맞는 심볼릭 링크 생성
@@ -54,6 +54,7 @@ validate_env() {
 
     local missing=()
     while IFS='=' read -r key _; do
+        key="${key//[[:space:]]/}"
         [[ "$key" =~ ^# || -z "$key" ]] && continue
         grep -q "^${key}=" "$env_file" 2>/dev/null || missing+=("$key")
     done < "$example_file"
@@ -78,4 +79,4 @@ for svc in "${SERVICES[@]}"; do
     echo ""
 done
 
-echo "setup-local 완료. 'make api' 또는 'make web'으로 서버를 기동하세요."
+echo "setup-local 완료."

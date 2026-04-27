@@ -1,6 +1,7 @@
 #!/bin/bash
 set -e
 
+: << 'COMMENT'
 register_config() {
   local key="$1" val="$2"
   docker config rm "$key" >/dev/null 2>&1 || true
@@ -20,6 +21,7 @@ register_secret_value() {
     echo "  ⚠ $key — 스택 실행 중(in use), 건너뜀"
   fi
 }
+COMMENT
 
 register_secret_file() {
   local file="$1" name
@@ -32,6 +34,7 @@ register_secret_file() {
   fi
 }
 
+: << 'COMMENT'
 # ─── Docker Config 등록 ──────────────────────────────────────────
 echo "=== Registering Docker Configs ==="
 while IFS='=' read -r key val || [ -n "$key" ]; do
@@ -47,6 +50,7 @@ while IFS='=' read -r key val || [ -n "$key" ]; do
   echo "$key" | grep -q '^#' && continue
   register_secret_value "$key" "${val%$'\r'}"
 done < secrets.env
+COMMENT
 
 # ─── Docker Secret 등록 (파일) ──────────────────────────────────
 echo "=== Registering Docker Secrets (files) ==="

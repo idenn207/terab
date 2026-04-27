@@ -1,9 +1,13 @@
 import { ConfigService } from '@nestjs/config';
-import { JwtService } from '@nestjs/jwt';
 import { Test } from '@nestjs/testing';
 import { ApiException } from '@terab/common';
+import { TokenService } from '@terab/core';
 import { mockConfigService, mockUser } from '@terab/test';
 import bcrypt from 'bcryptjs';
+import { DeviceService } from '../device/device.service';
+import { TrustedDeviceService } from '../trusted-device/trusted-device.service';
+import { PushChallengePublisher } from '../twofa/push-challenge.publisher';
+import { TwoFaService } from '../twofa/twofa.service';
 import { AuthRepository } from './auth.repository';
 import { AuthService } from './auth.service';
 
@@ -27,8 +31,29 @@ const mockAuthRepository = {
   insertUserRole: jest.fn(),
 };
 
-const mockJwtService = {
-  sign: jest.fn().mockReturnValue('mock.access.token'),
+const mockTokenService = {
+  generateAccessToken: jest.fn(),
+  issueRefreshToken: jest.fn(),
+  pepperPassword: jest.fn(),
+  hashToken: jest.fn(),
+  refreshExpMs: 86400000,
+};
+
+const mockDeviceService = {
+  findPushTokensByUserId: jest.fn(),
+};
+
+const mockTwoFaService = {
+  createChallenge: jest.fn(),
+  claimApprovedChallenge: jest.fn(),
+};
+
+const mockTrustedDeviceService = {
+  verify: jest.fn(),
+};
+
+const mockPushChallengePublisher = {
+  publish: jest.fn(),
 };
 
 describe('AuthService', () => {
@@ -39,14 +64,25 @@ describe('AuthService', () => {
       providers: [
         AuthService,
         { provide: AuthRepository, useValue: mockAuthRepository },
-        { provide: JwtService, useValue: mockJwtService },
         { provide: ConfigService, useValue: mockConfigService },
+        { provide: TokenService, useValue: mockTokenService },
+        { provide: DeviceService, useValue: mockDeviceService },
+        { provide: TwoFaService, useValue: mockTwoFaService },
+        { provide: TrustedDeviceService, useValue: mockTrustedDeviceService },
+        { provide: PushChallengePublisher, useValue: mockPushChallengePublisher },
       ],
     }).compile();
 
     service = module.get(AuthService);
     jest.clearAllMocks();
     mockAuthRepository.insertRefreshToken.mockResolvedValue(undefined);
+    mockDeviceService.findPushTokensByUserId.mockResolvedValue([]);
+    mockTokenService.generateAccessToken.mockReturnValue('mock.access.token');
+    mockTokenService.issueRefreshToken.mockReturnValue({
+      rawRefreshToken: 'mock-raw-refresh-token',
+      tokenHash: 'mock-token-hash',
+      expiresAt: new Date(),
+    });
   });
 
   describe('login', () => {
@@ -54,36 +90,129 @@ describe('AuthService', () => {
       mockAuthRepository.findUserWithPermissionsByUsername.mockResolvedValue(mockUser);
       (bcrypt.compare as jest.Mock).mockResolvedValue(false);
 
-      await expect(service.login({ username: 'user1', password: 'wrong' })).rejects.toThrow(ApiException);
+      await expect(service.login({ username: 'user1', password: 'wrong' }, undefined, undefined)).rejects.toThrow(
+        ApiException,
+      );
     });
 
     it('비활성 계정은 ApiException(ACCOUNT_DISABLED)을 던진다', async () => {
       mockAuthRepository.findUserWithPermissionsByUsername.mockResolvedValue({ ...mockUser, active: false });
       (bcrypt.compare as jest.Mock).mockResolvedValue(true);
 
-      await expect(service.login({ username: 'user1', password: 'any' })).rejects.toThrow(ApiException);
+      await expect(service.login({ username: 'user1', password: 'any' }, undefined, undefined)).rejects.toThrow(
+        ApiException,
+      );
     });
 
     it('존재하지 않는 사용자는 ApiException(INVALID_CREDENTIALS)을 던진다', async () => {
       mockAuthRepository.findUserWithPermissionsByUsername.mockResolvedValue(null);
 
-      await expect(service.login({ username: 'ghost', password: 'any' })).rejects.toThrow(ApiException);
+      await expect(service.login({ username: 'ghost', password: 'any' }, undefined, undefined)).rejects.toThrow(
+        ApiException,
+      );
     });
 
-    it('인증 성공 시 accessToken과 rawRefreshToken을 반환하고 JwtService.sign을 호출한다', async () => {
+    it('인증 성공 시 accessToken과 rawRefreshToken을 반환하고 TokenService를 호출한다', async () => {
       mockAuthRepository.findUserWithPermissionsByUsername.mockResolvedValue(mockUser);
       (bcrypt.compare as jest.Mock).mockResolvedValue(true);
 
-      const result = await service.login({ username: 'user1', password: 'correct' });
+      const result = await service.login({ username: 'user1', password: 'correct' }, undefined, undefined);
 
       expect(result.response.accessToken).toBe('mock.access.token');
-      expect(result.rawRefreshToken).toBeDefined();
-      expect(mockJwtService.sign).toHaveBeenCalledWith(
-        { sub: mockUser.id, username: mockUser.username, permissions: mockUser.permissions },
-        expect.objectContaining({ expiresIn: expect.any(Number) }),
+      expect(result.rawRefreshToken).toBe('mock-raw-refresh-token');
+      expect(mockTokenService.generateAccessToken).toHaveBeenCalledWith(
+        mockUser.id,
+        mockUser.username,
+        mockUser.permissions,
       );
+      expect(mockTokenService.issueRefreshToken).toHaveBeenCalledTimes(1);
       expect(mockAuthRepository.insertRefreshToken).toHaveBeenCalledTimes(1);
+    });
+
+    it('디바이스가 없으면 즉시 AUTHENTICATED를 반환한다', async () => {
+      mockAuthRepository.findUserWithPermissionsByUsername.mockResolvedValue(mockUser);
+      (bcrypt.compare as jest.Mock).mockResolvedValue(true);
+      mockTrustedDeviceService.verify.mockResolvedValue(false);
+      mockDeviceService.findPushTokensByUserId.mockResolvedValue([]);
+
+      const result = await service.login({ username: 'user1', password: 'pw' }, undefined, undefined);
+
+      expect(result.response.status).toBe('AUTHENTICATED');
+    });
+
+    it('신뢰기기 토큰이 유효하면 2FA 없이 AUTHENTICATED를 반환한다', async () => {
+      mockAuthRepository.findUserWithPermissionsByUsername.mockResolvedValue(mockUser);
+      (bcrypt.compare as jest.Mock).mockResolvedValue(true);
+      mockTrustedDeviceService.verify.mockResolvedValue(true);
+
+      const result = await service.login({ username: 'user1', password: 'pw' }, 'valid-trust-token', undefined);
+
+      expect(result.response.status).toBe('AUTHENTICATED');
+      expect(mockDeviceService.findPushTokensByUserId).not.toHaveBeenCalled();
+    });
+
+    it('디바이스가 있으면 2FA_REQUIRED를 반환한다', async () => {
+      mockAuthRepository.findUserWithPermissionsByUsername.mockResolvedValue(mockUser);
+      (bcrypt.compare as jest.Mock).mockResolvedValue(true);
+      mockTrustedDeviceService.verify.mockResolvedValue(false);
+      mockDeviceService.findPushTokensByUserId.mockResolvedValue(['push-token-abc']);
+      mockTwoFaService.createChallenge.mockResolvedValue({
+        id: 'challenge-id',
+        options: '47,82,13',
+        expiresAt: new Date(Date.now() + 60_000),
+      });
+
+      const result = await service.login({ username: 'user1', password: 'pw' }, undefined, undefined);
+
+      expect(result.response.status).toBe('2FA_REQUIRED');
+      expect(mockPushChallengePublisher.publish).toHaveBeenCalledWith(
+        expect.objectContaining({ pushToken: 'push-token-abc' }),
+      );
+    });
+
+    it('신뢰기기 토큰이 무효하고 디바이스가 있으면 2FA_REQUIRED를 반환한다', async () => {
+      mockAuthRepository.findUserWithPermissionsByUsername.mockResolvedValue(mockUser);
+      (bcrypt.compare as jest.Mock).mockResolvedValue(true);
+      mockTrustedDeviceService.verify.mockResolvedValue(false);
+      mockDeviceService.findPushTokensByUserId.mockResolvedValue(['push-token-abc']);
+      mockTwoFaService.createChallenge.mockResolvedValue({
+        id: 'challenge-id',
+        options: '47,82,13',
+        expiresAt: new Date(Date.now() + 60_000),
+      });
+
+      const result = await service.login({ username: 'user1', password: 'pw' }, 'invalid-trust-token', undefined);
+
+      expect(result.response.status).toBe('2FA_REQUIRED');
+      expect(mockTrustedDeviceService.verify).toHaveBeenCalledWith('invalid-trust-token', mockUser.id);
+    });
+  });
+
+  describe('completeTwoFa', () => {
+    it('챌린지가 APPROVED 상태가 아니면 TwoFaService에서 예외가 전파된다', async () => {
+      const { ApiException } = await import('@terab/common');
+      mockTwoFaService.claimApprovedChallenge.mockRejectedValue(new ApiException('TWO_FA_CHALLENGE_NOT_FOUND'));
+
+      await expect(service.completeTwoFa('challenge-id')).rejects.toThrow(ApiException);
+    });
+
+    it('APPROVED 챌린지 완료 후 AUTHENTICATED 응답과 토큰을 반환한다', async () => {
+      mockTwoFaService.claimApprovedChallenge.mockResolvedValue('user-id');
+      mockAuthRepository.findUserWithPermissionsById.mockResolvedValue(mockUser);
+
+      const result = await service.completeTwoFa('challenge-id');
+
+      expect(mockTwoFaService.claimApprovedChallenge).toHaveBeenCalledWith('challenge-id');
+      expect(result.response.status).toBe('AUTHENTICATED');
+      expect(result.rawRefreshToken).toBe('mock-raw-refresh-token');
+    });
+
+    it('userId에 해당하는 사용자가 없으면 ApiException을 던진다', async () => {
+      const { ApiException } = await import('@terab/common');
+      mockTwoFaService.claimApprovedChallenge.mockResolvedValue('ghost-user-id');
+      mockAuthRepository.findUserWithPermissionsById.mockResolvedValue(null);
+
+      await expect(service.completeTwoFa('challenge-id')).rejects.toThrow(ApiException);
     });
   });
 });
-

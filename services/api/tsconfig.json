@@ -16,13 +16,14 @@
     "outDir": "./dist",
     "incremental": true,
     "skipLibCheck": true,
-    "strictNullChecks": true,
     "forceConsistentCasingInFileNames": true,
+    "noFallthroughCasesInSwitch": false,
 
     "types": ["node", "jest"],
     "paths": {
       "@terab/common": ["./src/common"],
       "@terab/common/*": ["./src/common/index.ts"],
+      "@terab/core": ["./src/core/index.ts"],
       "@terab/db": ["./src/database/index.ts"],
       "@terab/test": ["./src/test/index.ts"]
     },

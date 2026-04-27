@@ -14,7 +14,7 @@ services:
     networks:
       - terab-net
     healthcheck:
-      test: ['CMD-SHELL', 'pg_isready -q -U $$POSTGRES_USER']
+      test: ['CMD-SHELL', 'pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB']
       interval: 10s
       timeout: 5s
       retries: 5
@@ -47,24 +47,22 @@ services:
       restart_policy:
         condition: any
 
-  # ─── RabbitMQ ────────────────────────────────────────────────
-  rabbitmq:
-    image: rabbitmq:3.13-management-alpine
-    env_file:
-      - infra.env
+  # ─── Redis (BullMQ 브로커) ────────────────────────────────────
+  redis:
+    image: redis:8-alpine
+    command: redis-server /usr/local/etc/redis/redis.conf
     volumes:
-      - ./volumes/rabbitmq:/var/lib/rabbitmq
+      - ./volumes/redis:/data
+      - ./redis.conf:/usr/local/etc/redis/redis.conf:ro
     ports:
-      - '5672:5672'
-      - '15672:15672'
+      - '6379:6379'
     networks:
       - terab-net
     healthcheck:
-      test: ['CMD', 'rabbitmq-diagnostics', 'ping']
+      test: ['CMD', 'redis-cli', 'ping']
       interval: 10s
       timeout: 5s
       retries: 5
-      start_period: 30s
     deploy:
       replicas: 1
       restart_policy:

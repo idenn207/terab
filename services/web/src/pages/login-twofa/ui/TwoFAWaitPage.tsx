@@ -16,10 +16,10 @@ export function TwoFAWaitPage() {
     if (!approvedData) return;
     setIsCompleting(true);
     try {
+      setAuth(approvedData.accessToken, approvedData.user);
       if (trustChecked) {
         await register();
       }
-      setAuth(approvedData.accessToken, approvedData.user);
       navigate('/drive');
     } finally {
       setIsCompleting(false);

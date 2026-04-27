@@ -6,12 +6,18 @@ endif
 
 # ─── 환경 설정 ────────────────────────────────────────────────────
 .PHONY: setup
-setup: ## 로컬/운영 개발 초기 설정 (최초 클론 후 1회, api.env/web.env 변경 시 재실행)
-	@bash scripts/setu.sh
+setup: ## 로컬/운영 개발 초기 설정 (최초 클론 후 1회, secrets 변경 시 재실행)
+	@bash scripts/setup.sh
+
+.PHONY: setup-local
+setup-local: ## 로컬 개발 초기 설정 (최초 클론 후 1회, api/mq/web.env 변경 시 재실행)
+	@bash scripts/setup-local.sh
 
 # ─── 로컬 인프라 (DB + MinIO + RabbitMQ) ──────────────────────────
 .PHONY: infra
 infra:
+	@echo "네트워크 대기 중..."
+	@until ! docker network inspect terab-infra_terab-net > /dev/null 2>&1; do sleep 1; done
 	docker stack deploy -c docker-stack.infra.local.yml terab-infra
 
 .PHONY: infra-down
@@ -43,6 +49,11 @@ dev-update:
 		--force \
 		terab_api \
 	&& docker service update \
+		--image terab-mq:local \
+		--with-registry-auth \
+		--force \
+		terab_mq \
+	&& docker service update \
 		--image terab-web:local \
 		--with-registry-auth \
 		--force \
@@ -53,7 +64,7 @@ dev-update:
 ensure-volumes: ## 운영 스택 bind mount 경로 생성 (없을 경우에만)
 	@mkdir -p \
 		/volume2/docker/terab/volumes/db \
-		/volume2/docker/terab/volumes/rabbitmq \
+		/volume2/docker/terab/volumes/redis \
 		/volume2/docker/terab/services/nginx \
 		/volume1/storage
 
@@ -73,6 +84,11 @@ stack-update:
 		--force \
 		terab_api \
 	&& docker service update \
+		--image ghcr.io/idenn207/terab-mq:latest \
+		--with-registry-auth \
+		--force \
+		terab_mq \
+	&& docker service update \
 		--image ghcr.io/idenn207/terab-web:latest \
 		--with-registry-auth \
 		--force \
@@ -82,12 +98,17 @@ stack-update:
 .PHONY: build-local
 build-local:
 	docker build -t terab-api:local ./services/api
+	docker build -t terab-mq:local ./services/mq
 	docker build -t terab-web:local ./services/web
 
 # ─── 빌드 ────────────────────────────────────────────────────────
 .PHONY: build-api
 build-api:
 	cd services/api && npm run build
+
+.PHONY: build-mq
+build-mq:
+	cd services/mq && npm run build
 
 .PHONY: build-web
 build-web:
@@ -109,6 +130,10 @@ build-android-prod:
 .PHONY: api
 api:
 	cd services/api && npm run start:dev
+
+.PHONY: mq
+mq:
+	cd services/mq && npm run start:dev
 
 # ─── 프론트엔드 ────────────────────────────────────────────────────
 .PHONY: web
@@ -134,11 +159,15 @@ android-open:
 
 # ─── 테스트 ────────────────────────────────────────────────────────
 .PHONY: test
-test: test-api test-web
+test: test-api test-mq test-web
 
 .PHONY: test-api
 test-api:
 	cd services/api && npm test
+
+.PHONY: test-mq
+test-mq:
+	cd services/mq && npm test
 
 .PHONY: test-web
 test-web:

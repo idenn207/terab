@@ -79,7 +79,6 @@ describe('usePushNotification', () => {
     await waitFor(() => {
       expect(mockRegisterPushToken).toHaveBeenCalledWith({
         pushToken: 'fcm-token-abc123',
-        platform: 'android',
       });
     });
   });
@@ -123,7 +122,6 @@ describe('usePushNotification', () => {
     await waitFor(() => {
       expect(mockRegisterPushToken).toHaveBeenCalledWith({
         pushToken: 'fcm-token-pending',
-        platform: 'android',
       });
     });
   });
