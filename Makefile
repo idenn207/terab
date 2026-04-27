@@ -47,6 +47,11 @@ dev-update:
 		--force \
 		terab_api \
 	&& docker service update \
+		--image terab-mq:local \
+		--with-registry-auth \
+		--force \
+		terab_mq \
+	&& docker service update \
 		--image terab-web:local \
 		--with-registry-auth \
 		--force \
@@ -86,12 +91,17 @@ stack-update:
 .PHONY: build-local
 build-local:
 	docker build -t terab-api:local ./services/api
+	docker build -t terab-mq:local ./services/mq
 	docker build -t terab-web:local ./services/web
 
 # ─── 빌드 ────────────────────────────────────────────────────────
 .PHONY: build-api
 build-api:
 	cd services/api && npm run build
+
+.PHONY: build-mq
+build-mq:
+	cd services/mq && npm run build
 
 .PHONY: build-web
 build-web:
@@ -113,6 +123,10 @@ build-android-prod:
 .PHONY: api
 api:
 	cd services/api && npm run start:dev
+
+.PHONY: mq
+mq:
+	cd services/mq && npm run start:dev
 
 # ─── 프론트엔드 ────────────────────────────────────────────────────
 .PHONY: web
@@ -138,11 +152,15 @@ android-open:
 
 # ─── 테스트 ────────────────────────────────────────────────────────
 .PHONY: test
-test: test-api test-web
+test: test-api test-mq test-web
 
 .PHONY: test-api
 test-api:
 	cd services/api && npm test
+
+.PHONY: test-mq
+test-mq:
+	cd services/mq && npm test
 
 .PHONY: test-web
 test-web:

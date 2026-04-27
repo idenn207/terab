@@ -55,6 +55,8 @@ services:
       - infra.env
     volumes:
       - ./volumes/redis:/data
+    ports:
+      - '6379:6379'
     networks:
       - terab-net
     healthcheck:

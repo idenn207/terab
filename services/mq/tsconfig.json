@@ -20,13 +20,7 @@
     "noFallthroughCasesInSwitch": false,
 
     "types": ["node", "jest"],
-    "paths": {
-      "@terab/common": ["./src/common"],
-      "@terab/common/*": ["./src/common/index.ts"],
-      "@terab/core": ["./src/core/index.ts"],
-      "@terab/db": ["./src/database/index.ts"],
-      "@terab/test": ["./src/test/index.ts"]
-    },
+    "paths": {},
 
     /* Strict Type-Checking Options */
     "strict": true
@@ -37,6 +31,5 @@
     // "strictPropertyInitialization": true,
     // "noImplicitThis": true,
     // "alwaysStrict": true,
-  },
-  "exclude": ["node_modules"]
+  }
 }

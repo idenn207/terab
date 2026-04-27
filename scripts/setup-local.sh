@@ -54,6 +54,7 @@ validate_env() {
 
     local missing=()
     while IFS='=' read -r key _; do
+        key="${key//[[:space:]]/}"
         [[ "$key" =~ ^# || -z "$key" ]] && continue
         grep -q "^${key}=" "$env_file" 2>/dev/null || missing+=("$key")
     done < "$example_file"
@@ -78,4 +79,4 @@ for svc in "${SERVICES[@]}"; do
     echo ""
 done
 
-echo "setup-local 완료. 'make api' 또는 'make web'으로 서버를 기동하세요."
+echo "setup-local 완료."
