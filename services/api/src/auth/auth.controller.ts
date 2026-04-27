@@ -10,11 +10,10 @@ import { LoginDto } from './dto/login.dto';
 import { UserResponseDto } from './dto/user-response.dto';
 import type { AuthUser } from './types/auth-user.type';
 
-const REFRESH_TOKEN_COOKIE = 'refreshToken';
-const COOKIE_PATH = '/api/auth';
-
 @Controller('api/auth')
 export class AuthController {
+  protected REFRESH_TOKEN_COOKIE = 'refreshToken';
+  protected COOKIE_PATH = '/api/auth';
   constructor(private readonly authService: AuthService) {}
 
   @Public()
@@ -44,7 +43,7 @@ export class AuthController {
   @Post('refresh')
   @HttpCode(HttpStatus.OK)
   async refresh(@Req() req: Request, @Res({ passthrough: true }) res: Response): Promise<LoginResponseDto> {
-    const rawRefreshToken = req.cookies?.[REFRESH_TOKEN_COOKIE] as string | undefined;
+    const rawRefreshToken = req.cookies?.[this.REFRESH_TOKEN_COOKIE] as string | undefined;
     const { response, rawRefreshToken: newRt, refreshTokenExpMs } = await this.authService.refresh(rawRefreshToken);
     this.setRefreshTokenCookie(res, newRt, refreshTokenExpMs);
     return response;
@@ -54,13 +53,13 @@ export class AuthController {
   @Post('logout')
   @HttpCode(HttpStatus.NO_CONTENT)
   async logout(@Req() req: Request, @Res({ passthrough: true }) res: Response): Promise<void> {
-    const rawRefreshToken = req.cookies?.[REFRESH_TOKEN_COOKIE] as string | undefined;
+    const rawRefreshToken = req.cookies?.[this.REFRESH_TOKEN_COOKIE] as string | undefined;
     await this.authService.logout(rawRefreshToken);
-    res.clearCookie(REFRESH_TOKEN_COOKIE, {
+    res.clearCookie(this.REFRESH_TOKEN_COOKIE, {
       httpOnly: true,
       secure: true,
       sameSite: 'strict',
-      path: COOKIE_PATH,
+      path: this.COOKIE_PATH,
     });
   }
 
@@ -70,12 +69,12 @@ export class AuthController {
   }
 
   private setRefreshTokenCookie(res: Response, rawToken: string, maxAgeMs: number): void {
-    res.cookie(REFRESH_TOKEN_COOKIE, rawToken, {
+    res.cookie(this.REFRESH_TOKEN_COOKIE, rawToken, {
       httpOnly: true,
       secure: true,
       sameSite: 'strict',
       maxAge: maxAgeMs,
-      path: COOKIE_PATH,
+      path: this.COOKIE_PATH,
     });
   }
 }

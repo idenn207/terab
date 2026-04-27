@@ -1,7 +1,7 @@
 import { ConfigService } from '@nestjs/config';
-import { JwtService } from '@nestjs/jwt';
 import { Test } from '@nestjs/testing';
 import { ApiException } from '@terab/common';
+import { TokenService } from '@terab/core';
 import { mockConfigService, mockUser } from '@terab/test';
 import bcrypt from 'bcryptjs';
 import { AuthRepository } from './auth.repository';
@@ -27,8 +27,12 @@ const mockAuthRepository = {
   insertUserRole: jest.fn(),
 };
 
-const mockJwtService = {
-  sign: jest.fn().mockReturnValue('mock.access.token'),
+const mockTokenService = {
+  generateAccessToken: jest.fn(),
+  issueRefreshToken: jest.fn(),
+  pepperPassword: jest.fn(),
+  hashToken: jest.fn(),
+  refreshExpMs: 86400000,
 };
 
 describe('AuthService', () => {
@@ -39,8 +43,8 @@ describe('AuthService', () => {
       providers: [
         AuthService,
         { provide: AuthRepository, useValue: mockAuthRepository },
-        { provide: JwtService, useValue: mockJwtService },
         { provide: ConfigService, useValue: mockConfigService },
+        { provide: TokenService, useValue: mockTokenService },
       ],
     }).compile();
 
@@ -70,20 +74,27 @@ describe('AuthService', () => {
       await expect(service.login({ username: 'ghost', password: 'any' })).rejects.toThrow(ApiException);
     });
 
-    it('인증 성공 시 accessToken과 rawRefreshToken을 반환하고 JwtService.sign을 호출한다', async () => {
+    it('인증 성공 시 accessToken과 rawRefreshToken을 반환하고 TokenService를 호출한다', async () => {
       mockAuthRepository.findUserWithPermissionsByUsername.mockResolvedValue(mockUser);
       (bcrypt.compare as jest.Mock).mockResolvedValue(true);
+      mockTokenService.generateAccessToken.mockReturnValue('mock.access.token');
+      mockTokenService.issueRefreshToken.mockReturnValue({
+        rawRefreshToken: 'mock-raw-refresh-token',
+        tokenHash: 'mock-token-hash',
+        expiresAt: new Date(),
+      });
 
       const result = await service.login({ username: 'user1', password: 'correct' });
 
       expect(result.response.accessToken).toBe('mock.access.token');
-      expect(result.rawRefreshToken).toBeDefined();
-      expect(mockJwtService.sign).toHaveBeenCalledWith(
-        { sub: mockUser.id, username: mockUser.username, permissions: mockUser.permissions },
-        expect.objectContaining({ expiresIn: expect.any(Number) }),
+      expect(result.rawRefreshToken).toBe('mock-raw-refresh-token');
+      expect(mockTokenService.generateAccessToken).toHaveBeenCalledWith(
+        mockUser.id,
+        mockUser.username,
+        mockUser.permissions,
       );
+      expect(mockTokenService.issueRefreshToken).toHaveBeenCalledTimes(1);
       expect(mockAuthRepository.insertRefreshToken).toHaveBeenCalledTimes(1);
     });
   });
 });
-

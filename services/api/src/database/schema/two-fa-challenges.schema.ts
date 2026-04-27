@@ -23,5 +23,5 @@ export const twoFaChallenges = table(
   (table) => [t.index().on(table.userId), t.index().on(table.status)],
 );
 
-export type TwoFaChallenge$Insert = typeof twoFaChallenges.$inferInsert;
-export type TwoFaChallenge$Select = typeof twoFaChallenges.$inferSelect;
+export type TwoFaChallenges$Insert = typeof twoFaChallenges.$inferInsert;
+export type TwoFaChallenges$Select = typeof twoFaChallenges.$inferSelect;

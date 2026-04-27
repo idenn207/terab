@@ -3,7 +3,6 @@ import { DeviceController } from './device.controller';
 import { DeviceService } from './device.service';
 
 const mockDeviceService = {};
-const mockDeviceRepository = {};
 
 describe('DeviceController', () => {
   let controller: DeviceController;
