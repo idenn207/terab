@@ -6,8 +6,12 @@ endif
 
 # ─── 환경 설정 ────────────────────────────────────────────────────
 .PHONY: setup
-setup: ## 로컬/운영 개발 초기 설정 (최초 클론 후 1회, api.env/web.env 변경 시 재실행)
-	@bash scripts/setu.sh
+setup: ## 로컬/운영 개발 초기 설정 (최초 클론 후 1회, secrets 변경 시 재실행)
+	@bash scripts/setup.sh
+
+.PHONY: setup-local
+setup-local: ## 로컬 개발 초기 설정 (최초 클론 후 1회, api/mq/web.env 변경 시 재실행)
+	@bash scripts/setup-local.sh
 
 # ─── 로컬 인프라 (DB + MinIO + RabbitMQ) ──────────────────────────
 .PHONY: infra
@@ -53,7 +57,7 @@ dev-update:
 ensure-volumes: ## 운영 스택 bind mount 경로 생성 (없을 경우에만)
 	@mkdir -p \
 		/volume2/docker/terab/volumes/db \
-		/volume2/docker/terab/volumes/rabbitmq \
+		/volume2/docker/terab/volumes/redis \
 		/volume2/docker/terab/services/nginx \
 		/volume1/storage
 

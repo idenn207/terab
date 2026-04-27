@@ -23,13 +23,10 @@ services:
       - '9000:9000'
       - '9001:9001'
 
-  rabbitmq:
-    image: rabbitmq:3.13-management-alpine
+  redis:
+    image: redis:7-alpine
     volumes:
-      - ./volumes/rabbitmq:/var/lib/rabbitmq
-    ports:
-      - '5672:5672'
-      - '15672:15672'
+      - ./volumes/redis:data
     deploy:
       placement:
         constraints: []

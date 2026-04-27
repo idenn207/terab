@@ -47,24 +47,21 @@ services:
       restart_policy:
         condition: any
 
-  # ─── RabbitMQ ────────────────────────────────────────────────
-  rabbitmq:
-    image: rabbitmq:3.13-management-alpine
+  # ─── Redis (BullMQ 브로커) ────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    command: redis-server --appendonly yes
     env_file:
       - infra.env
     volumes:
-      - ./volumes/rabbitmq:/var/lib/rabbitmq
-    ports:
-      - '5672:5672'
-      - '15672:15672'
+      - ./volumes/redis:/data
     networks:
       - terab-net
     healthcheck:
-      test: ['CMD', 'rabbitmq-diagnostics', 'ping']
+      test: ['CMD', 'redis-cli', 'ping']
       interval: 10s
       timeout: 5s
       retries: 5
-      start_period: 30s
     deploy:
       replicas: 1
       restart_policy:
