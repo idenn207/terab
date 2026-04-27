@@ -1,4 +1,4 @@
-import { Body, Controller, Get, HttpCode, HttpStatus, Post, Req, Res } from '@nestjs/common';
+import { Body, Controller, Get, Headers, HttpCode, HttpStatus, Post, Req, Res } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
 import type { Request, Response } from 'express';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
@@ -20,9 +20,16 @@ export class AuthController {
   @Throttle({ default: { ttl: 60000, limit: 5 } })
   @Post('login')
   @HttpCode(HttpStatus.OK)
-  async login(@Body() dto: LoginDto, @Res({ passthrough: true }) res: Response): Promise<LoginResponseDto> {
-    const { response, rawRefreshToken, refreshTokenExpMs } = await this.authService.login(dto);
-    this.setRefreshTokenCookie(res, rawRefreshToken, refreshTokenExpMs);
+  async login(
+    @Body() dto: LoginDto,
+    @Headers('trustToken') trustToken: string | undefined,
+    @Headers('user-agent') userAgent: string | undefined,
+    @Res({ passthrough: true }) res: Response,
+  ): Promise<LoginResponseDto> {
+    const { response, rawRefreshToken, refreshTokenExpMs } = await this.authService.login(dto, trustToken, userAgent);
+    if (rawRefreshToken && refreshTokenExpMs) {
+      this.setRefreshTokenCookie(res, rawRefreshToken, refreshTokenExpMs);
+    }
     return response;
   }
 

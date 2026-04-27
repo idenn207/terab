@@ -3,6 +3,10 @@ import { ConfigService } from '@nestjs/config';
 import { ApiException } from '@terab/common';
 import { TokenService } from '@terab/core';
 import bcrypt from 'bcryptjs';
+import { DeviceService } from '../device/device.service.js';
+import { TrustedDeviceService } from '../trusted-device/trusted-device.service.js';
+import { PushChallengePublisher } from '../twofa/push-challenge.publisher.js';
+import { TwoFaService } from '../twofa/twofa.service.js';
 import { AuthRepository, UserWithPermissions } from './auth.repository.js';
 import { BackupLoginDto } from './dto/backup-login.dto.js';
 import { LoginResponseDto } from './dto/login-response.dto.js';
@@ -20,9 +24,13 @@ interface AuthTokens {
 @Injectable()
 export class AuthService implements OnModuleInit {
   constructor(
-    private readonly authRepository: AuthRepository,
+    private readonly pushChallengePublisher: PushChallengePublisher,
     private readonly configService: ConfigService,
     private readonly tokenService: TokenService,
+    private readonly deviceService: DeviceService,
+    private readonly twoFaService: TwoFaService,
+    private readonly trustedDeviceService: TrustedDeviceService,
+    private readonly authRepository: AuthRepository,
   ) {}
 
   async onModuleInit(): Promise<void> {
@@ -31,25 +39,62 @@ export class AuthService implements OnModuleInit {
 
   // ─── Login ───────────────────────────────────────────────────────────
 
-  async login(dto: LoginDto): Promise<{
+  async login(
+    dto: LoginDto,
+    trustToken: string | undefined,
+    userAgent: string | undefined,
+  ): Promise<{
     response: LoginResponseDto;
-    rawRefreshToken: string;
-    refreshTokenExpMs: number;
+    rawRefreshToken?: string;
+    refreshTokenExpMs?: number;
   }> {
     const user = await this.authRepository.findUserWithPermissionsByUsername(dto.username);
     if (!user) throw new ApiException('INVALID_CREDENTIALS');
     await this.validateCredentials(user, dto.password);
 
-    // Push 기기 존재 시 2FA 챌린지 발급 (device, twofa 도메인 구현 후 추가)
-    const tokens = await this.issueTokenPair(user);
-    const response = LoginResponseDto.authenticated(
-      tokens.accessToken,
-      new UserResponseDto(user.id, user.username, user.nickname),
+    // 신뢰기기 쿠키 유효 시 2FA 스킵
+    if (trustToken && (await this.trustedDeviceService.verify(trustToken, user.id))) {
+      const tokens = await this.issueTokenPair(user);
+      return {
+        response: LoginResponseDto.authenticated(
+          tokens.accessToken,
+          new UserResponseDto(user.id, user.username, user.nickname),
+        ),
+        rawRefreshToken: tokens.rawRefreshToken,
+        refreshTokenExpMs: tokens.refreshTokenExpMs,
+      };
+    }
+
+    // pushToken 없으면 2FA 스킵
+    const pushTokens = await this.deviceService.findPushTokensByUserId(user.id);
+    if (pushTokens.length === 0) {
+      const tokens = await this.issueTokenPair(user);
+      return {
+        response: LoginResponseDto.authenticated(
+          tokens.accessToken,
+          new UserResponseDto(user.id, user.username, user.nickname),
+        ),
+        rawRefreshToken: tokens.rawRefreshToken,
+        refreshTokenExpMs: tokens.refreshTokenExpMs,
+      };
+    }
+
+    // 2FA 챌린지 생성 + BullMQ 발행
+    const challenge = await this.twoFaService.createChallenge(user.id);
+    await Promise.all(
+      pushTokens.map((pushToken) =>
+        this.pushChallengePublisher.publish({
+          userId: user.id,
+          pushToken,
+          challengeId: challenge.id,
+          options: challenge.options,
+          expiresAt: challenge.expiresAt.toISOString(),
+        }),
+      ),
     );
+
     return {
-      response,
-      rawRefreshToken: tokens.rawRefreshToken,
-      refreshTokenExpMs: tokens.refreshTokenExpMs,
+      response: LoginResponseDto.twoFactorRequired(challenge.id, challenge.options.split(','), challenge.expiresAt),
     };
   }
 
