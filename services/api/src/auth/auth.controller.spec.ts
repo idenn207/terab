@@ -20,6 +20,7 @@ const loginResult = {
 const mockAuthService = {
   login: jest.fn().mockResolvedValue(loginResult),
   loginWithBackupCode: jest.fn().mockResolvedValue(loginResult),
+  completeTwoFa: jest.fn().mockResolvedValue(loginResult),
   refresh: jest.fn().mockResolvedValue(loginResult),
   logout: jest.fn().mockResolvedValue(undefined),
   getCurrentUser: jest.fn().mockResolvedValue(new UserResponseDto('uid', 'user1', 'User')),
@@ -50,6 +51,14 @@ describe('AuthController', () => {
     const mockReq = { cookies: { refreshToken: 'raw.rt' } } as any;
     await controller.logout(mockReq, res);
     expect(res.clearCookie).toHaveBeenCalledWith('refreshToken', expect.objectContaining({ path: '/api/auth' }));
+  });
+
+  it('POST /2fa/challenge/:id/complete — RT 쿠키를 설정하고 LoginResponseDto를 반환한다', async () => {
+    const res = mockResponse();
+    const result = await controller.completeTwoFa('challenge-id', res);
+    expect(mockAuthService.completeTwoFa).toHaveBeenCalledWith('challenge-id');
+    expect(res.cookie).toHaveBeenCalledWith('refreshToken', 'raw.rt', expect.objectContaining({ httpOnly: true }));
+    expect(result.status).toBe('AUTHENTICATED');
   });
 
   it('GET /me — UserResponseDto를 반환한다', async () => {
