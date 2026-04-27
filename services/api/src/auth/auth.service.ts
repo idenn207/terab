@@ -98,6 +98,25 @@ export class AuthService implements OnModuleInit {
     };
   }
 
+  async completeTwoFa(challengeId: string): Promise<{
+    response: LoginResponseDto;
+    rawRefreshToken: string;
+    refreshTokenExpMs: number;
+  }> {
+    const userId = await this.twoFaService.claimApprovedChallenge(challengeId);
+    const user = await this.authRepository.findUserWithPermissionsById(userId);
+    if (!user) throw new ApiException('TWO_FA_CHALLENGE_NOT_FOUND');
+    const tokens = await this.issueTokenPair(user);
+    return {
+      response: LoginResponseDto.authenticated(
+        tokens.accessToken,
+        new UserResponseDto(user.id, user.username, user.nickname),
+      ),
+      rawRefreshToken: tokens.rawRefreshToken,
+      refreshTokenExpMs: tokens.refreshTokenExpMs,
+    };
+  }
+
   async loginWithBackupCode(dto: BackupLoginDto): Promise<{
     response: LoginResponseDto;
     rawRefreshToken: string;

@@ -1,5 +1,6 @@
-import { Body, Controller, Get, Headers, HttpCode, HttpStatus, Post, Req, Res } from '@nestjs/common';
+import { Body, Controller, Get, Headers, HttpCode, HttpStatus, Param, Post, Req, Res } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
+import { Cookies } from '@terab/common';
 import type { Request, Response } from 'express';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { Public } from '../common/decorators/public.decorator';
@@ -22,7 +23,7 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   async login(
     @Body() dto: LoginDto,
-    @Headers('trustToken') trustToken: string | undefined,
+    @Cookies('trustToken') trustToken: string | undefined,
     @Headers('user-agent') userAgent: string | undefined,
     @Res({ passthrough: true }) res: Response,
   ): Promise<LoginResponseDto> {
@@ -42,6 +43,15 @@ export class AuthController {
     @Res({ passthrough: true }) res: Response,
   ): Promise<LoginResponseDto> {
     const { response, rawRefreshToken, refreshTokenExpMs } = await this.authService.loginWithBackupCode(dto);
+    this.setRefreshTokenCookie(res, rawRefreshToken, refreshTokenExpMs);
+    return response;
+  }
+
+  @Public()
+  @Post('2fa/challenge/:id/complete')
+  @HttpCode(HttpStatus.OK)
+  async completeTwoFa(@Param('id') id: string, @Res({ passthrough: true }) res: Response): Promise<LoginResponseDto> {
+    const { response, rawRefreshToken, refreshTokenExpMs } = await this.authService.completeTwoFa(id);
     this.setRefreshTokenCookie(res, rawRefreshToken, refreshTokenExpMs);
     return response;
   }
