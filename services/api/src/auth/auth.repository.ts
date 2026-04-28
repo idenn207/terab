@@ -8,6 +8,7 @@ import {
   Users$Insert,
   Users$Select,
   backupCodes,
+  invitations,
   permissions,
   refreshTokens,
   rolePermissions,
@@ -156,4 +157,34 @@ export class AuthRepository {
   ): Promise<void> {
     await this.database.db.insert(backupCodes).values(codeHashes.map((codeHash) => ({ userId, codeHash })));
   }
+
+  // ─── Register ────────────────────────────────────────────────────────
+
+  async registerUser(data: {
+    username: string;
+    nickname: string;
+    password: string;
+    roleId: string;
+    codeHashes: string[];
+    invitationToken: string;
+  }): Promise<{ id: string }> {
+    return this.database.db.transaction(async (tx) => {
+      const [newUser] = await tx
+        .insert(users)
+        .values({ username: data.username, nickname: data.nickname, password: data.password })
+        .returning({ id: users.id });
+      if (!newUser) throw new InternalServerErrorException('사용자 생성 실패');
+
+      await tx.insert(userRoles).values({ userId: newUser.id, roleId: data.roleId });
+      await tx.insert(backupCodes).values(data.codeHashes.map((codeHash) => ({ userId: newUser.id, codeHash })));
+      await tx
+        .update(invitations)
+        .set({ usedAt: new Date(), usedBy: newUser.id })
+        .where(eq(invitations.token, data.invitationToken));
+
+      return newUser;
+    });
+  }
+
+  // ─── Login ───────────────────────────────────────────────────────────
 }
