@@ -2,6 +2,7 @@
 secrets/
 *.env
 redis.conf
+redis.*.conf
 
 # Anroid Release Key
 google-services.json

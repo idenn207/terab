@@ -10,6 +10,8 @@ services:
   # ─── Infra ───────────────────────────────────────────────────
   db:
     image: postgres:16-alpine
+    env_file:
+      - infra.env
     volumes:
       - ./volumes/db:/var/lib/postgresql/data
     deploy:
@@ -17,6 +19,8 @@ services:
         constraints: []
 
   minio:
+    env_file:
+      - infra.env
     volumes:
       - ./volumes/storage:/data
     ports:
@@ -27,6 +31,7 @@ services:
     image: redis:7-alpine
     volumes:
       - ./volumes/redis:data
+      - ./redis.conf:/usr/local/etc/redis/redis.conf:ro
     deploy:
       placement:
         constraints: []
@@ -35,16 +40,22 @@ services:
   # 주의: docker stack deploy는 build를 지원하지 않으므로 make dev가 배포 전 이미지를 빌드함
   api:
     image: terab-api:local
+    env_file:
+      - api.env
     deploy:
       replicas: 1
 
   mq:
     image: terab-mq:local
+    env_file:
+      - mq.env
     deploy:
       replicas: 1
 
   web:
     image: terab-web:local
+    env_file:
+      - web.env
     deploy:
       replicas: 1
 
