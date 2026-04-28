@@ -11,14 +11,14 @@ export interface BackupLoginForm {
   backupCode: string;
 }
 
-interface LoginError {
+interface BackupLoginError {
   code: ApiErrorCode;
   message: string;
 }
 
 export function useBackupLogin() {
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<LoginError | null>(null);
+  const [error, setError] = useState<BackupLoginError | null>(null);
   const resetError = () => setError(null);
   const navigate = useNavigate();
   const setAuth = useUserStore((s) => s.setAuth);
@@ -31,7 +31,7 @@ export function useBackupLogin() {
       setAuth(data.accessToken, data.user);
       navigate('/drive');
     } catch (err) {
-      const { code, message } = (err as AxiosError<LoginError>)?.response?.data ?? {};
+      const { code, message } = (err as AxiosError<BackupLoginError>)?.response?.data ?? {};
       setError({
         code: code ?? 'UNKNOWN',
         message: message ?? '로그인에 실패했습니다.',

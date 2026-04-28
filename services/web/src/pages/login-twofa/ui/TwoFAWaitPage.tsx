@@ -1,6 +1,6 @@
 import { useUserStore } from '@/entities';
 import { type ApprovedData, TrustThisDeviceCheckbox, TwoFactorWaiting, useTrustedDevice } from '@/features';
-import { Button, Text } from '@/shared/ui';
+import { Button } from '@/shared/ui';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
@@ -29,7 +29,7 @@ export function TwoFAWaitPage() {
   if (approvedData) {
     return (
       <div className="flex w-100 flex-col items-center gap-6 rounded-xl border p-8">
-        <Text className="text-lg font-bold text-green-600">✓ 인증 성공</Text>
+        <p className="text-lg font-bold text-green-600">✓ 인증 성공</p>
         <TrustThisDeviceCheckbox checked={trustChecked} onChange={setTrustChecked} />
         <Button className="w-full rounded-2xl bg-blue-600 py-2 text-white disabled:opacity-50" onClick={handleComplete} disabled={isCompleting}>
           {isCompleting ? '처리 중...' : '계속'}

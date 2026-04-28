@@ -64,6 +64,18 @@ export const ErrorCode = {
     message: '등록되지 않은 신뢰기기입니다.',
     status: HttpStatus.NOT_FOUND,
   },
+  INVITATION_NOT_FOUND: {
+    message: '유효하지 않은 초대 링크입니다.',
+    status: HttpStatus.NOT_FOUND,
+  },
+  INVITATION_EXPIRED: {
+    message: '만료된 초대 링크입니다.',
+    status: HttpStatus.GONE,
+  },
+  INVITATION_ALREADY_USED: {
+    message: '이미 사용된 초대 링크입니다.',
+    status: HttpStatus.CONFLICT,
+  },
 } as const satisfies Record<string, ErrorCodeDefinition>;
 
 export type ErrorCodeKey = keyof typeof ErrorCode;
