@@ -1,9 +1,11 @@
-import { Injectable, OnModuleInit } from '@nestjs/common';
+import { ConflictException, Injectable, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { ApiException } from '@terab/common';
 import { TokenService } from '@terab/core';
 import bcrypt from 'bcryptjs';
+import { randomBytes } from 'node:crypto';
 import { DeviceService } from '../device/device.service.js';
+import { InvitationService } from '../invitation/invitation.service.js';
 import { TrustedDeviceService } from '../trusted-device/trusted-device.service.js';
 import { PushChallengePublisher } from '../twofa/push-challenge.publisher.js';
 import { TwoFaService } from '../twofa/twofa.service.js';
@@ -11,9 +13,9 @@ import { AuthRepository, UserWithPermissions } from './auth.repository.js';
 import { BackupLoginDto } from './dto/backup-login.dto.js';
 import { LoginResponseDto } from './dto/login-response.dto.js';
 import { LoginDto } from './dto/login.dto.js';
+import { RegisterResponseDto } from './dto/register-response.dto.js';
+import { RegisterDto } from './dto/register.dto.js';
 import { UserResponseDto } from './dto/user-response.dto.js';
-
-const BCRYPT_ROUNDS = 10;
 
 interface AuthTokens {
   accessToken: string;
@@ -23,6 +25,8 @@ interface AuthTokens {
 
 @Injectable()
 export class AuthService implements OnModuleInit {
+  protected readonly BCRYPT_ROUNDS = 10;
+
   constructor(
     private readonly pushChallengePublisher: PushChallengePublisher,
     private readonly configService: ConfigService,
@@ -30,11 +34,58 @@ export class AuthService implements OnModuleInit {
     private readonly deviceService: DeviceService,
     private readonly twoFaService: TwoFaService,
     private readonly trustedDeviceService: TrustedDeviceService,
+    private readonly invitationService: InvitationService,
     private readonly authRepository: AuthRepository,
   ) {}
 
   async onModuleInit(): Promise<void> {
     await this.initOwnerAccount();
+  }
+
+  // ─── Register ────────────────────────────────────────────────────────
+
+  async register(
+    dto: RegisterDto,
+  ): Promise<RegisterResponseDto & Pick<AuthTokens, 'rawRefreshToken' | 'refreshTokenExpMs'>> {
+    await this.invitationService.validateOrThrow(dto.token);
+
+    const userRole = await this.authRepository.findRoleByName('USER');
+    if (!userRole) throw new Error('USER 역할 없음 - 마이그레이션 실행 여부를 확인하세요');
+
+    const pepperedPassword = this.tokenService.pepperPassword(dto.password);
+    const hashedPassword = await bcrypt.hash(pepperedPassword, this.BCRYPT_ROUNDS);
+
+    const rawCodes = this.generateBackupCodes();
+    const codeHashes = await Promise.all(rawCodes.map((code) => bcrypt.hash(code, this.BCRYPT_ROUNDS)));
+
+    let newUser: { id: string };
+    try {
+      newUser = await this.authRepository.registerUser({
+        username: dto.username,
+        nickname: dto.nickname,
+        password: hashedPassword,
+        roleId: userRole.id,
+        codeHashes,
+        invitationToken: dto.token,
+      });
+    } catch (err) {
+      if (err instanceof ConflictException) throw new ApiException('INVITATION_ALREADY_USED');
+      if ((err as { code?: string }).code === '23505') throw new ApiException('USERNAME_TAKEN');
+      throw err;
+    }
+
+    const userWithPermissions = await this.authRepository.findUserWithPermissionsById(newUser.id);
+    if (!userWithPermissions) throw new Error('가입 직후 사용자 조회 실패');
+
+    const tokens = await this.issueTokenPair(userWithPermissions);
+
+    return {
+      accessToken: tokens.accessToken,
+      user: new UserResponseDto(newUser.id, dto.username, dto.nickname),
+      backupCodes: rawCodes,
+      rawRefreshToken: tokens.rawRefreshToken,
+      refreshTokenExpMs: tokens.refreshTokenExpMs,
+    };
   }
 
   // ─── Login ───────────────────────────────────────────────────────────
@@ -209,7 +260,7 @@ export class AuthService implements OnModuleInit {
     const accessToken = this.tokenService.generateAccessToken(user.id, user.username, user.permissions);
     const { rawRefreshToken, tokenHash, expiresAt } = this.tokenService.issueRefreshToken();
     const refreshTokenExpMs = this.tokenService.refreshExpMs;
-    await this.authRepository.insertRefreshToken(user.id, tokenHash, expiresAt);
+    await this.authRepository.insertRefreshToken({ userId: user.id, tokenHash: tokenHash, expiresAt: expiresAt });
     return {
       accessToken,
       rawRefreshToken,
@@ -231,6 +282,14 @@ export class AuthService implements OnModuleInit {
     await this.authRepository.markBackupCodeUsed(matchedId, new Date());
   }
 
+  private generateBackupCodes(): string[] {
+    return Array.from({ length: 8 }, () => {
+      const buf = randomBytes(4);
+      const hex = buf.toString('hex').toUpperCase();
+      return `${hex.slice(0, 4)}-${hex.slice(4)}`;
+    });
+  }
+
   // ─── Owner 계정 초기화 ───────────────────────────────────────────────
 
   private async initOwnerAccount(): Promise<void> {
@@ -246,7 +305,7 @@ export class AuthService implements OnModuleInit {
     const ownerRole = await this.authRepository.findRoleByName('OWNER');
     if (!ownerRole) throw new Error('OWNER role 없음 — 마이그레이션 실행 여부를 확인하세요');
 
-    const hashedPassword = await bcrypt.hash(this.tokenService.pepperPassword(ownerPassword), BCRYPT_ROUNDS);
+    const hashedPassword = await bcrypt.hash(this.tokenService.pepperPassword(ownerPassword), this.BCRYPT_ROUNDS);
     try {
       const newUser = await this.authRepository.insertUser({
         username: ownerUsername,

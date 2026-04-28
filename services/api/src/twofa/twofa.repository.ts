@@ -15,12 +15,9 @@ import { eq } from 'drizzle-orm';
 export class TwoFaRepository {
   constructor(private readonly database: DatabaseService) {}
 
-  async insert(userId: string, options: string, correctNum: string, expiresAt: Date) {
-    const [twoFa] = await this.database.db
-      .insert(twoFaChallenges)
-      .values({ userId, options, correctNum, expiresAt })
-      .returning();
-    return twoFa;
+  async insert(data: Pick<TwoFaChallenges$Insert, 'userId' | 'options' | 'correctNum' | 'expiresAt'>) {
+    const [row] = await this.database.db.insert(twoFaChallenges).values(data).returning();
+    return row;
   }
 
   async findById(id: string) {
@@ -31,12 +28,9 @@ export class TwoFaRepository {
   async updateStatus(
     id: string,
     status: NonNullable<TwoFaChallenges$Insert['status']>,
-    respondedAt?: Date,
+    respondedAt?: TwoFaChallenges$Insert['respondedAt'],
   ): Promise<void> {
-    await this.database.db
-      .update(twoFaChallenges)
-      .set({ status, respondedAt: respondedAt ?? null })
-      .where(eq(twoFaChallenges.id, id));
+    await this.database.db.update(twoFaChallenges).set({ status, respondedAt }).where(eq(twoFaChallenges.id, id));
   }
 
   async findUserWithPermissionsById(userId: string) {

@@ -5,6 +5,7 @@ import { TokenService } from '@terab/core';
 import { mockConfigService, mockUser } from '@terab/test';
 import bcrypt from 'bcryptjs';
 import { DeviceService } from '../device/device.service';
+import { InvitationService } from '../invitation/invitation.service';
 import { TrustedDeviceService } from '../trusted-device/trusted-device.service';
 import { PushChallengePublisher } from '../twofa/push-challenge.publisher';
 import { TwoFaService } from '../twofa/twofa.service';
@@ -29,6 +30,8 @@ const mockAuthRepository = {
   findRoleByName: jest.fn(),
   insertUser: jest.fn(),
   insertUserRole: jest.fn(),
+  insertBackupCodes: jest.fn(),
+  registerUser: jest.fn(),
 };
 
 const mockTokenService = {
@@ -52,6 +55,11 @@ const mockTrustedDeviceService = {
   verify: jest.fn(),
 };
 
+const mockInvitationService = {
+  validateOrThrow: jest.fn(),
+  markUsed: jest.fn(),
+};
+
 const mockPushChallengePublisher = {
   publish: jest.fn(),
 };
@@ -69,6 +77,7 @@ describe('AuthService', () => {
         { provide: DeviceService, useValue: mockDeviceService },
         { provide: TwoFaService, useValue: mockTwoFaService },
         { provide: TrustedDeviceService, useValue: mockTrustedDeviceService },
+        { provide: InvitationService, useValue: mockInvitationService },
         { provide: PushChallengePublisher, useValue: mockPushChallengePublisher },
       ],
     }).compile();
@@ -77,11 +86,63 @@ describe('AuthService', () => {
     jest.clearAllMocks();
     mockAuthRepository.insertRefreshToken.mockResolvedValue(undefined);
     mockDeviceService.findPushTokensByUserId.mockResolvedValue([]);
+    mockInvitationService.validateOrThrow.mockResolvedValue({ token: 'valid-token' });
     mockTokenService.generateAccessToken.mockReturnValue('mock.access.token');
     mockTokenService.issueRefreshToken.mockReturnValue({
       rawRefreshToken: 'mock-raw-refresh-token',
       tokenHash: 'mock-token-hash',
       expiresAt: new Date(),
+    });
+  });
+
+  describe('register', () => {
+    const registerDto = {
+      token: '550e8400-e29b-41d4-a716-446655440000',
+      username: 'newuser',
+      nickname: '새유저',
+      password: 'password123',
+    };
+
+    it('초대 토큰이 유효하지 않으면 ApiException을 던진다', async () => {
+      mockInvitationService.validateOrThrow.mockRejectedValue(new ApiException('INVITATION_NOT_FOUND'));
+
+      await expect(service.register(registerDto)).rejects.toThrow(ApiException);
+      expect(mockAuthRepository.registerUser).not.toHaveBeenCalled();
+    });
+
+    it('중복 username이면 ApiException(USERNAME_TAKEN)을 던진다', async () => {
+      mockAuthRepository.findRoleByName.mockResolvedValue({ id: 'role-id' });
+      mockAuthRepository.registerUser.mockRejectedValue({ code: '23505' });
+      (bcrypt.hash as jest.Mock).mockResolvedValue('hashed');
+
+      await expect(service.register(registerDto)).rejects.toThrow(ApiException);
+    });
+
+    it('성공 시 accessToken + user + backupCodes 8개를 반환한다', async () => {
+      mockAuthRepository.findRoleByName.mockResolvedValue({ id: 'role-id' });
+      mockAuthRepository.registerUser.mockResolvedValue({ id: 'new-user-id' });
+      mockAuthRepository.findUserWithPermissionsById.mockResolvedValue(mockUser);
+      mockTokenService.issueRefreshToken.mockReturnValue({
+        rawRefreshToken: 'raw-rt',
+        tokenHash: 'hash',
+        expiresAt: new Date(Date.now() + 86400000),
+      });
+      (bcrypt.hash as jest.Mock).mockResolvedValue('hashed');
+
+      const result = await service.register(registerDto);
+
+      expect(result.accessToken).toBe('mock.access.token');
+      expect(result.backupCodes).toHaveLength(8);
+      expect(result.user.username).toBe('newuser');
+      expect(mockAuthRepository.registerUser).toHaveBeenCalledWith(
+        expect.objectContaining({
+          username: registerDto.username,
+          nickname: registerDto.nickname,
+          roleId: 'role-id',
+          invitationToken: registerDto.token,
+          codeHashes: expect.arrayContaining([expect.any(String)]),
+        }),
+      );
     });
   });
 

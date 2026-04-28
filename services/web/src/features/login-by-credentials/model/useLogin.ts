@@ -35,7 +35,7 @@ export function useLogin() {
       } else {
         // ...something else
       }
-    } catch (err: AxiosError | Error | unknown) {
+    } catch (err: unknown) {
       const { code, message } = (err as AxiosError<LoginError>)?.response?.data ?? {};
       setError({
         code: code ?? 'UNKNOWN',

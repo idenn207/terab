@@ -2,11 +2,11 @@ import { HttpException } from '@nestjs/common';
 import { ErrorCode, ErrorCodeKey } from './error-code.enum';
 
 export class ApiException extends HttpException {
-  readonly errorCode: ErrorCodeKey;
+  readonly code: ErrorCodeKey;
 
   constructor(code: ErrorCodeKey) {
     const { message, status } = ErrorCode[code];
     super(message, status);
-    this.errorCode = code;
+    this.code = code;
   }
 }

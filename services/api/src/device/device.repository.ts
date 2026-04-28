@@ -18,12 +18,12 @@ export class DeviceRepository {
   }
 
   async findByIdAndUserId(id: string, userId: string) {
-    const [device] = await this.database.db
+    const [row = null] = await this.database.db
       .select()
       .from(devices)
       .where(and(eq(devices.id, id), eq(devices.userId, userId)))
       .limit(1);
-    return device;
+    return row;
   }
 
   async deleteById(id: string): Promise<void> {

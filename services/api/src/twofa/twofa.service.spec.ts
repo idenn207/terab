@@ -33,13 +33,7 @@ describe('TwoFaService', () => {
 
   describe('createChallenge', () => {
     it('3개의 2자리 숫자 options를 생성한다', async () => {
-      mockTwoFaRepository.insert.mockImplementation(async (userId, options, correctNum, expiresAt) => ({
-        id: 'challenge-id',
-        userId,
-        options,
-        correctNum,
-        expiresAt,
-      }));
+      mockTwoFaRepository.insert.mockImplementation(async (data) => ({ ...data, id: 'challenge-id' }));
 
       const result = await service.createChallenge('user-id');
 
@@ -53,13 +47,7 @@ describe('TwoFaService', () => {
     });
 
     it('correctNum은 options 중 하나다', async () => {
-      mockTwoFaRepository.insert.mockImplementation(async (userId, options, correctNum, expiresAt) => ({
-        id: 'challenge-id',
-        userId,
-        options,
-        correctNum,
-        expiresAt,
-      }));
+      mockTwoFaRepository.insert.mockImplementation(async (data) => ({ ...data, id: 'challenge-id' }));
 
       const result = await service.createChallenge('user-id');
 

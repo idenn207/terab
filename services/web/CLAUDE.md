@@ -42,15 +42,20 @@ src/
     TDD_GUIDE.md          # 테스트 작성 가이드
 
   features/{slice}/
-    __tests__/            # 해당 슬라이스의 테스트
-      *.test.tsx
+    model/
+      useXxx.ts
+      useXxx.test.ts      # 훅·스토어 테스트는 구현 파일 옆에
+    ui/
+      Component.tsx
+      Component.test.tsx  # 컴포넌트 테스트는 구현 파일 옆에
 
   entities/{domain}/
-    __tests__/            # 해당 도메인의 테스트
-      *.test.ts
+    model/
+      store.ts
+      store.test.ts       # 도메인 테스트는 구현 파일 옆에
 ```
 
-테스트 파일은 대상 슬라이스의 `__tests__/` 서브디렉토리에 위치한다. 슬라이스에 귀속되지 않는 공유 유틸·MSW 설정은 `src/__tests__/`에만 둔다. 테스트 파일 네이밍: `*.test.tsx` (컴포넌트/훅), `*.test.ts` (유틸/스토어)
+테스트 파일은 대상 구현 파일과 같은 서브디렉토리(예: `model/`, `ui/`, `api/`)에 위치한다. 슬라이스에 귀속되지 않는 공유 유틸·MSW 설정은 `src/__tests__/`에만 둔다. 테스트 파일 네이밍: `*.test.tsx` (컴포넌트/훅), `*.test.ts` (유틸/스토어)
 
 ## FSD 레이어 의존 규칙
 
