@@ -37,5 +37,6 @@
     // "noImplicitThis": true,
     // "alwaysStrict": true,
   },
+  "include": ["types/global.d.ts"],
   "exclude": ["node_modules"]
 }
