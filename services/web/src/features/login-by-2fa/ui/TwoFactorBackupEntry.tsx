@@ -1,4 +1,4 @@
-import { Button, Field, FieldGroup, Fieldset, Input, Label, Text } from '@/shared/ui';
+import { Button, Field, FieldGroup, Fieldset, Input, Label } from '@/shared/ui';
 import { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { useNavigate } from 'react-router-dom';
@@ -78,9 +78,9 @@ export function TwoFactorBackupEntry() {
         </FieldGroup>
       </Fieldset>
       {displayError && (
-        <Text role="alert" className="text-sm text-red-500">
+        <p role="alert" className="text-sm text-red-500">
           {displayError}
-        </Text>
+        </p>
       )}
       <Button type="submit" disabled={isLoading}>
         {isLoading ? '로그인 중...' : '로그인'}

@@ -114,7 +114,7 @@ describe('InvitationService', () => {
       try {
         await service.validateOrThrow('token');
       } catch (e) {
-        code = (e as ApiException).errorCode;
+        code = (e as ApiException).code;
       }
       expect(code).toBe('INVITATION_ALREADY_USED');
     });
@@ -130,7 +130,7 @@ describe('InvitationService', () => {
       try {
         await service.validateOrThrow('token');
       } catch (e) {
-        code = (e as ApiException).errorCode;
+        code = (e as ApiException).code;
       }
       expect(code).toBe('INVITATION_EXPIRED');
     });

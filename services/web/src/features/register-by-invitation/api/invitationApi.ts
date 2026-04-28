@@ -5,6 +5,6 @@ export interface ValidateInvitationResponse {
 }
 
 export async function validateInvitation(token: string): Promise<ValidateInvitationResponse> {
-  const { data } = await axios.get<ValidateInvitationResponse>(`/api/invitation/${token}`);
+  const { data } = await axios.get<ValidateInvitationResponse>(`/api/invitations/${token}`);
   return data;
 }
