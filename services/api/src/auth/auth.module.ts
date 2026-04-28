@@ -2,7 +2,6 @@ import { BullModule } from '@nestjs/bullmq';
 import { Module } from '@nestjs/common';
 import { PassportModule } from '@nestjs/passport';
 import { DeviceModule } from '../device/device.module';
-import { InvitationModule } from '../invitation/invitation.module';
 import { TrustedDeviceModule } from '../trusted-device/trusted-device.module';
 import { PUSH_CHALLENGE_QUEUE } from '../twofa/push-challenge.publisher';
 import { TwoFaModule } from '../twofa/twofa.module';
@@ -18,7 +17,6 @@ import { JwtStrategy } from './strategies/jwt.strategy';
     DeviceModule,
     TwoFaModule,
     TrustedDeviceModule,
-    InvitationModule,
   ],
   controllers: [AuthController],
   providers: [AuthService, AuthRepository, JwtStrategy],

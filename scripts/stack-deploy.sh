@@ -6,8 +6,8 @@
 set -euo pipefail
 
 STACK="terab"
-INFRA_SERVICES=("${STACK}_db" "${STACK}_redis" "${STACK}_minio")
-APP_SERVICES=("${STACK}_api" "${STACK}_mq")
+INFRA_SERVICES=("${STACK}_db" "${STACK}_minio" "${STACK}_rabbitmq")
+APP_SERVICES=("${STACK}_api" "${STACK}_notification")
 
 # 서비스의 실행 중인 replica 수가 목표치와 같아질 때까지 대기
 wait_service_ready() {

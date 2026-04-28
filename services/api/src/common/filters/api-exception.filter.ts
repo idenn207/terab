@@ -13,7 +13,7 @@ export class ApiExceptionFilter implements ExceptionFilter {
 
     if (exception instanceof ApiException) {
       response.status(exception.getStatus()).json({
-        code: exception.code,
+        errorCode: exception.errorCode,
         message: exception.message,
       });
       return;
@@ -24,7 +24,7 @@ export class ApiExceptionFilter implements ExceptionFilter {
       // 내부 메시지 노출 방지 — status code 기반 제네릭 메시지만 응답, 상세 오류는 로그에만 기록
       this.logger.warn(exception.message, { url: request.url, status });
       response.status(status).json({
-        code: 'HTTP_ERROR',
+        errorCode: 'HTTP_ERROR',
         message: HttpStatusMessage[status] ?? 'HTTP Error',
       });
       return;
@@ -34,7 +34,7 @@ export class ApiExceptionFilter implements ExceptionFilter {
       url: request.url,
     });
     response.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
-      code: 'INTERNAL_SERVER_ERROR',
+      errorCode: 'INTERNAL_SERVER_ERROR',
       message: '서버 내부 오류가 발생했습니다.',
     });
   }

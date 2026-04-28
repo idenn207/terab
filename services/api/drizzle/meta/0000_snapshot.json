@@ -1,5 +1,5 @@
 {
-  "id": "64e0feea-e409-455e-844a-90f145b77649",
+  "id": "30127971-fe96-45af-82bc-af5b02fd6533",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -305,19 +305,6 @@
           ],
           "onDelete": "cascade",
           "onUpdate": "no action"
-        },
-        "refresh_tokens_device_id_devices_id_fk": {
-          "name": "refresh_tokens_device_id_devices_id_fk",
-          "tableFrom": "refresh_tokens",
-          "tableTo": "devices",
-          "columnsFrom": [
-            "device_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
         }
       },
       "compositePrimaryKeys": {},
@@ -563,7 +550,7 @@
           "name": "status",
           "type": "varchar(10)",
           "primaryKey": false,
-          "notNull": true,
+          "notNull": false,
           "default": "'PENDING'"
         },
         "created_at": {

@@ -1,5 +1,5 @@
 import { BackupCodeSection, TrustedDeviceSection, TrustThisDeviceCheckbox, TwoFactorApprovalPage, TwoFactorBackupEntry, TwoFactorWaiting } from '@/features';
-import { BackupCodeIssuePage, DrivePage, Link2TwoFAAuth, LoginPage, RegisterPage, TwoFAApprovalPage, TwoFABackupPage, TwoFAWaitPage } from '@/pages';
+import { DrivePage, Link2TwoFAAuth, LoginPage, TwoFAApprovalPage, TwoFABackupPage, TwoFAWaitPage } from '@/pages';
 import { AuthLayout } from '@/widgets';
 import { PrivateRoute } from '@shared/router';
 import { Outlet, type RouteObject } from 'react-router-dom';
@@ -27,17 +27,6 @@ const rootRoutes: RouteObject[] = [
           </>
         ),
       },
-    ],
-  },
-];
-
-const registerRoutes: RouteObject[] = [
-  {
-    path: '/register',
-    element: <AuthLayout />,
-    children: [
-      { path: ':token', element: <RegisterPage /> },
-      { path: ':token/backup', element: <BackupCodeIssuePage /> },
     ],
   },
 ];
@@ -93,6 +82,6 @@ const previewRoutes: RouteObject[] = [
 export const routes: RouteObject[] = [
   {
     element: <AppShell />,
-    children: [...rootRoutes, ...registerRoutes, ...authRoutes, ...appRoutes, ...previewRoutes],
+    children: [...rootRoutes, ...authRoutes, ...appRoutes, ...previewRoutes],
   },
 ];

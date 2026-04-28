@@ -1,6 +1,5 @@
 export * from './backup-codes.schema';
 export * from './devices.schema';
-export * from './invitations.schema';
 export * from './permissions.schema';
 export * from './refresh-tokens.schema';
 export * from './role-permissions.schema';

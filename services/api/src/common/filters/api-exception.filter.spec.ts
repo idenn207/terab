@@ -27,7 +27,7 @@ describe('ApiExceptionFilter', () => {
 
     expect(mockStatus).toHaveBeenCalledWith(HttpStatus.UNAUTHORIZED);
     expect(mockJson).toHaveBeenCalledWith({
-      code: 'INVALID_CREDENTIALS',
+      errorCode: 'INVALID_CREDENTIALS',
       message: '아이디 또는 비밀번호가 올바르지 않습니다.',
     });
   });
