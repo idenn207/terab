@@ -1,4 +1,4 @@
-import { Button, Heading } from '@/shared/ui';
+import { Button, Heading, Text } from '@/shared/ui';
 import { useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useTwoFactorPolling, type ApprovedData } from '../model/useTwoFactorPolling';
@@ -33,11 +33,13 @@ export function TwoFactorWaiting({ onApproved }: TwoFactorWaitingProps) {
       <Heading level={1} className="text-xl font-bold">
         Push 2FA
       </Heading>
-      <p className="text-center text-sm text-gray-600">모바일 기기에서 아래 숫자를 선택해 주세요.</p>
-      <div className="flex h-24 w-24 items-center justify-center rounded-lg border-2 text-4xl font-bold">{correctNum}</div>
-      <p className="text-sm text-gray-500">
+      <Text className="text-center text-sm text-gray-600">모바일 기기에서 아래 숫자를 선택해 주세요.</Text>
+      <div className="flex h-24 w-24 items-center justify-center rounded-lg border-2 text-4xl font-bold">
+        {correctNum}
+      </div>
+      <Text className="text-sm text-gray-500">
         남은 시간: {minutes}:{seconds}
-      </p>
+      </Text>
       <div className="flex gap-4 text-sm">
         <Button onClick={resend} className="text-blue-600 underline" plain>
           재전송

@@ -9,7 +9,6 @@ import { DatabaseModule } from '@terab/db';
 import { AuthModule } from './auth/auth.module';
 import { DeviceModule } from './device/device.module';
 import { HealthModule } from './health/health.module';
-import { InvitationModule } from './invitation/invitation.module';
 import { TrustedDeviceModule } from './trusted-device/trusted-device.module';
 import { TwoFaModule } from './twofa/twofa.module';
 
@@ -33,7 +32,6 @@ import { TwoFaModule } from './twofa/twofa.module';
     DeviceModule,
     TrustedDeviceModule,
     TwoFaModule,
-    InvitationModule,
   ],
   providers: [
     // 전역 Guard: ThrottlerGuard → JwtAuthGuard(401) → PermissionGuard(403) 순서 보장

@@ -7,9 +7,9 @@ services:
   db:
     image: postgres:16
     env_file:
-      - infra.prod.env
+      - infra.env
     volumes:
-      - db_data:/var/lib/postgresql/data
+      - /volume2/docker/terab/volumes/db:/var/lib/postgresql/data
     networks:
       - terab-net
     healthcheck:
@@ -33,7 +33,7 @@ services:
     image: minio/minio:latest
     command: server /data --console-address ":9001"
     env_file:
-      - infra.prod.env
+      - infra.env
     volumes:
       - /volume1/storage:/data
     ports:
@@ -54,13 +54,10 @@ services:
   # ─── Redis (BullMQ 브로커) ────────────────────────────────────
   redis:
     image: redis:7
-    command: redis-server /usr/local/etc/redis/redis.conf
+    command: redis-server --appendonly yes
+    # hostname: redis
     volumes:
-      # - /volume2/docker/terab/volumes/redis:/data
-      - redis_data:/data
-      - /volume2/docker/terab/redis.prod.conf:/usr/local/etc/redis/redis.conf:ro
-    ports:
-      - '6379:6379'
+      - /volume2/docker/terab/volumes/redis:/data
     networks:
       - terab-net
     healthcheck:
@@ -82,7 +79,7 @@ services:
   api:
     image: ghcr.io/idenn207/terab-api:latest
     env_file:
-      - api.prod.env
+      - api.env
     networks:
       - terab-net
     healthcheck:
@@ -111,9 +108,7 @@ services:
   mq:
     image: ghcr.io/idenn207/terab-mq:latest
     env_file:
-      - mq.prod.env
-    secrets:
-      - firebase_credential.json
+      - mq.env
     networks:
       - terab-net
     healthcheck:
@@ -142,7 +137,7 @@ services:
   web:
     image: ghcr.io/idenn207/terab-web:latest
     env_file:
-      - web.prod.env
+      - web.env
     networks:
       - terab-net
     healthcheck:
@@ -222,15 +217,9 @@ services:
         window: 60s
 
 volumes:
-  db_data:
-  redis_data:
   portainer_data:
 
 networks:
   terab-net:
     driver: overlay
     attachable: true
-
-secrets:
-  firebase_credential.json:
-    external: true

@@ -16,8 +16,8 @@ setup-local: ## 로컬 개발 초기 설정 (최초 클론 후 1회, api/mq/web.
 # ─── 로컬 인프라 (DB + MinIO + RabbitMQ) ──────────────────────────
 .PHONY: infra
 infra:
-# 	@echo "네트워크 대기 중..."
-# 	@until ! docker network inspect terab-infra_terab-net > /dev/null 2>&1; do sleep 1; done
+	@echo "네트워크 대기 중..."
+	@until ! docker network inspect terab-infra_terab-net > /dev/null 2>&1; do sleep 1; done
 	docker stack deploy -c docker-stack.infra.local.yml terab-infra
 
 .PHONY: infra-down
@@ -67,9 +67,6 @@ ensure-volumes: ## 운영 스택 bind mount 경로 생성 (없을 경우에만)
 		/volume2/docker/terab/volumes/redis \
 		/volume2/docker/terab/services/nginx \
 		/volume1/storage
-	@chown -R 999:999 \
-		/volume2/docker/terab/volumes/db \
-		/volume2/docker/terab/volumes/redis
 
 .PHONY: stack
 stack: ensure-volumes
