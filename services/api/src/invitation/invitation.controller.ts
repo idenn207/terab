@@ -1,4 +1,5 @@
 import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, Post } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
 import { CurrentUser, Public, RequirePermission } from '@terab/common';
 import type { AuthUser } from '../auth/types/auth-user.type';
 import { CreateInvitationDto } from './dto/create-invitation.dto';
@@ -15,6 +16,7 @@ export class InvitationController {
     return this.invitationService.create(user.userId, dto.expiresInDays);
   }
 
+  @Throttle({ default: { ttl: 60000, limit: 30 } })
   @Get(':token')
   @Public()
   async validate(@Param('token') token: string): Promise<{ valid: boolean }> {
