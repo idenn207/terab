@@ -8,6 +8,8 @@ import { AuthService } from './auth.service';
 import { BackupLoginDto } from './dto/backup-login.dto';
 import { LoginResponseDto } from './dto/login-response.dto';
 import { LoginDto } from './dto/login.dto';
+import { RegisterResponseDto } from './dto/register-response.dto';
+import { RegisterDto } from './dto/register.dto';
 import { UserResponseDto } from './dto/user-response.dto';
 import type { AuthUser } from './types/auth-user.type';
 
@@ -16,6 +18,16 @@ export class AuthController {
   protected REFRESH_TOKEN_COOKIE = 'refreshToken';
   protected COOKIE_PATH = '/api/auth';
   constructor(private readonly authService: AuthService) {}
+
+  @Public()
+  @Throttle({ default: { ttl: 60000, limit: 5 } })
+  @Post('register')
+  @HttpCode(HttpStatus.CREATED)
+  async register(@Body() dto: RegisterDto, @Res({ passthrough: true }) res: Response): Promise<RegisterResponseDto> {
+    const { accessToken, user, backupCodes, rawRefreshToken, refreshTokenExpMs } = await this.authService.register(dto);
+    this.setRefreshTokenCookie(res, rawRefreshToken, refreshTokenExpMs);
+    return { accessToken, user, backupCodes };
+  }
 
   @Public()
   @Throttle({ default: { ttl: 60000, limit: 5 } })

@@ -7,7 +7,7 @@ export class InvitationRepository {
   constructor(private readonly database: DatabaseService) {}
 
   async insert(data: Pick<Invitations$Insert, 'createdBy' | 'expiresAt'>) {
-    const [row = null] = await this.database.db.insert(invitations).values(data).returning();
+    const [row] = await this.database.db.insert(invitations).values(data).returning();
     return row;
   }
 
