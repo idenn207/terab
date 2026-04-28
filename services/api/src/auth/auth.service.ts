@@ -1,4 +1,4 @@
-import { Injectable, OnModuleInit } from '@nestjs/common';
+import { ConflictException, Injectable, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { ApiException } from '@terab/common';
 import { TokenService } from '@terab/core';
@@ -69,6 +69,7 @@ export class AuthService implements OnModuleInit {
         invitationToken: dto.token,
       });
     } catch (err) {
+      if (err instanceof ConflictException) throw new ApiException('INVITATION_ALREADY_USED');
       if ((err as { code?: string }).code === '23505') throw new ApiException('USERNAME_TAKEN');
       throw err;
     }

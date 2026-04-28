@@ -1,4 +1,4 @@
-import { Injectable, InternalServerErrorException } from '@nestjs/common';
+import { ConflictException, Injectable, InternalServerErrorException } from '@nestjs/common';
 import {
   BackupCodes$Insert,
   DatabaseService,
@@ -177,11 +177,13 @@ export class AuthRepository {
 
       await tx.insert(userRoles).values({ userId: newUser.id, roleId: data.roleId });
       await tx.insert(backupCodes).values(data.codeHashes.map((codeHash) => ({ userId: newUser.id, codeHash })));
-      await tx
+      const updated = await tx
         .update(invitations)
         .set({ usedAt: new Date(), usedBy: newUser.id })
-        .where(eq(invitations.token, data.invitationToken));
+        .where(and(eq(invitations.token, data.invitationToken), isNull(invitations.usedAt)))
+        .returning({ id: invitations.id });
 
+      if (updated.length === 0) throw new ConflictException('INVITATION_ALREADY_USED');
       return newUser;
     });
   }
