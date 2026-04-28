@@ -49,6 +49,7 @@ services/api/drizzle/                                ← 신규 마이그레이�
 services/web/src/features/register-by-invitation/
   api/invitationApi.ts
   api/registerApi.ts
+  model/useInvitationValidation.ts
   model/useRegister.ts
   __tests__/useRegister.test.tsx
   ui/RegisterForm.tsx
@@ -1332,11 +1333,39 @@ export function RegisterForm() {
 }
 ```
 
-- [ ] **Step 7: feature 슬라이스 index.ts 작성 + features/index.ts 업데이트**
+- [ ] **Step 7: useInvitationValidation 훅 작성**
+
+FSD 규칙: `index.ts`에서 `api/` 함수를 직접 export하면 안 됨. `validateInvitation` API 호출은 모델 훅으로 캡슐화한다.
+
+```typescript
+// services/web/src/features/register-by-invitation/model/useInvitationValidation.ts
+import { useEffect, useState } from 'react';
+import { useParams } from 'react-router-dom';
+import { validateInvitation } from '../api/invitationApi';
+
+export function useInvitationValidation() {
+  const { token } = useParams<{ token: string }>();
+  const [valid, setValid] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    if (!token) {
+      setValid(false);
+      return;
+    }
+    validateInvitation(token)
+      .then(({ valid }) => setValid(valid))
+      .catch(() => setValid(false));
+  }, [token]);
+
+  return { valid };
+}
+```
+
+- [ ] **Step 8: feature 슬라이스 index.ts 작성 + features/index.ts 업데이트**
 
 ```typescript
 // services/web/src/features/register-by-invitation/index.ts
-export * from './api/invitationApi';   // validateInvitation — RegisterPage에서 사용
+export * from './model/useInvitationValidation';
 export * from './model/useRegister';
 export * from './ui/RegisterForm';
 ```
@@ -1352,7 +1381,7 @@ export * from './register-by-invitation';   // ← 이 줄만 추가
 export * from './trusted-device';
 ```
 
-- [ ] **Step 8: 커밋**
+- [ ] **Step 9: 커밋**
 
 ```bash
 git add services/web/src/features/register-by-invitation/ \
@@ -1374,25 +1403,12 @@ git commit -m "feat: register-by-invitation feature 슬라이스 추가 (API, �
 
 ```typescript
 // services/web/src/pages/register/ui/RegisterPage.tsx
-import { RegisterForm, validateInvitation } from '@/features';
+import { RegisterForm, useInvitationValidation } from '@/features';
 import { LogoLabel } from '@/shared/assets';
 import { Heading } from '@/shared/ui';
-import { useEffect, useState } from 'react';
-import { useParams } from 'react-router-dom';
 
 export function RegisterPage() {
-  const { token } = useParams<{ token: string }>();
-  const [valid, setValid] = useState<boolean | null>(null);
-
-  useEffect(() => {
-    if (!token) {
-      setValid(false);
-      return;
-    }
-    validateInvitation(token)
-      .then(({ valid }) => setValid(valid))
-      .catch(() => setValid(false));
-  }, [token]);
+  const { valid } = useInvitationValidation();
 
   if (valid === null) {
     return (
@@ -1622,3 +1638,4 @@ git commit -m "feat: Android App Links /register/ 경로 추가 (DEV-017)"
 | --- | --- |
 | 2026-04-28 | 초안 작성 |
 | 2026-04-28 | 플랜 검토 수정: (1) `index.ts`에 `validateInvitation` export 추가, (2) `RegisterPage`에서 axios 직접 호출 → `validateInvitation` 사용으로 교체, (3) `features/index.ts` 부분 스니펫에 "기존 내용 보존" 주의사항 명시 |
+| 2026-04-29 | FSD 위반 수정: Task 9에서 `api/invitationApi` 직접 export 제거 → `useInvitationValidation` 훅으로 캡슐화 (Step 7 추가), Task 10 `RegisterPage`에서 `validateInvitation` 직접 호출 → `useInvitationValidation()` 훅 사용으로 교체 |

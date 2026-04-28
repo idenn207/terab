@@ -11,5 +11,5 @@ export function useInvitationValidation(token: string) {
       .catch(() => setValid(false));
   }, [token]);
 
-  return valid;
+  return { valid };
 }
