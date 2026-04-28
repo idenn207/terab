@@ -19,7 +19,7 @@ export class TwoFaService {
     const options = optionNums.join(',');
     const correctNum = optionNums[randomInt(3)].toString();
     const expiresAt = new Date(Date.now() + this.CHALLENGE_EXPIRY_MS);
-    return this.twoFaRepository.insert(userId, options, correctNum, expiresAt);
+    return this.twoFaRepository.insert({ userId, options, correctNum, expiresAt });
   }
 
   async getStatus(challengeId: string): Promise<ChallengeStatusResponseDto> {

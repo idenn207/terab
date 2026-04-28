@@ -209,7 +209,7 @@ export class AuthService implements OnModuleInit {
     const accessToken = this.tokenService.generateAccessToken(user.id, user.username, user.permissions);
     const { rawRefreshToken, tokenHash, expiresAt } = this.tokenService.issueRefreshToken();
     const refreshTokenExpMs = this.tokenService.refreshExpMs;
-    await this.authRepository.insertRefreshToken(user.id, tokenHash, expiresAt);
+    await this.authRepository.insertRefreshToken({ userId: user.id, tokenHash: tokenHash, expiresAt: expiresAt });
     return {
       accessToken,
       rawRefreshToken,

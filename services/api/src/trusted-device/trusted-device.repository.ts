@@ -11,11 +11,11 @@ export class TrustedDeviceRepository {
   }
 
   async findByTokenHash(tokenHash: string) {
-    const [trustedDevice] = await this.database.db
+    const [row = null] = await this.database.db
       .select()
       .from(trustedDevices)
       .where(eq(trustedDevices.tokenHash, tokenHash));
-    return trustedDevice;
+    return row;
   }
 
   async findByUserId(userId: string) {
@@ -23,11 +23,11 @@ export class TrustedDeviceRepository {
   }
 
   async findByIdAndUserId(id: string, userId: string) {
-    const [trustedDevice] = await this.database.db
+    const [row = null] = await this.database.db
       .select()
       .from(trustedDevices)
       .where(and(eq(trustedDevices.id, id), eq(trustedDevices.userId, userId)));
-    return trustedDevice;
+    return row;
   }
 
   async deleteById(id: string): Promise<void> {

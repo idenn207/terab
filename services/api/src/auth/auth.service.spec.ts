@@ -29,6 +29,7 @@ const mockAuthRepository = {
   findRoleByName: jest.fn(),
   insertUser: jest.fn(),
   insertUserRole: jest.fn(),
+  insertBackupCodes: jest.fn(),
 };
 
 const mockTokenService = {

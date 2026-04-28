@@ -7,12 +7,12 @@ export class InvitationRepository {
   constructor(private readonly database: DatabaseService) {}
 
   async insert(data: Pick<Invitations$Insert, 'createdBy' | 'expiresAt'>) {
-    const [row] = await this.database.db.insert(invitations).values(data).returning();
+    const [row = null] = await this.database.db.insert(invitations).values(data).returning();
     return row;
   }
 
   async findByToken(token: string) {
-    const [row] = await this.database.db.select().from(invitations).where(eq(invitations.token, token)).limit(1);
+    const [row = null] = await this.database.db.select().from(invitations).where(eq(invitations.token, token)).limit(1);
     return row;
   }
 
