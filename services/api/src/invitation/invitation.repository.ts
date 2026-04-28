@@ -16,8 +16,13 @@ export class InvitationRepository {
     return row;
   }
 
-  async deactivate(token: string) {
-    await this.database.db.update(invitations).set({ deactivatedAt: new Date() }).where(eq(invitations.token, token));
+  async deactivate(token: string): Promise<boolean> {
+    const result = await this.database.db
+      .update(invitations)
+      .set({ deactivatedAt: new Date() })
+      .where(eq(invitations.token, token))
+      .returning({ id: invitations.id });
+    return result.length > 0;
   }
 
   async markUsed(token: string, usedBy: NonNullable<Invitations$Insert['usedBy']>) {

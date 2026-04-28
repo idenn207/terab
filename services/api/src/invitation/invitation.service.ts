@@ -34,8 +34,9 @@ export class InvitationService {
     return row;
   }
 
-  async deactivate(token: string) {
-    await this.invitationRepository.deactivate(token);
+  async deactivate(token: string): Promise<void> {
+    const found = await this.invitationRepository.deactivate(token);
+    if (!found) throw new ApiException('INVITATION_NOT_FOUND');
   }
 
   async markUsed(token: string, usedBy: string) {
