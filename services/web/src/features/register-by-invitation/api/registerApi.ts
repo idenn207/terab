@@ -1,4 +1,4 @@
-import axios from 'axios';
+import { axiosBasic } from '@/shared/api';
 
 export interface RegisterRequest {
   token: string;
@@ -14,7 +14,7 @@ export interface RegisterResponse {
 }
 
 export async function register(data: RegisterRequest): Promise<RegisterResponse> {
-  const { data: response } = await axios.post<RegisterResponse>('/api/auth/register', data, {
+  const { data: response } = await axiosBasic.post<RegisterResponse>('/auth/register', data, {
     withCredentials: true,
   });
   return response;

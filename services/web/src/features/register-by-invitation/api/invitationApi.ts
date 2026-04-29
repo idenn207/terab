@@ -1,10 +1,10 @@
-import axios from 'axios';
+import { axiosBasic } from '@/shared/api';
 
 export interface ValidateInvitationResponse {
   valid: boolean;
 }
 
 export async function validateInvitation(token: string): Promise<ValidateInvitationResponse> {
-  const { data } = await axios.get<ValidateInvitationResponse>(`/api/invitations/${token}`);
+  const { data } = await axiosBasic.get<ValidateInvitationResponse>(`/invitations/${token}`);
   return data;
 }

@@ -1,6 +1,5 @@
 import type { User } from '@/entities';
-import { axiosUser } from '@/shared/api';
-import axios from 'axios';
+import { axiosAuth, axiosBasic } from '@/shared/api';
 
 // PC 폴링 응답 타입
 interface ChallengeStatusPending {
@@ -46,19 +45,19 @@ export interface ResendResponse {
 
 const twoFactorApi = {
   getStatus: (challengeId: string): Promise<ChallengeStatus> =>
-    axios.get<ChallengeStatus>(`/api/auth/2fa/challenge/${challengeId}/status`, { withCredentials: true }).then((r) => r.data),
+    axiosBasic.get<ChallengeStatus>(`/auth/2fa/challenge/${challengeId}/status`, { withCredentials: true }).then((r) => r.data),
 
   resend: (challengeId: string): Promise<ResendResponse> =>
-    axios.post<ResendResponse>(`/api/auth/2fa/challenge/${challengeId}/resend`, null, { withCredentials: true }).then((r) => r.data),
+    axiosBasic.post<ResendResponse>(`/auth/2fa/challenge/${challengeId}/resend`, null, { withCredentials: true }).then((r) => r.data),
 
   respond: (challengeId: string, selectedNumber: string): Promise<void> =>
-    axiosUser.post(`/auth/2fa/challenge/${challengeId}/respond`, { selectedNumber }).then(() => {}),
+    axiosAuth.post(`/auth/2fa/challenge/${challengeId}/respond`, { selectedNumber }).then(() => {}),
 
   complete: (challengeId: string): Promise<CompleteTwoFaResponse> =>
-    axios.post<CompleteTwoFaResponse>(`/api/auth/2fa/challenge/${challengeId}/complete`, null, { withCredentials: true }).then((r) => r.data),
+    axiosBasic.post<CompleteTwoFaResponse>(`/auth/2fa/challenge/${challengeId}/complete`, null, { withCredentials: true }).then((r) => r.data),
 
   backupLogin: (data: BackupLoginRequest): Promise<BackupLoginResponse> =>
-    axios.post<BackupLoginResponse>('/api/auth/login/backup', data, { withCredentials: true }).then((r) => r.data),
+    axiosBasic.post<BackupLoginResponse>('/auth/login/backup', data, { withCredentials: true }).then((r) => r.data),
 };
 
 export { twoFactorApi };
