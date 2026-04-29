@@ -100,11 +100,15 @@ stack-update:
 # ─── docker 이미지 빌드 ─────────────────────────────────────────────
 .PHONY: build-local
 build-local:
-	docker build -t terab-api:local ./services/api
+	docker build -t terab-api:local -f services/api/Dockerfile .
 	docker build -t terab-mq:local ./services/mq
-	docker build -t terab-web:local ./services/web
+	docker build -t terab-web:local -f services/web/Dockerfile .
 
 # ─── 빌드 ────────────────────────────────────────────────────────
+.PHONY: build-packages
+build-packages:
+	cd packages/contracts && npm run build
+
 .PHONY: build-api
 build-api:
 	cd services/api && npm run build
