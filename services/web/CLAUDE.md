@@ -87,6 +87,31 @@ import { useAuth } from '@/features';
 import { useAuth } from '@/features/login-by-2fa/model/useAuth';
 ```
 
+### 슬라이스 내부 세그먼트 참조 규칙
+
+슬라이스 내부에서 세그먼트 간 참조는 아래 방향만 허용한다.
+
+```
+api → model → ui
+```
+
+| import 방향          | 허용 여부 |
+| -------------------- | --------- |
+| `model` → `api`      | ✅        |
+| `ui` → `model`       | ✅        |
+| `ui` → `api`         | ❌        |
+| `api` → `model`      | ❌        |
+| `model` → `ui`       | ❌        |
+
+`api` 세그먼트는 `index.ts`에서 export하지 않는다. 외부 슬라이스에는 `model`과 `ui`만 노출한다.
+
+```ts
+// features/upload/index.ts
+export { useUpload } from './model/useUpload';     // ✅ model export
+export { UploadButton } from './ui/UploadButton';  // ✅ ui export
+// export { uploadApi } from './api/uploadApi';    // ❌ api는 슬라이스 내부용
+```
+
 ## 컴포넌트 컨벤션
 
 - 파일명: PascalCase (`FileList.tsx`)
@@ -217,7 +242,11 @@ export { useUserStore };
 ## API 레이어 컨벤션
 
 - axios 인스턴스: `shared/api/axiosInstance.ts` — 이 외 경로에 인스턴스 생성 금지
-- 인스턴스는 401 응답 시 자동 토큰 갱신(refresh queue) 처리가 내장되어 있음
+- `axiosInstance`는 401 응답 시 자동 토큰 갱신(refresh queue) 처리 후 검증 실패 시 `/login`으로 리다이렉트한다
+- **인스턴스 선택 기준**
+  - `axiosInstance`: 로그인 이후 사용자 자격증명(accessToken)이 필요한 모든 요청
+  - 순수 `axios`: 인증이 필요 없는 공개 엔드포인트 (예: `POST /api/auth/login`, `POST /api/auth/refresh`)
+  - 로그인 API에 `axiosInstance`를 사용하면 401 → `/login` 리다이렉트 무한 루프가 발생하므로 반드시 순수 `axios` 사용
 - API 함수는 레이어별 `api/` 서브디렉토리에 작성 (예: `features/login-by-2fa/api/twoFactorApi.ts`)
 - 반환 타입 명시 필수 — `any` 사용 금지
 - 에러 핸들링은 호출부(훅 또는 컴포넌트)에서 처리
@@ -281,7 +310,7 @@ server: {
 
 - 새 파일 생성 전 FSD 레이어 위치가 적절한지 판단한다
 - 컴포넌트 작성 전 `shared/ui/catalyst/`에 재사용 가능한 기반 컴포넌트가 있는지 확인한다
-- API 함수 작성 전 `shared/api/axiosInstance.ts`를 import하는지 확인한다
+- API 함수 작성 전 인증 필요 여부를 확인한다: 인증 필요 → `axiosInstance`, 공개 엔드포인트(로그인·리프레시 등) → 순수 `axios`
 
 ### FSD 레이어 위반 감지 시
 
