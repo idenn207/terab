@@ -1,10 +1,10 @@
-# ts-rest + TanStack Query 마이그레이션 구현 계획
+﻿# ts-rest + TanStack Query 마이그레이션 구현 계획
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** 모노레포 내 `packages/contracts/`에 `@terab/contracts` 패키지를 생성하고, Zod 스키마 기반 ts-rest 계약을 통해 API(`@ts-rest/nest`)와 Web(`@ts-rest/react-query`) 양측을 완전히 타입 안전하게 연결한다. 기존 수동 타입 정의 및 `axiosUser` 직접 호출 패턴을 제거하고 FSD 규칙(`{slice}/api/query.ts`, `{slice}/api/mutation.ts`)으로 통일한다.
 
-**Architecture:** `packages/contracts/` (공유 계약 패키지) → `services/api/` (`@ts-rest/nest` TsRestHandler) + `services/web/` (`@ts-rest/react-query` initQueryClient). Docker 빌드 컨텍스트를 repo root(`.`)로 확장하여 contracts를 API/Web 모두 COPY 가능하게 한다. npm workspaces 미도입 — 로컬 경로 참조(`file:../../packages/contracts`)로 연결. contracts는 TypeScript → dist/ 빌드 후 소비한다. ts-rest 클라이언트는 기존 `axiosUser` 인스턴스를 transport로 재사용하되, 계약 경로(`/api/...`)와 `axiosUser.baseURL('/api')` 중복을 막기 위해 어댑터에서 `baseURL: ''` per-request 오버라이드를 적용한다. login/backup-login 엔드포인트는 401 → refresh → redirect 루프를 막기 위해 순수 `axios`를 사용한다.
+**Architecture:** `packages/contracts/` (공유 계약 패키지) → `services/api/` (`@ts-rest/nest` TsRestHandler) + `services/web/` (`@ts-rest/react-query` initQueryClient). Docker 빌드 컨텍스트를 repo root(`.`)로 확장하여 contracts를 API/Web 모두 COPY 가능하게 한다. npm workspaces 미도입 — 로컬 경로 참조(`file:../../packages/contracts`)로 연결. contracts는 TypeScript → dist/ 빌드 후 소비한다.
 
 **Tech Stack:** NestJS 11 / `@ts-rest/nest` ^3 / `@ts-rest/core` ^3 / Zod ^3 · React 19 / `@ts-rest/react-query` ^3 / `@tanstack/react-query` ^5 / Zustand / Axios · Node 24 / TypeScript 5.x
 
@@ -46,16 +46,16 @@ services/web/package.json                                        (@ts-rest/react
 ### 수정 — Web 공통
 
 ```
-services/web/src/app/App.tsx                                     (QueryClientProvider 추가)
-services/web/src/shared/api/client.ts                            (신규: initQueryClient, axiosUser 재사용)
-services/web/src/shared/api/index.ts                             (client re-export 추가)
+services/web/src/app/providers/index.ts                          (QueryClientProvider 추가)
+services/web/src/shared/api/client.ts                            (신규: initQueryClient)
+services/web/src/shared/api/index.ts                             (client re-export)
 ```
 
 ### 전환 — Phase 1: invitation
 
 ```
 services/api/src/invitation/invitation.controller.ts             (@TsRestHandler로 교체)
-services/api/src/invitation/invitation.controller.spec.ts        (supertest 통합 테스트로 재작성)
+services/api/src/invitation/invitation.controller.spec.ts        (업데이트)
 services/api/src/invitation/dto/create-invitation.dto.ts         (삭제)
 services/api/src/invitation/dto/invitation-response.dto.ts       (삭제)
 services/web/src/features/register-by-invitation/api/query.ts    (신규: useValidateInvitationQuery)
@@ -68,7 +68,7 @@ services/web/src/features/register-by-invitation/model/useRegister.ts (업데이
 
 ```
 services/api/src/auth/auth.controller.ts                         (@TsRestHandler로 교체)
-services/api/src/auth/auth.controller.spec.ts                    (supertest 통합 테스트로 재작성)
+services/api/src/auth/auth.controller.spec.ts                    (업데이트)
 services/api/src/auth/dto/login.dto.ts                           (삭제)
 services/api/src/auth/dto/login-response.dto.ts                  (삭제)
 services/api/src/auth/dto/register.dto.ts                        (삭제)
@@ -92,7 +92,7 @@ services/web/src/entities/user/api/userApi.ts                    (삭제)
 
 ```
 services/api/src/twofa/twofa.controller.ts                       (@TsRestHandler로 교체)
-services/api/src/twofa/twofa.controller.spec.ts                  (supertest 통합 테스트로 재작성)
+services/api/src/twofa/twofa.controller.spec.ts                  (업데이트)
 services/api/src/twofa/dto/challenge-status-response.dto.ts      (삭제)
 services/api/src/twofa/dto/respond-challenge.dto.ts              (삭제)
 services/web/src/features/login-by-2fa/api/query.ts              (신규: useChallengeStatusQuery)
@@ -106,7 +106,7 @@ services/web/src/features/login-by-2fa/model/useTwoFactorRespond.ts (업데이�
 
 ```
 services/api/src/device/device.controller.ts                     (@TsRestHandler로 교체)
-services/api/src/device/device.controller.spec.ts                (supertest 통합 테스트로 재작성)
+services/api/src/device/device.controller.spec.ts                (업데이트)
 services/api/src/device/dto/device-response.dto.ts               (삭제)
 services/api/src/device/dto/register-device.dto.ts               (삭제)
 services/web/src/features/push-notification/api/query.ts         (신규: useDevicesQuery)
@@ -119,7 +119,7 @@ services/web/src/features/push-notification/model/usePushNotification.ts (업데
 
 ```
 services/api/src/trusted-device/trusted-device.controller.ts     (@TsRestHandler로 교체)
-services/api/src/trusted-device/trusted-device.controller.spec.ts (supertest 통합 테스트로 재작성)
+services/api/src/trusted-device/trusted-device.controller.spec.ts (업데이트)
 services/api/src/trusted-device/dto/trusted-device-response.dto.ts (삭제)
 services/web/src/features/trusted-device/api/query.ts            (신규: useTrustedDevicesQuery)
 services/web/src/features/trusted-device/api/mutation.ts         (신규: useRegisterTrustedDeviceMutation, useRevokeTrustedDeviceMutation)
@@ -968,13 +968,16 @@ strategy:
 ```
 
 - [ ] `cd services/web && npm install`을 실행한다.
+- [ ] `services/web/src/app/providers/AppShell.tsx`를 확인하여 Provider 트리 최상위에 `QueryClientProvider`를 추가한다.
 
-- [ ] `services/web/src/app/App.tsx`를 수정하여 `QueryClientProvider`를 추가한다. `AppShell.tsx`는 `<Outlet />`을 반환하는 라우트 레이아웃 컴포넌트이므로 `QueryClientProvider`는 라우터를 감싸는 위치인 `App.tsx`에 추가한다.
+  현재 `services/web/src/app/providers/index.ts`는 `AppShell`, `router`, `theme`를 re-export하고 있다. `AppShell.tsx` 파일에 `QueryClientProvider`를 추가한다.
 
 ```typescript
+// services/web/src/app/providers/AppShell.tsx 수정
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { RouterProvider } from 'react-router-dom';
-import { router } from './providers';
+import { router } from './router';
+import { theme } from './theme'; // 기존 theme import 유지
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -985,46 +988,102 @@ const queryClient = new QueryClient({
   },
 });
 
-const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <RouterProvider router={router} />
-  </QueryClientProvider>
-);
-
-export default App;
+export function AppShell() {
+  return (
+    <QueryClientProvider client={queryClient}>
+      <RouterProvider router={router} />
+    </QueryClientProvider>
+  );
+}
 ```
 
-- [ ] `git add services/web/package.json services/web/package-lock.json services/web/src/app/App.tsx && git commit -m "chore(web): @ts-rest/react-query 및 QueryClientProvider 추가"`
+- [ ] `git add services/web/package.json services/web/package-lock.json services/web/src/app/providers/AppShell.tsx && git commit -m "chore(web): @ts-rest/react-query 및 QueryClientProvider 추가"`
 
 ---
 
 ## Task 12: shared/api/client.ts 생성
 
-**설계 결정:**
-- `axiosUser`는 `baseURL: '/api'`로 생성되어 있고 계약 경로는 `/api/auth/login` 형식이다. 그대로 사용하면 `/api/api/auth/login`이 되므로 어댑터 내 per-request `baseURL: ''`로 오버라이드한다.
-- `axiosUser`의 401 → refresh → redirect 인터셉터는 로그인/백업 로그인 엔드포인트에서 무한 루프를 유발하므로 해당 경로는 순수 `axios`(인스턴스 미생성, 기본 싱글턴)를 사용한다.
-- CLAUDE.md 규칙("axios 인스턴스: `shared/api/axiosInstance.ts` — 이 외 경로에 인스턴스 생성 금지")에 따라 `axios.create()` 호출 없이 기본 `axios` 싱글턴을 사용한다.
-
 - [ ] `services/web/src/shared/api/client.ts` 파일을 생성한다.
 
 ```typescript
-import axios from 'axios';
 import { initQueryClient } from '@ts-rest/react-query';
 import { contract } from '@terab/contracts';
-import { axiosUser } from './axiosInstance';
+import { useUserStore } from '@/entities';
+import axios, { AxiosError, type InternalAxiosRequestConfig } from 'axios';
 
-// 401 → refresh → redirect 루프를 막아야 하는 공개 엔드포인트
-const PUBLIC_PATHS = new Set(['/api/auth/login', '/api/auth/login/backup']);
+const axiosUser = axios.create({
+  baseURL: '/',
+  withCredentials: true,
+});
+
+axiosUser.interceptors.request.use((config) => {
+  const token = useUserStore.getState().accessToken;
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
+
+let isRefreshing = false;
+let failedQueue: Array<{
+  resolve: (token: string) => void;
+  reject: (err: unknown) => void;
+}> = [];
+
+const processQueue = (error: unknown, token: string | null = null) => {
+  failedQueue.forEach((prom) => {
+    if (error) prom.reject(error);
+    else prom.resolve(token!);
+  });
+  failedQueue = [];
+};
+
+axiosUser.interceptors.response.use(
+  (response) => response,
+  async (error: AxiosError | unknown) => {
+    if (error instanceof AxiosError) {
+      const originalRequest = error.config as InternalAxiosRequestConfig & { _retry?: boolean };
+
+      if (error.response?.status !== 401 || originalRequest._retry) {
+        return Promise.reject(error);
+      }
+
+      if (isRefreshing) {
+        return new Promise<string>((resolve, reject) => {
+          failedQueue.push({ resolve, reject });
+        }).then((token) => {
+          originalRequest.headers.Authorization = `Bearer ${token}`;
+          return axiosUser(originalRequest);
+        });
+      }
+
+      originalRequest._retry = true;
+      isRefreshing = true;
+
+      try {
+        const { data } = await axios.post<{ accessToken: string; user: unknown }>('/api/auth/refresh', {}, { withCredentials: true });
+        useUserStore.getState().setAccessToken(data.accessToken);
+        processQueue(null, data.accessToken);
+        originalRequest.headers.Authorization = `Bearer ${data.accessToken}`;
+        return axiosUser(originalRequest);
+      } catch (refreshError) {
+        processQueue(refreshError, null);
+        useUserStore.getState().clearAuth();
+        window.location.href = '/login';
+        return Promise.reject(refreshError);
+      } finally {
+        isRefreshing = false;
+      }
+    }
+  },
+);
 
 export const tsRestClient = initQueryClient(contract, {
   baseUrl: '',
   baseHeaders: {},
   api: async ({ path, method, headers, body }) => {
-    const instance = PUBLIC_PATHS.has(path) ? axios : axiosUser;
-    const response = await instance.request({
+    const response = await axiosUser.request({
       url: path,
-      baseURL: '',
-      withCredentials: true,
       method,
       headers,
       data: body,
@@ -1032,6 +1091,8 @@ export const tsRestClient = initQueryClient(contract, {
     return { status: response.status, body: response.data, headers: response.headers as Headers };
   },
 });
+
+export { axiosUser };
 ```
 
 - [ ] `services/web/src/shared/api/index.ts`를 업데이트한다.
@@ -1047,20 +1108,14 @@ export * from './client';
 
 ## Task 13: Phase 1 — invitation API 컨트롤러 전환
 
-`@TsRestHandler`는 HTTP 파이프라인 인터셉터가 Zod 파싱을 처리한 뒤 핸들러를 호출하므로, 컨트롤러 테스트는 실제 HTTP 레이어가 필요하다. `supertest`를 사용한 통합 테스트로 작성한다.
-
-- [ ] `services/api/src/invitation/invitation.controller.spec.ts`를 아래와 같이 재작성한다.
+- [ ] `services/api/src/invitation/invitation.controller.spec.ts`를 먼저 업데이트하여 TsRestHandler 기반 테스트를 작성한다.
 
 ```typescript
-import { INestApplication, ExecutionContext } from '@nestjs/common';
-import { APP_GUARD } from '@nestjs/core';
-import { Test } from '@nestjs/testing';
+import { Test, TestingModule } from '@nestjs/testing';
 import { TsRestModule } from '@ts-rest/nest';
-import * as request from 'supertest';
+import { contract } from '@terab/contracts';
 import { InvitationController } from './invitation.controller';
 import { InvitationService } from './invitation.service';
-
-const mockUser = { userId: 'user-id', username: 'admin', permissions: ['user:invite', 'user:manage'] };
 
 const mockInvitationService = {
   create: jest.fn(),
@@ -1069,36 +1124,21 @@ const mockInvitationService = {
 };
 
 describe('InvitationController', () => {
-  let app: INestApplication;
+  let controller: InvitationController;
 
-  beforeAll(async () => {
-    const module = await Test.createTestingModule({
-      imports: [TsRestModule.register({ isGlobal: true })],
+  beforeEach(async () => {
+    const module: TestingModule = await Test.createTestingModule({
+      imports: [TsRestModule.register({ isGlobal: false })],
       controllers: [InvitationController],
-      providers: [
-        { provide: InvitationService, useValue: mockInvitationService },
-        {
-          provide: APP_GUARD,
-          useValue: {
-            canActivate: (ctx: ExecutionContext) => {
-              ctx.switchToHttp().getRequest().user = mockUser;
-              return true;
-            },
-          },
-        },
-      ],
+      providers: [{ provide: InvitationService, useValue: mockInvitationService }],
     }).compile();
 
-    app = module.createNestApplication();
-    await app.init();
+    controller = module.get<InvitationController>(InvitationController);
+    jest.clearAllMocks();
   });
 
-  afterAll(() => app.close());
-
-  beforeEach(() => jest.clearAllMocks());
-
   it('컨트롤러가 정의되어 있다', () => {
-    expect(app).toBeDefined();
+    expect(controller).toBeDefined();
   });
 
   it('POST /api/invitations — 초대장을 생성하고 201을 반환한다', async () => {
@@ -1109,48 +1149,41 @@ describe('InvitationController', () => {
     };
     mockInvitationService.create.mockResolvedValue(fakeResult);
 
-    const res = await request(app.getHttpServer())
-      .post('/api/invitations')
-      .send({ expiresInDays: 7 })
-      .expect(201);
+    const result = await controller.handleCreateInvitation({ expiresInDays: 7 }, { userId: 'user-id', username: 'admin', permissions: ['user:invite'] });
 
     expect(mockInvitationService.create).toHaveBeenCalledWith('user-id', 7);
-    expect(res.body.token).toBe('tok-uuid');
+    expect(result).toEqual({ status: 201, body: fakeResult });
   });
 
   it('GET /api/invitations/:token — valid: true를 반환한다', async () => {
     mockInvitationService.validate.mockResolvedValue(true);
 
-    const res = await request(app.getHttpServer())
-      .get('/api/invitations/tok-uuid')
-      .expect(200);
+    const result = await controller.handleValidateInvitation('tok-uuid');
 
     expect(mockInvitationService.validate).toHaveBeenCalledWith('tok-uuid');
-    expect(res.body).toEqual({ valid: true });
+    expect(result).toEqual({ status: 200, body: { valid: true } });
   });
 
   it('DELETE /api/invitations/:token — 204를 반환한다', async () => {
     mockInvitationService.deactivate.mockResolvedValue(undefined);
 
-    await request(app.getHttpServer())
-      .delete('/api/invitations/tok-uuid')
-      .expect(204);
+    const result = await controller.handleDeactivateInvitation('tok-uuid');
 
     expect(mockInvitationService.deactivate).toHaveBeenCalledWith('tok-uuid');
+    expect(result).toEqual({ status: 204, body: undefined });
   });
 });
 ```
 
 - [ ] `npm test -- --testPathPattern=invitation.controller` 테스트가 실패하는 것을 확인한다 (아직 구현 전).
 
-- [ ] `services/api/src/invitation/invitation.controller.ts`를 TsRestHandler로 교체한다. 기존 `@Throttle`은 `validate` 엔드포인트에 유지한다.
+- [ ] `services/api/src/invitation/invitation.controller.ts`를 TsRestHandler로 교체한다.
 
 ```typescript
 import { Controller } from '@nestjs/common';
 import { TsRestHandler, tsRestHandler } from '@ts-rest/nest';
-import { Throttle } from '@nestjs/throttler';
 import { contract } from '@terab/contracts';
-import { CurrentUser, Public, RequirePermission } from '@terab/common';
+import { CurrentUser, RequirePermission, Public } from '@terab/common';
 import type { AuthUser } from '../auth/types/auth-user.type';
 import { InvitationService } from './invitation.service';
 
@@ -1160,17 +1193,16 @@ export class InvitationController {
 
   @RequirePermission('user:invite')
   @TsRestHandler(contract.invitation.create)
-  async handleCreate(@CurrentUser() user: AuthUser) {
-    return tsRestHandler(contract.invitation.create, async ({ body }) => {
-      const result = await this.invitationService.create(user.userId, body.expiresInDays);
+  async handleCreateInvitation(body: { expiresInDays?: number }, user: AuthUser) {
+    return tsRestHandler(contract.invitation.create, async ({ body: b }) => {
+      const result = await this.invitationService.create(user.userId, b.expiresInDays);
       return { status: 201 as const, body: result };
     });
   }
 
-  @Throttle({ default: { ttl: 60000, limit: 30 } })
   @Public()
   @TsRestHandler(contract.invitation.validate)
-  async handleValidate() {
+  async handleValidateInvitation(token: string) {
     return tsRestHandler(contract.invitation.validate, async ({ params }) => {
       const valid = await this.invitationService.validate(params.token);
       return { status: 200 as const, body: { valid } };
@@ -1179,7 +1211,7 @@ export class InvitationController {
 
   @RequirePermission('user:manage')
   @TsRestHandler(contract.invitation.deactivate)
-  async handleDeactivate() {
+  async handleDeactivateInvitation(token: string) {
     return tsRestHandler(contract.invitation.deactivate, async ({ params }) => {
       await this.invitationService.deactivate(params.token);
       return { status: 204 as const, body: undefined };
@@ -1187,6 +1219,8 @@ export class InvitationController {
   }
 }
 ```
+
+> **주의:** `@TsRestHandler`는 NestJS 라우트 데코레이터(`@Post()`, `@Get()`, `@Delete()`)를 대체한다. `@Controller()`에는 prefix를 주지 않는다. `@Public()`, `@RequirePermission()` 데코레이터는 `@TsRestHandler`와 함께 사용 가능하다.
 
 - [ ] `npm test -- --testPathPattern=invitation.controller` 테스트가 통과하는지 확인한다.
 - [ ] `services/api/src/invitation/dto/create-invitation.dto.ts`를 삭제한다.
@@ -1226,7 +1260,7 @@ export function useRegisterMutation() {
 }
 ```
 
-- [ ] `services/web/src/features/register-by-invitation/model/useRegister.ts`를 업데이트한다. 기존 파일을 먼저 읽고 import 경로와 store 호출 방식을 유지한다.
+- [ ] `services/web/src/features/register-by-invitation/model/useRegister.ts`를 업데이트한다.
 
 ```typescript
 import { useUserStore } from '@/entities';
@@ -1245,7 +1279,7 @@ export function useRegister(token: string, onSuccess: (backupCodes: string[]) =>
   const navigate = useNavigate();
   const mutation = useRegisterMutation();
 
-  const submit = (values: RegisterFormValues) => {
+  const submit = async (values: RegisterFormValues) => {
     mutation.mutate(
       {
         body: {
@@ -1269,7 +1303,7 @@ export function useRegister(token: string, onSuccess: (backupCodes: string[]) =>
   return {
     submit,
     isLoading: mutation.isPending,
-    error: mutation.isError ? { code: 'UNKNOWN', message: '회원가입에 실패했습니다.' } : null,
+    error: mutation.error ? { code: 'UNKNOWN', message: '회원가입에 실패했습니다.' } : null,
   };
 }
 ```
@@ -1281,18 +1315,20 @@ export function useRegister(token: string, onSuccess: (backupCodes: string[]) =>
 
 ## Task 15: Phase 2 — auth API 컨트롤러 전환
 
-- [ ] `services/api/src/auth/auth.controller.spec.ts`를 supertest 기반으로 재작성한다.
+- [ ] `services/api/src/auth/auth.controller.spec.ts`를 TsRestHandler 기반으로 재작성한다.
 
 ```typescript
-import { INestApplication, ExecutionContext } from '@nestjs/common';
-import { APP_GUARD } from '@nestjs/core';
 import { Test } from '@nestjs/testing';
 import { TsRestModule } from '@ts-rest/nest';
-import * as request from 'supertest';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 
-const mockUser = { userId: 'uid', username: 'user1', permissions: [] };
+const mockResponse = () => {
+  const res: any = {};
+  res.cookie = jest.fn().mockReturnValue(res);
+  res.clearCookie = jest.fn().mockReturnValue(res);
+  return res;
+};
 
 const fakeUser = { id: 'uid', username: 'user1', nickname: 'User' };
 
@@ -1319,71 +1355,45 @@ const mockAuthService = {
 };
 
 describe('AuthController', () => {
-  let app: INestApplication;
+  let controller: AuthController;
 
-  beforeAll(async () => {
+  beforeEach(async () => {
     const module = await Test.createTestingModule({
-      imports: [TsRestModule.register({ isGlobal: true })],
+      imports: [TsRestModule.register({ isGlobal: false })],
       controllers: [AuthController],
-      providers: [
-        { provide: AuthService, useValue: mockAuthService },
-        {
-          provide: APP_GUARD,
-          useValue: {
-            canActivate: (ctx: ExecutionContext) => {
-              ctx.switchToHttp().getRequest().user = mockUser;
-              return true;
-            },
-          },
-        },
-      ],
+      providers: [{ provide: AuthService, useValue: mockAuthService }],
     }).compile();
 
-    app = module.createNestApplication();
-    await app.init();
+    controller = module.get(AuthController);
+    jest.clearAllMocks();
   });
 
-  afterAll(() => app.close());
-
-  beforeEach(() => jest.clearAllMocks());
-
-  it('POST /api/auth/login — RT 쿠키를 설정하고 AUTHENTICATED 응답을 반환한다', async () => {
-    const res = await request(app.getHttpServer())
-      .post('/api/auth/login')
-      .send({ username: 'user1', password: 'pass' })
-      .expect(200);
-
-    expect(res.headers['set-cookie']).toBeDefined();
-    expect(res.body.status).toBe('AUTHENTICATED');
-    expect(res.body.accessToken).toBe('at.token');
+  it('POST /login — RT 쿠키를 설정하고 AUTHENTICATED 응답을 반환한다', async () => {
+    const res = mockResponse();
+    const result = await controller.handleLogin({ username: 'u', password: 'p' }, undefined, undefined, res);
+    expect(res.cookie).toHaveBeenCalledWith('refreshToken', 'raw.rt', expect.objectContaining({ httpOnly: true }));
+    expect(result).toEqual({ status: 200, body: { status: 'AUTHENTICATED', accessToken: 'at.token', user: fakeUser } });
   });
 
-  it('POST /api/auth/logout — RT 쿠키를 삭제하고 204를 반환한다', async () => {
-    await request(app.getHttpServer())
-      .post('/api/auth/logout')
-      .send({})
-      .expect(204);
-
-    expect(mockAuthService.logout).toHaveBeenCalled();
+  it('POST /logout — RT 쿠키를 삭제하고 204를 반환한다', async () => {
+    const res = mockResponse();
+    const mockReq = { cookies: { refreshToken: 'raw.rt' } } as any;
+    const result = await controller.handleLogout(mockReq, res);
+    expect(res.clearCookie).toHaveBeenCalledWith('refreshToken', expect.objectContaining({ path: '/api/auth' }));
+    expect(result).toEqual({ status: 204, body: undefined });
   });
 
-  it('POST /api/auth/2fa/challenge/:id/complete — RT 쿠키를 설정하고 AUTHENTICATED 응답을 반환한다', async () => {
-    const res = await request(app.getHttpServer())
-      .post('/api/auth/2fa/challenge/challenge-id/complete')
-      .send({})
-      .expect(200);
-
+  it('POST /2fa/challenge/:id/complete — RT 쿠키를 설정하고 AUTHENTICATED 응답을 반환한다', async () => {
+    const res = mockResponse();
+    const result = await controller.handleCompleteTwoFa('challenge-id', res);
     expect(mockAuthService.completeTwoFa).toHaveBeenCalledWith('challenge-id');
-    expect(res.body.status).toBe('AUTHENTICATED');
+    expect(res.cookie).toHaveBeenCalledWith('refreshToken', 'raw.rt', expect.objectContaining({ httpOnly: true }));
+    expect(result).toEqual({ status: 200, body: { status: 'AUTHENTICATED', accessToken: 'at.token', user: fakeUser } });
   });
 
-  it('GET /api/auth/me — 현재 사용자를 반환한다', async () => {
-    const res = await request(app.getHttpServer())
-      .get('/api/auth/me')
-      .expect(200);
-
-    expect(mockAuthService.getCurrentUser).toHaveBeenCalledWith('uid');
-    expect(res.body.id).toBe('uid');
+  it('GET /me — 현재 사용자를 반환한다', async () => {
+    const result = await controller.handleMe({ userId: 'uid', username: 'user1', permissions: [] });
+    expect(result).toEqual({ status: 200, body: fakeUser });
   });
 });
 ```
@@ -1420,14 +1430,10 @@ export class AuthController {
 
   @Public()
   @TsRestHandler(contract.auth.login)
-  async handleLogin(
-    @Cookies('trustToken') trustToken: string | undefined,
-    @Req() req: Request,
-    @Res({ passthrough: true }) res: Response,
-  ) {
-    return tsRestHandler(contract.auth.login, async ({ body }) => {
+  async handleLogin(body: unknown, @Cookies('trustToken') trustToken: string | undefined, @Req() req: Request, @Res({ passthrough: true }) res: Response) {
+    return tsRestHandler(contract.auth.login, async ({ body: b }) => {
       const userAgent = req.headers['user-agent'];
-      const { response, rawRefreshToken, refreshTokenExpMs } = await this.authService.login(body, trustToken, userAgent);
+      const { response, rawRefreshToken, refreshTokenExpMs } = await this.authService.login(b, trustToken, userAgent);
       if (rawRefreshToken && refreshTokenExpMs) {
         this.setRefreshTokenCookie(res, rawRefreshToken, refreshTokenExpMs);
       }
@@ -1526,7 +1532,7 @@ export function useLoginMutation() {
 }
 ```
 
-- [ ] `services/web/src/features/login-by-credentials/model/useLogin.ts`를 업데이트한다. 기존 파일을 먼저 읽어 import 경로와 navigate 경로를 확인하고 유지한다.
+- [ ] `services/web/src/features/login-by-credentials/model/useLogin.ts`를 업데이트한다.
 
 ```typescript
 import { useUserStore } from '@/entities';
@@ -1583,7 +1589,7 @@ export function useLogoutMutation() {
 }
 ```
 
-- [ ] `services/web/src/features/logout/model/useLogout.ts`를 업데이트한다. 기존 파일을 먼저 읽어 import 경로와 navigate 경로를 유지한다.
+- [ ] `services/web/src/features/logout/model/useLogout.ts`를 업데이트한다.
 
 ```typescript
 import { useUserStore } from '@/entities';
@@ -1623,7 +1629,7 @@ export function useLoginWithBackupMutation() {
 }
 ```
 
-- [ ] `services/web/src/features/backup-code/model/useBackupCode.ts`를 업데이트한다. 기존 파일을 먼저 읽어 navigate 경로와 기존 인터페이스를 확인하고 유지한다.
+- [ ] `services/web/src/features/backup-code/model/useBackupCode.ts`를 업데이트한다.
 
 ```typescript
 import { useUserStore } from '@/entities';
@@ -1679,18 +1685,13 @@ export function useMeQuery() {
 
 ## Task 17: Phase 3 — twofa 전환 (API + Web)
 
-- [ ] `services/api/src/twofa/twofa.controller.spec.ts`를 supertest 기반으로 재작성한다.
+- [ ] `services/api/src/twofa/twofa.controller.spec.ts`를 TsRestHandler 기반으로 재작성한다.
 
 ```typescript
-import { INestApplication, ExecutionContext } from '@nestjs/common';
-import { APP_GUARD } from '@nestjs/core';
-import { Test } from '@nestjs/testing';
+import { Test, TestingModule } from '@nestjs/testing';
 import { TsRestModule } from '@ts-rest/nest';
-import * as request from 'supertest';
 import { TwoFaController } from './twofa.controller';
 import { TwoFaService } from './twofa.service';
-
-const mockUser = { userId: 'user-id', username: 'user1', permissions: [] };
 
 const mockTwoFaService = {
   getStatus: jest.fn(),
@@ -1699,35 +1700,24 @@ const mockTwoFaService = {
 };
 
 describe('TwoFaController', () => {
-  let app: INestApplication;
+  let controller: TwoFaController;
 
-  beforeAll(async () => {
-    const module = await Test.createTestingModule({
-      imports: [TsRestModule.register({ isGlobal: true })],
+  beforeEach(async () => {
+    const module: TestingModule = await Test.createTestingModule({
+      imports: [TsRestModule.register({ isGlobal: false })],
       controllers: [TwoFaController],
-      providers: [
-        { provide: TwoFaService, useValue: mockTwoFaService },
-        {
-          provide: APP_GUARD,
-          useValue: {
-            canActivate: (ctx: ExecutionContext) => {
-              ctx.switchToHttp().getRequest().user = mockUser;
-              return true;
-            },
-          },
-        },
-      ],
+      providers: [{ provide: TwoFaService, useValue: mockTwoFaService }],
     }).compile();
 
-    app = module.createNestApplication();
-    await app.init();
+    controller = module.get<TwoFaController>(TwoFaController);
+    jest.clearAllMocks();
   });
 
-  afterAll(() => app.close());
+  it('컨트롤러가 정의되어 있다', () => {
+    expect(controller).toBeDefined();
+  });
 
-  beforeEach(() => jest.clearAllMocks());
-
-  it('GET /api/auth/2fa/challenge/:id/status — PENDING 상태를 반환한다', async () => {
+  it('GET challenge/:id/status — PENDING 상태를 반환한다', async () => {
     const pendingStatus = {
       status: 'PENDING' as const,
       options: ['47', '82', '13'],
@@ -1736,43 +1726,37 @@ describe('TwoFaController', () => {
     };
     mockTwoFaService.getStatus.mockResolvedValue(pendingStatus);
 
-    const res = await request(app.getHttpServer())
-      .get('/api/auth/2fa/challenge/challenge-id/status')
-      .expect(200);
+    const result = await controller.handleGetStatus('challenge-id');
 
     expect(mockTwoFaService.getStatus).toHaveBeenCalledWith('challenge-id');
-    expect(res.body.status).toBe('PENDING');
-    expect(res.body.correctNum).toBe('47');
+    expect(result).toEqual({ status: 200, body: pendingStatus });
   });
 
-  it('POST /api/auth/2fa/challenge/:id/respond — 204를 반환한다', async () => {
+  it('POST challenge/:id/respond — 204를 반환한다', async () => {
     mockTwoFaService.respond.mockResolvedValue(undefined);
+    const user = { userId: 'user-id', username: 'user1', permissions: [] };
 
-    await request(app.getHttpServer())
-      .post('/api/auth/2fa/challenge/challenge-id/respond')
-      .send({ selectedNumber: '47' })
-      .expect(204);
+    const result = await controller.handleRespond('challenge-id', user);
 
     expect(mockTwoFaService.respond).toHaveBeenCalledWith('challenge-id', 'user-id', '47');
+    expect(result).toEqual({ status: 204, body: undefined });
   });
 
-  it('POST /api/auth/2fa/challenge/:id/resend — 새 challengeId를 반환한다', async () => {
-    const resendResult = { id: 'new-challenge-id', options: ['47', '82', '13'], expiresAt: new Date() };
+  it('POST challenge/:id/resend — 새 challengeId를 반환한다', async () => {
+    const resendResult = { id: 'new-id', options: ['47', '82', '13'], expiresAt: new Date() };
     mockTwoFaService.resend.mockResolvedValue(resendResult);
 
-    const res = await request(app.getHttpServer())
-      .post('/api/auth/2fa/challenge/old-id/resend')
-      .send({})
-      .expect(200);
+    const result = await controller.handleResend('old-challenge-id');
 
-    expect(res.body.challengeId).toBe('new-challenge-id');
+    expect(mockTwoFaService.resend).toHaveBeenCalledWith('old-challenge-id');
+    expect(result.body).toMatchObject({ challengeId: 'new-id' });
   });
 });
 ```
 
 - [ ] `npm test -- --testPathPattern=twofa.controller` 테스트가 실패하는 것을 확인한다.
 
-- [ ] `services/api/src/twofa/twofa.controller.ts`를 TsRestHandler로 교체한다. 기존 파일을 먼저 읽어 TwoFaService 메서드 시그니처를 확인한다.
+- [ ] `services/api/src/twofa/twofa.controller.ts`를 TsRestHandler로 교체한다.
 
 ```typescript
 import { Controller } from '@nestjs/common';
@@ -1788,7 +1772,7 @@ export class TwoFaController {
 
   @Public()
   @TsRestHandler(contract.twofa.getStatus)
-  async handleGetStatus() {
+  async handleGetStatus(id: string) {
     return tsRestHandler(contract.twofa.getStatus, async ({ params }) => {
       const result = await this.twoFaService.getStatus(params.id);
       return { status: 200 as const, body: result };
@@ -1796,7 +1780,7 @@ export class TwoFaController {
   }
 
   @TsRestHandler(contract.twofa.respond)
-  async handleRespond(@CurrentUser() user: AuthUser) {
+  async handleRespond(id: string, @CurrentUser() user: AuthUser) {
     return tsRestHandler(contract.twofa.respond, async ({ params, body }) => {
       await this.twoFaService.respond(params.id, user.userId, body.selectedNumber);
       return { status: 204 as const, body: undefined };
@@ -1805,7 +1789,7 @@ export class TwoFaController {
 
   @Public()
   @TsRestHandler(contract.twofa.resend)
-  async handleResend() {
+  async handleResend(id: string) {
     return tsRestHandler(contract.twofa.resend, async ({ params }) => {
       const result = await this.twoFaService.resend(params.id);
       return {
@@ -1824,7 +1808,7 @@ export class TwoFaController {
 - [ ] `npm test -- --testPathPattern=twofa.controller` 테스트가 통과하는지 확인한다.
 - [ ] `services/api/src/twofa/dto/challenge-status-response.dto.ts`를 삭제한다.
 - [ ] `services/api/src/twofa/dto/respond-challenge.dto.ts`를 삭제한다.
-- [ ] `npm run build`를 실행하여 타입 오류가 없는지 확인한다 (api).
+- [ ] `npm run build`를 실행하여 타입 오류가 없는지 확인한다.
 
 - [ ] `services/web/src/features/login-by-2fa/api/query.ts` 파일을 생성한다.
 
@@ -1856,22 +1840,16 @@ export function useRespondChallengeMutation() {
 export function useResendChallengeMutation() {
   return tsRestClient.twofa.resend.useMutation();
 }
-
-export function useCompleteTwoFaMutation() {
-  return tsRestClient.auth.completeTwoFa.useMutation();
-}
 ```
 
-- [ ] `services/web/src/features/login-by-2fa/model/useTwoFactorPolling.ts`를 업데이트한다. 기존 파일을 먼저 읽어 navigate 경로와 store 호출을 확인한다.
-
-  **주의:** TanStack Query v5에서 `useQuery` 옵션의 `onSuccess`/`onError`가 제거됐다. 상태 변화 감지는 `useEffect`로 처리한다. `completeTwoFa`는 `useMutation` 훅으로 정의한 뒤 `mutateAsync`로 호출한다.
+- [ ] `services/web/src/features/login-by-2fa/model/useTwoFactorPolling.ts`를 업데이트한다.
 
 ```typescript
 import { useUserStore } from '@/entities';
-import { useEffect, useState } from 'react';
+import { tsRestClient } from '@/shared/api';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useCompleteTwoFaMutation, useResendChallengeMutation } from '../api/mutation';
-import { useChallengeStatusQuery } from '../api/query';
+import { useResendChallengeMutation } from '../api/mutation';
 
 export function useTwoFactorPolling(initialChallengeId: string) {
   const [challengeId, setChallengeId] = useState(initialChallengeId);
@@ -1879,30 +1857,38 @@ export function useTwoFactorPolling(initialChallengeId: string) {
   const setAuth = useUserStore((s) => s.setAuth);
   const navigate = useNavigate();
   const resendMutation = useResendChallengeMutation();
-  const completeMutation = useCompleteTwoFaMutation();
 
-  const { data } = useChallengeStatusQuery(challengeId, pollEnabled);
-
-  useEffect(() => {
-    if (!data || data.status !== 200) return;
-    const body = data.body;
-
-    if (body.status === 'APPROVED') {
-      setPollEnabled(false);
-      completeMutation
-        .mutateAsync({ params: { id: challengeId }, body: {} })
-        .then((completeRes) => {
-          if (completeRes.status === 200 && completeRes.body.status === 'AUTHENTICATED') {
-            setAuth(completeRes.body.accessToken, completeRes.body.user);
-            navigate('/drive');
+  const { data } = tsRestClient.twofa.getStatus.useQuery(
+    ['twofa', 'status', challengeId],
+    { params: { id: challengeId } },
+    {
+      enabled: pollEnabled && !!challengeId,
+      refetchInterval: 3000,
+      retry: false,
+      onSuccess: async (response) => {
+        if (response.status !== 200) return;
+        const body = response.body;
+        if (body.status === 'APPROVED') {
+          setPollEnabled(false);
+          try {
+            const completeRes = await tsRestClient.auth.completeTwoFa.mutate({
+              params: { id: challengeId },
+              body: {},
+            });
+            if (completeRes.status === 200 && completeRes.body.status === 'AUTHENTICATED') {
+              setAuth(completeRes.body.accessToken, completeRes.body.user);
+              navigate('/drive');
+            }
+          } catch {
+            navigate('/login?error=2fa_failed');
           }
-        })
-        .catch(() => navigate('/login?error=2fa_failed'));
-    } else if (body.status === 'DENIED' || body.status === 'EXPIRED') {
-      setPollEnabled(false);
-      navigate('/login?error=2fa_denied');
-    }
-  }, [data]);
+        } else if (body.status === 'DENIED' || body.status === 'EXPIRED') {
+          setPollEnabled(false);
+          navigate('/login?error=2fa_denied');
+        }
+      },
+    },
+  );
 
   const pendingData = data?.status === 200 && data.body.status === 'PENDING' ? data.body : null;
 
@@ -1929,14 +1915,12 @@ export function useTwoFactorPolling(initialChallengeId: string) {
 }
 ```
 
-- [ ] `services/web/src/features/login-by-2fa/model/useTwoFactorRespond.ts`를 업데이트한다. 기존 파일을 먼저 읽어 navigate 경로를 확인한다.
-
-  **주의:** TanStack Query v5에서 `useQuery` 옵션의 `onSuccess`/`onError`가 제거됐다. `useEffect`로 대체한다.
+- [ ] `services/web/src/features/login-by-2fa/model/useTwoFactorRespond.ts`를 업데이트한다.
 
 ```typescript
-import { useState, useEffect } from 'react';
+import { tsRestClient } from '@/shared/api';
+import { useState } from 'react';
 import { useRespondChallengeMutation } from '../api/mutation';
-import { useChallengeStatusQuery } from '../api/query';
 
 type RespondStatus = 'loading' | 'selecting' | 'done' | 'expired';
 
@@ -1944,20 +1928,25 @@ export function useTwoFactorRespond(challengeId: string) {
   const [respondStatus, setRespondStatus] = useState<RespondStatus>('loading');
   const respondMutation = useRespondChallengeMutation();
 
-  const { data, isError } = useChallengeStatusQuery(challengeId, respondStatus === 'loading' || respondStatus === 'selecting');
-
-  useEffect(() => {
-    if (isError) {
-      setRespondStatus('expired');
-      return;
-    }
-    if (!data || data.status !== 200) return;
-    if (data.body.status === 'PENDING') {
-      setRespondStatus('selecting');
-    } else {
-      setRespondStatus('expired');
-    }
-  }, [data, isError]);
+  const { data } = tsRestClient.twofa.getStatus.useQuery(
+    ['twofa', 'status', challengeId],
+    { params: { id: challengeId } },
+    {
+      retry: false,
+      onSuccess: (response) => {
+        if (response.status !== 200) {
+          setRespondStatus('expired');
+          return;
+        }
+        if (response.body.status === 'PENDING') {
+          setRespondStatus('selecting');
+        } else {
+          setRespondStatus('expired');
+        }
+      },
+      onError: () => setRespondStatus('expired'),
+    },
+  );
 
   const options = data?.status === 200 && data.body.status === 'PENDING' ? data.body.options : [];
 
@@ -1975,25 +1964,20 @@ export function useTwoFactorRespond(challengeId: string) {
 ```
 
 - [ ] `services/web/src/features/login-by-2fa/api/twoFactorApi.ts`를 삭제한다.
-- [ ] `cd services/web && npm run build`를 실행하여 타입 오류가 없는지 확인한다.
+- [ ] `npm run build`를 실행하여 타입 오류가 없는지 확인한다. (web: `cd services/web && npm run build`)
 - [ ] `git add services/api/src/twofa/ services/web/src/features/login-by-2fa/ && git commit -m "feat: twofa 도메인 @TsRestHandler 및 ts-rest 훅으로 전환"`
 
 ---
 
 ## Task 18: Phase 4 — device 전환 (API + Web)
 
-- [ ] `services/api/src/device/device.controller.spec.ts`를 supertest 기반으로 재작성한다. 기존 파일을 먼저 읽어 DeviceService 메서드명을 확인한다.
+- [ ] `services/api/src/device/device.controller.spec.ts`를 TsRestHandler 기반으로 재작성한다.
 
 ```typescript
-import { INestApplication, ExecutionContext } from '@nestjs/common';
-import { APP_GUARD } from '@nestjs/core';
-import { Test } from '@nestjs/testing';
+import { Test, TestingModule } from '@nestjs/testing';
 import { TsRestModule } from '@ts-rest/nest';
-import * as request from 'supertest';
 import { DeviceController } from './device.controller';
 import { DeviceService } from './device.service';
-
-const mockUser = { userId: 'uid', username: 'user1', permissions: [] };
 
 const mockDeviceService = {
   register: jest.fn(),
@@ -2002,72 +1986,59 @@ const mockDeviceService = {
 };
 
 describe('DeviceController', () => {
-  let app: INestApplication;
+  let controller: DeviceController;
 
-  beforeAll(async () => {
-    const module = await Test.createTestingModule({
-      imports: [TsRestModule.register({ isGlobal: true })],
+  beforeEach(async () => {
+    const module: TestingModule = await Test.createTestingModule({
+      imports: [TsRestModule.register({ isGlobal: false })],
       controllers: [DeviceController],
-      providers: [
-        { provide: DeviceService, useValue: mockDeviceService },
-        {
-          provide: APP_GUARD,
-          useValue: {
-            canActivate: (ctx: ExecutionContext) => {
-              ctx.switchToHttp().getRequest().user = mockUser;
-              return true;
-            },
-          },
-        },
-      ],
+      providers: [{ provide: DeviceService, useValue: mockDeviceService }],
     }).compile();
 
-    app = module.createNestApplication();
-    await app.init();
+    controller = module.get<DeviceController>(DeviceController);
+    jest.clearAllMocks();
   });
 
-  afterAll(() => app.close());
-
-  beforeEach(() => jest.clearAllMocks());
+  it('컨트롤러가 정의되어 있다', () => {
+    expect(controller).toBeDefined();
+  });
 
   it('POST /api/devices — 디바이스를 등록하고 204를 반환한다', async () => {
     mockDeviceService.register.mockResolvedValue(undefined);
+    const user = { userId: 'uid', username: 'user1', permissions: [] };
 
-    await request(app.getHttpServer())
-      .post('/api/devices')
-      .send({ pushToken: 'push-token-value' })
-      .expect(204);
+    const result = await controller.handleRegister(user);
 
-    expect(mockDeviceService.register).toHaveBeenCalledWith('uid', 'push-token-value', expect.any(String));
+    expect(mockDeviceService.register).toHaveBeenCalledWith('uid', 'push-token-value', undefined);
+    expect(result).toEqual({ status: 204, body: undefined });
   });
 
   it('GET /api/devices — 디바이스 목록을 반환한다', async () => {
     const devices = [{ id: 'dev-1', userAgent: 'Mozilla/5.0', createdAt: new Date('2026-01-01') }];
     mockDeviceService.findAll.mockResolvedValue(devices);
+    const user = { userId: 'uid', username: 'user1', permissions: [] };
 
-    const res = await request(app.getHttpServer())
-      .get('/api/devices')
-      .expect(200);
+    const result = await controller.handleList(user);
 
     expect(mockDeviceService.findAll).toHaveBeenCalledWith('uid');
-    expect(res.body[0].id).toBe('dev-1');
+    expect(result).toEqual({ status: 200, body: devices });
   });
 
   it('DELETE /api/devices/:id — 디바이스를 삭제하고 204를 반환한다', async () => {
     mockDeviceService.remove.mockResolvedValue(undefined);
+    const user = { userId: 'uid', username: 'user1', permissions: [] };
 
-    await request(app.getHttpServer())
-      .delete('/api/devices/dev-1')
-      .expect(204);
+    const result = await controller.handleRemove('dev-1', user);
 
     expect(mockDeviceService.remove).toHaveBeenCalledWith('dev-1', 'uid');
+    expect(result).toEqual({ status: 204, body: undefined });
   });
 });
 ```
 
 - [ ] `npm test -- --testPathPattern=device.controller` 테스트가 실패하는 것을 확인한다.
 
-- [ ] `services/api/src/device/device.controller.ts`를 TsRestHandler로 교체한다. 기존 파일을 먼저 읽어 DeviceService 메서드 시그니처를 확인한다.
+- [ ] `services/api/src/device/device.controller.ts`를 TsRestHandler로 교체한다.
 
 ```typescript
 import { Controller, Req } from '@nestjs/common';
@@ -2100,7 +2071,7 @@ export class DeviceController {
   }
 
   @TsRestHandler(contract.device.remove)
-  async handleRemove(@CurrentUser() user: AuthUser) {
+  async handleRemove(id: string, @CurrentUser() user: AuthUser) {
     return tsRestHandler(contract.device.remove, async ({ params }) => {
       await this.deviceService.remove(params.id, user.userId);
       return { status: 204 as const, body: undefined };
@@ -2112,7 +2083,7 @@ export class DeviceController {
 - [ ] `npm test -- --testPathPattern=device.controller` 테스트가 통과하는지 확인한다.
 - [ ] `services/api/src/device/dto/device-response.dto.ts`를 삭제한다.
 - [ ] `services/api/src/device/dto/register-device.dto.ts`를 삭제한다.
-- [ ] `npm run build`를 실행하여 타입 오류가 없는지 확인한다 (api).
+- [ ] `npm run build`를 실행하여 타입 오류가 없는지 확인한다.
 
 - [ ] `services/web/src/features/push-notification/api/query.ts` 파일을 생성한다.
 
@@ -2138,7 +2109,7 @@ export function useRemoveDeviceMutation() {
 }
 ```
 
-- [ ] `services/web/src/features/push-notification/model/usePushNotification.ts`를 업데이트한다. 기존 파일을 먼저 읽어 Capacitor 코드와 useEffect 구조를 유지하고 `registerMutation` 호출 방식만 교체한다.
+- [ ] `services/web/src/features/push-notification/model/usePushNotification.ts`를 업데이트한다.
 
 ```typescript
 import { useUserStore } from '@/entities';
@@ -2217,18 +2188,19 @@ export function usePushNotification() {
 
 ## Task 19: Phase 5 — trusted-device 전환 (API + Web)
 
-- [ ] `services/api/src/trusted-device/trusted-device.controller.spec.ts`를 supertest 기반으로 재작성한다. 기존 파일을 먼저 읽어 TrustedDeviceService 메서드명과 `trustDurationMs` 프로퍼티를 확인한다.
+- [ ] `services/api/src/trusted-device/trusted-device.controller.spec.ts`를 TsRestHandler 기반으로 재작성한다.
 
 ```typescript
-import { INestApplication, ExecutionContext } from '@nestjs/common';
-import { APP_GUARD } from '@nestjs/core';
-import { Test } from '@nestjs/testing';
+import { Test, TestingModule } from '@nestjs/testing';
 import { TsRestModule } from '@ts-rest/nest';
-import * as request from 'supertest';
 import { TrustedDeviceController } from './trusted-device.controller';
 import { TrustedDeviceService } from './trusted-device.service';
 
-const mockUser = { userId: 'uid', username: 'user1', permissions: [] };
+const mockResponse = () => {
+  const res: any = {};
+  res.cookie = jest.fn().mockReturnValue(res);
+  return res;
+};
 
 const mockTrustedDeviceService = {
   findAll: jest.fn(),
@@ -2238,73 +2210,61 @@ const mockTrustedDeviceService = {
 };
 
 describe('TrustedDeviceController', () => {
-  let app: INestApplication;
+  let controller: TrustedDeviceController;
 
-  beforeAll(async () => {
-    const module = await Test.createTestingModule({
-      imports: [TsRestModule.register({ isGlobal: true })],
+  beforeEach(async () => {
+    const module: TestingModule = await Test.createTestingModule({
+      imports: [TsRestModule.register({ isGlobal: false })],
       controllers: [TrustedDeviceController],
-      providers: [
-        { provide: TrustedDeviceService, useValue: mockTrustedDeviceService },
-        {
-          provide: APP_GUARD,
-          useValue: {
-            canActivate: (ctx: ExecutionContext) => {
-              ctx.switchToHttp().getRequest().user = mockUser;
-              return true;
-            },
-          },
-        },
-      ],
+      providers: [{ provide: TrustedDeviceService, useValue: mockTrustedDeviceService }],
     }).compile();
 
-    app = module.createNestApplication();
-    await app.init();
+    controller = module.get<TrustedDeviceController>(TrustedDeviceController);
+    jest.clearAllMocks();
   });
 
-  afterAll(() => app.close());
-
-  beforeEach(() => jest.clearAllMocks());
+  it('컨트롤러가 정의되어 있다', () => {
+    expect(controller).toBeDefined();
+  });
 
   it('GET /api/trusted-device — 목록을 반환한다', async () => {
     const devices = [{ id: 'td-1', userAgent: 'Mozilla/5.0', createdAt: new Date('2026-01-01') }];
     mockTrustedDeviceService.findAll.mockResolvedValue(devices);
+    const user = { userId: 'uid', username: 'user1', permissions: [] };
 
-    const res = await request(app.getHttpServer())
-      .get('/api/trusted-device')
-      .expect(200);
+    const result = await controller.handleList(user);
 
     expect(mockTrustedDeviceService.findAll).toHaveBeenCalledWith('uid');
-    expect(res.body[0].id).toBe('td-1');
+    expect(result).toEqual({ status: 200, body: devices });
   });
 
   it('POST /api/trusted-device — trustToken 쿠키를 설정하고 201을 반환한다', async () => {
     mockTrustedDeviceService.register.mockResolvedValue('raw-trust-token');
+    const res = mockResponse();
+    const user = { userId: 'uid', username: 'user1', permissions: [] };
 
-    const res = await request(app.getHttpServer())
-      .post('/api/trusted-device')
-      .send({})
-      .expect(201);
+    const result = await controller.handleRegister(user, res);
 
-    expect(mockTrustedDeviceService.register).toHaveBeenCalledWith('uid', expect.any(String));
-    expect(res.headers['set-cookie']).toBeDefined();
+    expect(mockTrustedDeviceService.register).toHaveBeenCalledWith('uid', undefined);
+    expect(res.cookie).toHaveBeenCalledWith('trustToken', 'raw-trust-token', expect.objectContaining({ httpOnly: true }));
+    expect(result).toEqual({ status: 201, body: undefined });
   });
 
   it('DELETE /api/trusted-device/:id — 204를 반환한다', async () => {
     mockTrustedDeviceService.revoke.mockResolvedValue(undefined);
+    const user = { userId: 'uid', username: 'user1', permissions: [] };
 
-    await request(app.getHttpServer())
-      .delete('/api/trusted-device/td-1')
-      .expect(204);
+    const result = await controller.handleRevoke('td-1', user);
 
     expect(mockTrustedDeviceService.revoke).toHaveBeenCalledWith('td-1', 'uid');
+    expect(result).toEqual({ status: 204, body: undefined });
   });
 });
 ```
 
 - [ ] `npm test -- --testPathPattern=trusted-device.controller` 테스트가 실패하는 것을 확인한다.
 
-- [ ] `services/api/src/trusted-device/trusted-device.controller.ts`를 TsRestHandler로 교체한다. 기존 파일을 먼저 읽어 쿠키 경로와 서비스 메서드를 확인한다.
+- [ ] `services/api/src/trusted-device/trusted-device.controller.ts`를 TsRestHandler로 교체한다.
 
 ```typescript
 import { Controller, Req, Res } from '@nestjs/common';
@@ -2331,11 +2291,7 @@ export class TrustedDeviceController {
   }
 
   @TsRestHandler(contract.trustedDevice.register)
-  async handleRegister(
-    @CurrentUser() user: AuthUser,
-    @Res({ passthrough: true }) res: Response,
-    @Req() req: Request,
-  ) {
+  async handleRegister(@CurrentUser() user: AuthUser, @Res({ passthrough: true }) res: Response, @Req() req: Request) {
     return tsRestHandler(contract.trustedDevice.register, async () => {
       const userAgent = req.headers['user-agent'];
       const rawToken = await this.trustedDeviceService.register(user.userId, userAgent);
@@ -2351,7 +2307,7 @@ export class TrustedDeviceController {
   }
 
   @TsRestHandler(contract.trustedDevice.revoke)
-  async handleRevoke(@CurrentUser() user: AuthUser) {
+  async handleRevoke(id: string, @CurrentUser() user: AuthUser) {
     return tsRestHandler(contract.trustedDevice.revoke, async ({ params }) => {
       await this.trustedDeviceService.revoke(params.id, user.userId);
       return { status: 204 as const, body: undefined };
@@ -2362,7 +2318,7 @@ export class TrustedDeviceController {
 
 - [ ] `npm test -- --testPathPattern=trusted-device.controller` 테스트가 통과하는지 확인한다.
 - [ ] `services/api/src/trusted-device/dto/trusted-device-response.dto.ts`를 삭제한다.
-- [ ] `npm run build`를 실행하여 타입 오류가 없는지 확인한다 (api).
+- [ ] `npm run build`를 실행하여 타입 오류가 없는지 확인한다.
 
 - [ ] `services/web/src/features/trusted-device/api/query.ts` 파일을 생성한다.
 
@@ -2376,52 +2332,40 @@ export function useTrustedDevicesQuery() {
 
 - [ ] `services/web/src/features/trusted-device/api/mutation.ts` 파일을 생성한다.
 
-  **주의:** FSD 규칙에 따라 `api` 세그먼트는 서버와의 데이터 교환만 담당한다. `invalidateQueries`는 사이드이펙트이므로 `model` 세그먼트에서 처리한다.
-
 ```typescript
+import { useQueryClient } from '@tanstack/react-query';
 import { tsRestClient } from '@/shared/api';
 
 export function useRegisterTrustedDeviceMutation() {
-  return tsRestClient.trustedDevice.register.useMutation();
+  const queryClient = useQueryClient();
+  return tsRestClient.trustedDevice.register.useMutation({
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['trusted-device', 'list'] });
+    },
+  });
 }
 
 export function useRevokeTrustedDeviceMutation() {
-  return tsRestClient.trustedDevice.revoke.useMutation();
+  const queryClient = useQueryClient();
+  return tsRestClient.trustedDevice.revoke.useMutation({
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['trusted-device', 'list'] });
+    },
+  });
 }
 ```
 
-- [ ] `services/web/src/features/trusted-device/model/useTrustedDevice.ts`를 업데이트한다. 기존 파일을 먼저 읽어 반환 인터페이스를 확인한다. `invalidateQueries`는 model 레이어에서 처리한다.
+- [ ] `services/web/src/features/trusted-device/model/useTrustedDevice.ts`를 업데이트한다.
 
 ```typescript
-import { useQueryClient } from '@tanstack/react-query';
 import { useRegisterTrustedDeviceMutation, useRevokeTrustedDeviceMutation } from '../api/mutation';
 
 export function useTrustedDevice() {
-  const queryClient = useQueryClient();
   const registerMutation = useRegisterTrustedDeviceMutation();
   const revokeMutation = useRevokeTrustedDeviceMutation();
 
-  const register = () => {
-    registerMutation.mutate(
-      { body: {} },
-      {
-        onSuccess: () => {
-          queryClient.invalidateQueries({ queryKey: ['trusted-device', 'list'] });
-        },
-      },
-    );
-  };
-
-  const revoke = (id: string) => {
-    revokeMutation.mutate(
-      { params: { id }, body: {} },
-      {
-        onSuccess: () => {
-          queryClient.invalidateQueries({ queryKey: ['trusted-device', 'list'] });
-        },
-      },
-    );
-  };
+  const register = () => registerMutation.mutate({ body: {} });
+  const revoke = (id: string) => revokeMutation.mutate({ params: { id }, body: {} });
 
   return {
     register,
@@ -2433,14 +2377,15 @@ export function useTrustedDevice() {
 ```
 
 - [ ] `services/web/src/features/trusted-device/api/trustedDeviceApi.ts`를 삭제한다.
-- [ ] `cd services/web && npm run build`를 실행하여 타입 오류가 없는지 확인한다.
 - [ ] `git add services/api/src/trusted-device/ services/web/src/features/trusted-device/ && git commit -m "feat: trusted-device 도메인 @TsRestHandler 및 ts-rest 훅으로 전환"`
 
 ---
 
 ## Task 20: 최종 정리
 
-- [ ] `services/api/src/app.module.ts`를 읽어 `ValidationPipe`(APP_PIPE) 전역 등록 여부를 확인한다. `@ts-rest/nest`는 Zod 스키마로 요청을 검증하므로 `class-validator` 기반 `ValidationPipe`와 이중 적용된다. `APP_PIPE` 등록 블록을 제거한다.
+- [ ] `services/api/src/app.module.ts`에서 `ValidationPipe` 전역 등록이 contracts Zod 검증과 중복되지 않는지 확인한다. `@ts-rest/nest`는 Zod 검증을 자체적으로 수행하므로 `ValidationPipe`의 `whitelist`, `forbidNonWhitelisted` 옵션을 제거하거나 `APP_PIPE`를 제거한다.
+
+  `services/api/src/app.module.ts`에서 `APP_PIPE` 등록을 제거한다.
 
 ```typescript
 // providers 배열에서 아래 블록을 삭제:
@@ -2454,31 +2399,21 @@ export function useTrustedDevice() {
 // },
 ```
 
-- [ ] `class-validator`, `class-transformer` 잔여 사용 여부를 확인한다.
+- [ ] `services/api/package.json`에서 `class-validator`와 `class-transformer`를 `dependencies`에서 제거한다. (다른 파일에서 사용 중이지 않은지 확인 후 제거)
 
 ```bash
-cd services/api && grep -r "class-validator\|class-transformer\|@IsString\|@IsNumber\|@IsOptional\|@MinLength\|@IsUUID" src/ --include="*.ts" -l
+cd services/api && grep -r "class-validator\|class-transformer" src/ --include="*.ts" -l
 ```
 
-위 명령으로 사용 중인 파일이 없는지 확인한다. 없으면 `services/api/package.json`의 `dependencies`에서 `class-validator`와 `class-transformer`를 제거하고 `npm install`을 실행한다.
+위 명령으로 아직 사용 중인 파일이 없는지 확인한다. 없으면 `package.json`에서 제거 후 `npm install`을 실행한다.
 
-- [ ] API 빌드 최종 확인을 실행한다.
-
-```bash
-cd services/api && npm run build
-```
-
-- [ ] Web 빌드 최종 확인을 실행한다.
-
-```bash
-cd services/web && npm run build
-```
-
-- [ ] 전체 테스트를 실행하여 통과하는지 확인한다.
-
-```bash
-cd services/api && npm test
-cd services/web && npm test
-```
-
+- [ ] `services/api/src/twofa/types/` 디렉토리에 잔여 DTO 파일이 없는지 확인한다.
+- [ ] `services/api/src/auth/types/` 디렉토리에 잔여 DTO 파일이 없는지 확인한다.
+- [ ] `npm run build`를 실행하여 전체 빌드가 성공하는지 확인한다 (api, web 양측).
+- [ ] `npm test`를 실행하여 모든 테스트가 통과하는지 확인한다 (api, web 양측).
 - [ ] `git add services/api/package.json services/api/package-lock.json services/api/src/app.module.ts && git commit -m "chore(api): class-validator/class-transformer 제거 및 ValidationPipe 정리"`
+
+```
+
+---
+```
