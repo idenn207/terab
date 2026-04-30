@@ -1,8 +1,9 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { ApiException } from '@terab/common';
+import { contract } from '@terab/contract';
 import { Invitations$Select } from '@terab/db';
-import { InvitationResponseDto } from './dto/invitation-response.dto';
+import { ServerInferResponseBody } from '@ts-rest/core';
 import { InvitationRepository } from './invitation.repository';
 
 @Injectable()
@@ -15,16 +16,19 @@ export class InvitationService {
     private readonly configService: ConfigService,
   ) {}
 
-  async create(createdBy: string, expiresInDays: number = this.DEFAULT_EXPIRES_DAYS): Promise<InvitationResponseDto> {
+  async create(
+    createdBy: string,
+    expiresInDays: number = this.DEFAULT_EXPIRES_DAYS,
+  ): Promise<ServerInferResponseBody<typeof contract.invitation.create>> {
     const expiresAt = new Date(Date.now() + expiresInDays * this.MS_PER_DAY);
     const row = await this.invitationRepository.insert({ createdBy, expiresAt });
     const baseUrl = this.configService.getOrThrow<string>('APP_BASE_URL');
     return { token: row.token, url: `${baseUrl}/register/${row.token}`, expiresAt: row.expiresAt };
   }
 
-  async validate(token: string): Promise<boolean> {
+  async validate(token: string): Promise<ServerInferResponseBody<typeof contract.invitation.validate>> {
     const row = await this.invitationRepository.findByToken(token);
-    return this.getException(row) === null;
+    return { valid: this.getException(row) === null };
   }
 
   async validateOrThrow(token: string) {
