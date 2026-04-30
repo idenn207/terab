@@ -1,6 +1,7 @@
 import { ConsoleLogger, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { NestFactory } from '@nestjs/core';
+import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import cookieParser from 'cookie-parser';
 import helmet from 'helmet';
 import { AppModule } from './app.module';
@@ -15,6 +16,7 @@ async function bootstrap(): Promise<void> {
   const host = configService.get<string>('HOST') || '0.0.0.0';
   const port = configService.get<string>('PORT') || '3000';
 
+  // ───── Settings ──────────────────────────────
   app.use(helmet());
   app.use(cookieParser());
 
@@ -28,6 +30,13 @@ async function bootstrap(): Promise<void> {
     credentials: true,
   });
 
+  // ───── Swagger ─────────────────────────
+  // 모든 Route 주소 확인용
+  const config = new DocumentBuilder().setTitle('API Docs').build();
+  const document = SwaggerModule.createDocument(app, config);
+  SwaggerModule.setup('swagger', app, document); // http://localhost:3000/swagger 로 접속
+
+  // ───── Listen ─────────────────────────
   await app.listen(port, host);
   Logger.log(`Application is running on: ${await app.getUrl()}`);
 }
