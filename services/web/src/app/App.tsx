@@ -1,10 +1,12 @@
 import { RouterProvider } from 'react-router-dom';
-import { router } from './providers';
+import { QueryProvider, router, ThemeProvider } from './providers';
 
 const App = () => (
-  // <ThemeProvider>
-  <RouterProvider router={router} />
-  // </ThemeProvider>
+  <ThemeProvider>
+    <QueryProvider>
+      <RouterProvider router={router} />
+    </QueryProvider>
+  </ThemeProvider>
 );
 
 export default App;

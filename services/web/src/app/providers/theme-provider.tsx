@@ -1,7 +1,7 @@
 import { applyTheme, getStoredTheme, getSystemTheme, setStoredTheme, ThemeContext } from '@/shared/lib/theme';
 import React, { useEffect, useState } from 'react';
 
-const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [theme, setTheme] = useState(getStoredTheme() || 'system');
   const resolvedTheme = theme === 'system' ? getSystemTheme() : theme;
 
@@ -11,6 +11,4 @@ const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) =>
   }, [theme]);
 
   return <ThemeContext.Provider value={{ theme, setTheme, resolvedTheme }}>{children}</ThemeContext.Provider>;
-};
-
-export { ThemeProvider };
+}
