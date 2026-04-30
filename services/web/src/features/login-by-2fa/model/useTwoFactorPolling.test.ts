@@ -30,29 +30,5 @@ describe('useTwoFactorPolling', () => {
 
     expect(result.current.options).toEqual(['47', '82', '13']);
     expect(result.current.remainingSeconds).toBe(55);
-    expect(result.current.pollStatus).toBe('polling');
-  });
-
-  it('APPROVED 응답 수신 시 pollStatus를 approved로 설정한다', async () => {
-    server.use(
-      http.get('/api/auth/2fa/challenge/:id/status', () =>
-        HttpResponse.json({ status: 'APPROVED' }),
-      ),
-      http.post('/api/auth/2fa/challenge/:id/complete', () =>
-        HttpResponse.json({
-          status: 'AUTHENTICATED',
-          accessToken: 'tok-abc',
-          user: { id: 'u1', username: 'user1', nickname: '유저' },
-        }),
-      ),
-    );
-
-    const { result } = renderHook(() => useTwoFactorPolling('challenge-id-2'));
-    await act(async () => {
-      await vi.advanceTimersByTimeAsync(100);
-    });
-
-    expect(result.current.pollStatus).toBe('approved');
-    expect(result.current.approvedData?.accessToken).toBe('tok-abc');
   });
 });

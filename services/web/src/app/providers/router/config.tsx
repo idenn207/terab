@@ -79,7 +79,7 @@ const previewRoutes: RouteObject[] = [
   {
     path: '/preview',
     children: [
-      { index: true, element: <TwoFactorWaiting onApproved={() => {}} /> },
+      { index: true, element: <TwoFactorWaiting /> },
       { path: '1', element: <TwoFactorApprovalPage /> },
       { path: '2', element: <TwoFactorBackupEntry /> },
       { path: '4', element: <TrustedDeviceSection /> },
