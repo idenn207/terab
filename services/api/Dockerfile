@@ -26,15 +26,14 @@ ARG API_PATH
 ARG CONTRACTS_PATH
 WORKDIR /app/${API_PATH}
 
+# file: 로컬 패키지 의존성(contracts)을 먼저 확보 후 의존성 설치
+COPY --from=contracts-builder /${CONTRACTS_PATH}/dist /${CONTRACTS_PATH}/dist
+COPY --from=contracts-builder /${CONTRACTS_PATH}/package.json /${CONTRACTS_PATH}/package.json
 COPY ${API_PATH}/package*.json ./
 RUN npm ci --ignore-scripts
 
 COPY ${API_PATH}/tsconfig*.json ${API_PATH}/nest-cli.json ${API_PATH}/.swcrc ./
 COPY ${API_PATH}/src ./src
-
-# 빌드된 Contracts 가져오기
-COPY --from=contracts-builder /${CONTRACTS_PATH}/dist /${CONTRACTS_PATH}/dist
-COPY --from=contracts-builder /${CONTRACTS_PATH}/package.json /${CONTRACTS_PATH}/package.json
 
 RUN npm run build
 
@@ -56,14 +55,14 @@ WORKDIR /app/${API_PATH}
 # 보안: non-root 사용자
 RUN addgroup -S appgroup && adduser -S appuser -G appgroup
 
-# 프로덕션 의존성만 설치 (root 상태에서 실행 후 소유권 이전)
+# file: 로컬 패키지 의존성(contracts)을 먼저 확보 후 프로덕션 의존성 설치
+COPY --from=contracts-builder /${CONTRACTS_PATH}/dist /${CONTRACTS_PATH}/dist
+COPY --from=contracts-builder /${CONTRACTS_PATH}/package.json /${CONTRACTS_PATH}/package.json
 COPY ${API_PATH}/package*.json ./
 RUN npm ci --omit=dev --ignore-scripts
 
 # 빌드 결과물 및 마이그레이션 파일 복사
 COPY --from=builder /app/${API_PATH}/dist ./dist
-COPY --from=builder /${CONTRACTS_PATH}/dist /${CONTRACTS_PATH}/dist
-COPY --from=builder /${CONTRACTS_PATH}/package.json /${CONTRACTS_PATH}/package.json
 COPY ${API_PATH}/drizzle ./drizzle
 
 RUN chown -R appuser:appgroup /app

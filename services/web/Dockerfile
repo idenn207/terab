@@ -22,13 +22,11 @@ ARG WEB_PATH
 ARG CONTRACTS_PATH
 WORKDIR /app
 
-# 의존성 캐시
-COPY ${WEB_PATH}/package.json ${WEB_PATH}/package-lock.json ./
-RUN npm ci
-
-# 빌드 환경에 Contracts 결과물 미리 배치
+# file: 로컬 패키지 의존성(contracts)을 먼저 확보 후 의존성 설치
 COPY --from=contracts-builder /${CONTRACTS_PATH}/dist /${CONTRACTS_PATH}/dist
 COPY --from=contracts-builder /${CONTRACTS_PATH}/package.json /${CONTRACTS_PATH}/package.json
+COPY ${WEB_PATH}/package.json ${WEB_PATH}/package-lock.json ./
+RUN npm ci --ignore-scripts
 
 # 소스 복사 및 빌드
 COPY ${WEB_PATH} .

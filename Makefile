@@ -105,12 +105,15 @@ build-local:
 	docker build -t terab-web:local -f services/web/Dockerfile .
 
 # ─── 빌드 ────────────────────────────────────────────────────────
+.PHONY: build
+build: build-packages build-api build-mq build-web build-android
+
 .PHONY: build-packages
 build-packages:
 	cd packages/contracts && npm run build
 
 .PHONY: build-api
-build-api:
+build-api: build-packages
 	cd services/api && npm run build
 
 .PHONY: build-mq
@@ -118,7 +121,7 @@ build-mq:
 	cd services/mq && npm run build
 
 .PHONY: build-web
-build-web:
+build-web: build-packages
 	cd services/web && npm run build
 
 .PHONY: build-android

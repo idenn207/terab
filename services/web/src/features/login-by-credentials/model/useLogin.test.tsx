@@ -1,11 +1,9 @@
 import { useUserStore } from '@/entities';
+import { makeRouterWrapper } from '@tests/wrappers';
 import { act, renderHook } from '@testing-library/react';
 import { server } from '@tests/mocks';
 import { http, HttpResponse } from 'msw';
-import { MemoryRouter } from 'react-router-dom';
 import { useLogin } from '../model/useLogin';
-
-const wrapper = ({ children }: { children: React.ReactNode }) => <MemoryRouter initialEntries={['/login']}>{children}</MemoryRouter>;
 
 describe('useLogin', () => {
   afterEach(() => {
@@ -23,7 +21,7 @@ describe('useLogin', () => {
       ),
     );
 
-    const { result } = renderHook(() => useLogin(), { wrapper });
+    const { result } = renderHook(() => useLogin(), { wrapper: makeRouterWrapper({ initialEntries: ['/login'] }) });
     await act(() => result.current.login({ username: 'testuser', password: 'pass123' }));
 
     expect(useUserStore.getState().accessToken).toBe('mock-access-token');
@@ -42,7 +40,7 @@ describe('useLogin', () => {
       ),
     );
 
-    const { result } = renderHook(() => useLogin(), { wrapper });
+    const { result } = renderHook(() => useLogin(), { wrapper: makeRouterWrapper({ initialEntries: ['/login'] }) });
     await act(() => result.current.login({ username: 'testuser', password: 'pass123' }));
 
     expect(useUserStore.getState().accessToken).toBeNull();
@@ -57,7 +55,7 @@ describe('useLogin', () => {
       ),
     );
 
-    const { result } = renderHook(() => useLogin(), { wrapper });
+    const { result } = renderHook(() => useLogin(), { wrapper: makeRouterWrapper({ initialEntries: ['/login'] }) });
     await act(() => result.current.login({ username: 'wrong', password: 'wrong' }));
 
     expect(result.current.apiError?.code).toBe('INVALID_CREDENTIALS');

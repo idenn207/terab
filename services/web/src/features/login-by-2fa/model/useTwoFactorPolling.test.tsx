@@ -1,4 +1,5 @@
 import { server } from '@/__tests__/mocks';
+import { makeRouterWrapper } from '@tests/wrappers';
 import { act, renderHook } from '@testing-library/react';
 import { http, HttpResponse } from 'msw';
 import { useTwoFactorPolling } from '../model/useTwoFactorPolling';
@@ -23,7 +24,7 @@ describe('useTwoFactorPolling', () => {
       ),
     );
 
-    const { result } = renderHook(() => useTwoFactorPolling('challenge-id-1'));
+    const { result } = renderHook(() => useTwoFactorPolling('challenge-id-1'), { wrapper: makeRouterWrapper() });
     await act(async () => {
       await vi.advanceTimersByTimeAsync(100);
     });

@@ -6,7 +6,7 @@ const { mockRequestPermissions, mockRegister, mockRemove, mockRegisterPushToken 
   mockRequestPermissions: vi.fn(),
   mockRegister: vi.fn(),
   mockRemove: vi.fn(),
-  mockRegisterPushToken: vi.fn().mockResolvedValue({ deviceId: 'test-device-id' }),
+  mockRegisterPushToken: vi.fn(),
 }));
 
 let capturedRegistrationCallback: ((token: { value: string }) => Promise<void>) | null = null;
@@ -26,8 +26,11 @@ vi.mock('@capacitor/push-notifications', () => ({
   },
 }));
 
-vi.mock('../api/deviceApi', () => ({
-  deviceApi: { registerPushToken: mockRegisterPushToken },
+vi.mock('../api/mutation', () => ({
+  useRegisterDeviceMutation: () => ({
+    mutate: mockRegisterPushToken,
+    isPending: false,
+  }),
 }));
 
 describe('usePushNotification', () => {
@@ -78,7 +81,7 @@ describe('usePushNotification', () => {
 
     await waitFor(() => {
       expect(mockRegisterPushToken).toHaveBeenCalledWith({
-        pushToken: 'fcm-token-abc123',
+        body: { pushToken: 'fcm-token-abc123' },
       });
     });
   });
@@ -121,7 +124,7 @@ describe('usePushNotification', () => {
 
     await waitFor(() => {
       expect(mockRegisterPushToken).toHaveBeenCalledWith({
-        pushToken: 'fcm-token-pending',
+        body: { pushToken: 'fcm-token-pending' },
       });
     });
   });
