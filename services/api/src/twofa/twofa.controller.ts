@@ -1,34 +1,37 @@
-import { Body, Controller, Get, HttpCode, HttpStatus, Param, Post } from '@nestjs/common';
+import { Controller, HttpStatus } from '@nestjs/common';
 import { CurrentUser, Public } from '@terab/common';
+import { contract } from '@terab/contract';
+import { tsRestHandler, TsRestHandler } from '@ts-rest/nest';
 import type { AuthUser } from '../auth/types/auth-user.type';
-import { ChallengeStatusResponseDto } from './dto/challenge-status-response.dto';
-import { RespondChallengeDto } from './dto/respond-challenge.dto';
 import { TwoFaService } from './twofa.service';
 
-@Controller('api/auth/2fa')
+@Controller()
 export class TwoFaController {
   constructor(private readonly twoFaService: TwoFaService) {}
 
   @Public()
-  @Get('challenge/:id/status')
-  async getStatus(@Param('id') id: string): Promise<ChallengeStatusResponseDto> {
-    return this.twoFaService.getStatus(id);
+  @TsRestHandler(contract.twofa.getStatus)
+  handleGetStatus() {
+    return tsRestHandler(contract.twofa.getStatus, async ({ params }) => {
+      const result = await this.twoFaService.getStatus(params.id);
+      return { status: HttpStatus.OK, body: result };
+    });
   }
 
-  @Post('challenge/:id/respond')
-  @HttpCode(HttpStatus.NO_CONTENT)
-  async respond(
-    @Param('id') id: string,
-    @Body() dto: RespondChallengeDto,
-    @CurrentUser() user: AuthUser,
-  ): Promise<void> {
-    await this.twoFaService.respond(id, user.userId, dto.selectedNumber);
+  @TsRestHandler(contract.twofa.respond)
+  handleRespond(@CurrentUser() user: AuthUser) {
+    return tsRestHandler(contract.twofa.respond, async ({ body, params }) => {
+      await this.twoFaService.respond(params.id, user.userId, body.selectedNumber);
+      return { status: HttpStatus.NO_CONTENT, body: undefined };
+    });
   }
 
   @Public()
-  @Post('challenge/:id/resend')
-  async resend(@Param('id') id: string): Promise<{ challengeId: string; options: string[]; expiresAt: Date }> {
-    const result = await this.twoFaService.resend(id);
-    return { challengeId: result.id, options: result.options, expiresAt: result.expiresAt };
+  @TsRestHandler(contract.twofa.resend)
+  handleResend() {
+    return tsRestHandler(contract.twofa.resend, async ({ params }) => {
+      const result = await this.twoFaService.resend(params.id);
+      return { status: HttpStatus.OK, body: { ...result, challengeId: result.id } };
+    });
   }
 }
