@@ -1,4 +1,4 @@
-import { BackupCodeSection, TrustedDeviceSection, TrustThisDeviceCheckbox, TwoFactorApprovalPage, TwoFactorBackupEntry, TwoFactorWaiting } from '@/features';
+import { TrustedDeviceSection, TrustThisDeviceCheckbox, TwoFactorApprovalPage, TwoFactorBackupEntry, TwoFactorWaiting } from '@/features';
 import { BackupCodeIssuePage, DrivePage, Link2TwoFAAuth, LoginPage, RegisterPage, TwoFAApprovalPage, TwoFABackupPage, TwoFAWaitPage } from '@/pages';
 import { AuthLayout } from '@/widgets';
 import { PrivateRoute } from '@shared/router';
@@ -82,7 +82,6 @@ const previewRoutes: RouteObject[] = [
       { index: true, element: <TwoFactorWaiting onApproved={() => {}} /> },
       { path: '1', element: <TwoFactorApprovalPage /> },
       { path: '2', element: <TwoFactorBackupEntry /> },
-      { path: '3', element: <BackupCodeSection /> },
       { path: '4', element: <TrustedDeviceSection /> },
       { path: '5', element: <TrustThisDeviceCheckbox checked={false} onChange={() => {}} /> },
       { path: '2fa-auth', element: <Link2TwoFAAuth /> },

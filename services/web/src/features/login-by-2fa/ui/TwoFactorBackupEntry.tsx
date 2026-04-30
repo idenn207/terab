@@ -1,5 +1,4 @@
 import { Button, Field, FieldGroup, Fieldset, Input, Label } from '@/shared/ui';
-import { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { useNavigate } from 'react-router-dom';
 import { TWO_FACTOR_ERROR_MESSAGES } from '../model/twoFactorErrors';
@@ -7,32 +6,22 @@ import { useBackupLogin, type BackupLoginForm } from '../model/useBackupLogin';
 
 export function TwoFactorBackupEntry() {
   const navigate = useNavigate();
-  const { login, isLoading, apiError, resetError } = useBackupLogin();
+  const { loginWithBackup, isLoading, apiError } = useBackupLogin();
   const {
     register,
     handleSubmit,
-    setError,
-    clearErrors,
     setValue,
     formState: { errors },
   } = useForm<BackupLoginForm>();
 
-  useEffect(() => {
-    if (!apiError) {
-      clearErrors('root');
-      return;
-    }
-    setError('root', { message: TWO_FACTOR_ERROR_MESSAGES[apiError.code] });
-  }, [apiError, setError, clearErrors]);
-
   const formatBackupCode = (s: string) => s.toUpperCase().replace(/([A-Z0-9]{4})([A-Z0-9]{1,4})/, '$1-$2');
 
-  const displayError = Object.values(errors)
+  const formError = Object.values(errors)
     .map((s) => s.message)
     .find((s) => !!s);
 
   return (
-    <form onSubmit={handleSubmit(login)} className="grid w-full max-w-sm grid-cols-1 gap-6">
+    <form onSubmit={handleSubmit(loginWithBackup)} className="grid w-full max-w-sm grid-cols-1 gap-6">
       <Fieldset>
         <FieldGroup>
           <Field>
@@ -42,7 +31,7 @@ export function TwoFactorBackupEntry() {
               id="username"
               type="text"
               autoComplete="username"
-              {...register('username', { required: TWO_FACTOR_ERROR_MESSAGES.USERNAME_REQUIRED, onChange: resetError })}
+              {...register('username', { required: TWO_FACTOR_ERROR_MESSAGES.USERNAME_REQUIRED })}
             />
           </Field>
           <Field>
@@ -52,7 +41,7 @@ export function TwoFactorBackupEntry() {
               id="password"
               type="password"
               autoComplete="current-password"
-              {...register('password', { required: TWO_FACTOR_ERROR_MESSAGES.PASSWORD_REQUIRED, onChange: resetError })}
+              {...register('password', { required: TWO_FACTOR_ERROR_MESSAGES.PASSWORD_REQUIRED })}
             />
           </Field>
           <Field>
@@ -77,9 +66,9 @@ export function TwoFactorBackupEntry() {
           </Field>
         </FieldGroup>
       </Fieldset>
-      {displayError && (
+      {(apiError || formError) && (
         <p role="alert" className="text-sm text-red-500">
-          {displayError}
+          {apiError?.message ?? formError}
         </p>
       )}
       <Button type="submit" disabled={isLoading}>

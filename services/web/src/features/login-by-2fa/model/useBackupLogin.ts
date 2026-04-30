@@ -1,10 +1,8 @@
 import { useUserStore } from '@/entities';
 import { parseApiError } from '@/shared/api';
-import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { twoFactorApi } from '../api/twoFactorApi';
-import type { ApiErrorCode } from './twoFactorErrors';
-import { TWO_FACTOR_ERROR_MESSAGES } from './twoFactorErrors';
+import { useLoginWithBackupMutation } from '../api/mutation';
+import { TWO_FACTOR_ERROR_MESSAGES, type ApiErrorCode } from './twoFactorErrors';
 
 export interface BackupLoginForm {
   username: string;
@@ -13,25 +11,27 @@ export interface BackupLoginForm {
 }
 
 export function useBackupLogin() {
-  const [isLoading, setIsLoading] = useState(false);
-  const [apiError, setApiError] = useState<{ code: ApiErrorCode | 'UNKNOWN'; message: string } | null>(null);
-  const resetError = () => setApiError(null);
   const navigate = useNavigate();
   const setAuth = useUserStore((s) => s.setAuth);
+  const mutation = useLoginWithBackupMutation();
 
-  const login = async (form: BackupLoginForm) => {
-    setIsLoading(true);
-    setApiError(null);
-    try {
-      const data = await twoFactorApi.backupLogin(form);
-      setAuth(data.accessToken, data.user);
-      navigate('/drive');
-    } catch (err) {
-      setApiError(parseApiError<ApiErrorCode>(err, { code: 'UNKNOWN', message: TWO_FACTOR_ERROR_MESSAGES.UNKNOWN }));
-    } finally {
-      setIsLoading(false);
-    }
+  const loginWithBackup = async (form: BackupLoginForm) => {
+    mutation.mutate(
+      { body: form },
+      {
+        onSuccess: (response) => {
+          if (response.status !== 200) return;
+          const data = response.body;
+          if (data.status === 'AUTHENTICATED') {
+            setAuth(data.accessToken, data.user);
+            navigate('/drive');
+          }
+        },
+      },
+    );
   };
 
-  return { login, isLoading, apiError, resetError };
+  const apiError = mutation.isError ? parseApiError<ApiErrorCode>(mutation.error, { code: 'UNKNOWN', message: TWO_FACTOR_ERROR_MESSAGES.UNKNOWN }) : null;
+
+  return { loginWithBackup, isLoading: mutation.isPending, apiError };
 }

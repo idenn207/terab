@@ -40,7 +40,7 @@ describe('useRegister', () => {
     expect(onSuccess).toHaveBeenCalledWith(mockBackupCodes);
   });
 
-  it('USERNAME_TAKEN 응답 시 error.code를 설정한다', async () => {
+  it('USERNAME_TAKEN 응답 시 apiError.code를 설정한다', async () => {
     server.use(http.post('/api/auth/register', () => HttpResponse.json({ code: 'USERNAME_TAKEN', message: '이미 사용 중인 아이디입니다.' }, { status: 409 })));
 
     const onSuccess = vi.fn();
@@ -54,7 +54,7 @@ describe('useRegister', () => {
       }),
     );
 
-    expect(result.current.error?.code).toBe('USERNAME_TAKEN');
+    expect(result.current.apiError?.code).toBe('USERNAME_TAKEN');
     expect(useUserStore.getState().accessToken).toBeNull();
     expect(onSuccess).not.toHaveBeenCalled();
   });

@@ -60,7 +60,7 @@ describe('useLogin', () => {
     const { result } = renderHook(() => useLogin(), { wrapper });
     await act(() => result.current.login({ username: 'wrong', password: 'wrong' }));
 
-    expect(result.current.error?.code).toBe('INVALID_CREDENTIALS');
+    expect(result.current.apiError?.code).toBe('INVALID_CREDENTIALS');
     expect(useUserStore.getState().accessToken).toBeNull();
   });
 });
