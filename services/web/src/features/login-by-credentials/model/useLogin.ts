@@ -1,30 +1,26 @@
 import { useUserStore } from '@/entities';
-import { AxiosError } from 'axios';
+import { parseApiError } from '@/shared/api';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { loginApi } from '../api/loginApi';
 import type { ApiErrorCode } from './loginErrors';
+import { LOGIN_ERROR_MESSAGES } from './loginErrors';
 
 export interface LoginCredentials {
   username: string;
   password: string;
 }
 
-interface LoginError {
-  code: ApiErrorCode;
-  message: string;
-}
-
 export function useLogin() {
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<LoginError | null>(null);
-  const resetError = () => setError(null);
+  const [apiError, setApiError] = useState<{ code: ApiErrorCode | 'UNKNOWN'; message: string } | null>(null);
+  const resetError = () => setApiError(null);
   const navigate = useNavigate();
   const setAuth = useUserStore((s) => s.setAuth);
 
   const login = async (credentials: LoginCredentials) => {
     setIsLoading(true);
-    setError(null);
+    setApiError(null);
     try {
       const data = await loginApi.login(credentials);
       if (data.status === 'AUTHENTICATED') {
@@ -32,19 +28,13 @@ export function useLogin() {
         navigate('/drive');
       } else if (data.status === '2FA_REQUIRED') {
         navigate(`/login/2fa?id=${data.challengeId}`);
-      } else {
-        // ...something else
       }
     } catch (err: unknown) {
-      const { code, message } = (err as AxiosError<LoginError>)?.response?.data ?? {};
-      setError({
-        code: code ?? 'UNKNOWN',
-        message: message ?? '로그인에 실패했습니다.',
-      });
+      setApiError(parseApiError<ApiErrorCode>(err, { code: 'UNKNOWN', message: LOGIN_ERROR_MESSAGES.UNKNOWN }));
     } finally {
       setIsLoading(false);
     }
   };
 
-  return { login, isLoading, error, resetError };
+  return { login, isLoading, apiError, resetError };
 }

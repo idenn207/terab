@@ -7,7 +7,7 @@ import { useBackupLogin, type BackupLoginForm } from '../model/useBackupLogin';
 
 export function TwoFactorBackupEntry() {
   const navigate = useNavigate();
-  const { login, isLoading, error, resetError } = useBackupLogin();
+  const { login, isLoading, apiError, resetError } = useBackupLogin();
   const {
     register,
     handleSubmit,
@@ -18,12 +18,12 @@ export function TwoFactorBackupEntry() {
   } = useForm<BackupLoginForm>();
 
   useEffect(() => {
-    if (!error) {
+    if (!apiError) {
       clearErrors('root');
       return;
     }
-    setError('root', { message: TWO_FACTOR_ERROR_MESSAGES[error.code] });
-  }, [error, setError, clearErrors]);
+    setError('root', { message: TWO_FACTOR_ERROR_MESSAGES[apiError.code] });
+  }, [apiError, setError, clearErrors]);
 
   const formatBackupCode = (s: string) => s.toUpperCase().replace(/([A-Z0-9]{4})([A-Z0-9]{1,4})/, '$1-$2');
 

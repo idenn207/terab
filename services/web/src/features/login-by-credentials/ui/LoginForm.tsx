@@ -6,7 +6,7 @@ import type { LoginCredentials } from '../model/useLogin';
 import { useLogin } from '../model/useLogin';
 
 export function LoginForm() {
-  const { login, isLoading, error, resetError } = useLogin();
+  const { login, isLoading, apiError, resetError } = useLogin();
   const {
     register,
     handleSubmit,
@@ -16,12 +16,12 @@ export function LoginForm() {
   } = useForm<LoginCredentials>();
 
   useEffect(() => {
-    if (!error) {
+    if (!apiError) {
       clearErrors('root');
       return;
     }
-    setError('root', { message: LOGIN_ERROR_MESSAGES[error.code] });
-  }, [error, setError, clearErrors]);
+    setError('root', { message: LOGIN_ERROR_MESSAGES[apiError.code] });
+  }, [apiError, setError, clearErrors]);
 
   const displayError = errors.username?.message ?? errors.password?.message ?? errors.root?.message;
 

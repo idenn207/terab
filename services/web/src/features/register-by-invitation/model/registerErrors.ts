@@ -12,7 +12,7 @@ const API_ERROR_MESSAGES = {
   INVITATION_ALREADY_USED: '이미 사용된 초대 링크입니다',
   INVITATION_EXPIRED: '만료된 초대 링크입니다',
   USERNAME_TAKEN: '이미 사용 중인 아이디입니다',
-  UNKNOWN: '로그인에 실패했습니다',
+  UNKNOWN: '회원가입에 실패했습니다',
 } as const;
 
 type ApiErrorCode = keyof typeof API_ERROR_MESSAGES;

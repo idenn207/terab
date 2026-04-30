@@ -12,6 +12,9 @@ const API_ERROR_MESSAGES = {
   UNKNOWN: '로그인에 실패했습니다',
 } as const;
 
-export type ApiErrorCode = keyof typeof API_ERROR_MESSAGES;
+type ApiErrorCode = keyof typeof API_ERROR_MESSAGES;
 
-export const TWO_FACTOR_ERROR_MESSAGES = { ...FORM_ERROR_MESSAGES, ...API_ERROR_MESSAGES } as const;
+const TWO_FACTOR_ERROR_MESSAGES = { ...FORM_ERROR_MESSAGES, ...API_ERROR_MESSAGES } as const;
+
+export { TWO_FACTOR_ERROR_MESSAGES };
+export type { ApiErrorCode };
