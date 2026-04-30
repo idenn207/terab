@@ -81,8 +81,8 @@ export class AuthService implements OnModuleInit {
       accessToken: tokens.accessToken,
       user: {
         id: newUser.id,
-        nickname: data.username,
-        username: data.nickname,
+        username: data.username,
+        nickname: data.nickname,
       },
       backupCodes: rawCodes,
       rawRefreshToken: tokens.rawRefreshToken,

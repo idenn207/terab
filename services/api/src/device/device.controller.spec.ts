@@ -68,7 +68,6 @@ describe('DeviceController', () => {
 
   it('DELETE /devices/:id — 디바이스를 삭제하고 204를 반환한다', async () => {
     const deviceId = randomUUID();
-    console.log('deviceId: ', deviceId);
     mockDeviceService.remove.mockResolvedValue(undefined);
 
     await request(app.getHttpServer()).delete(`/devices/${deviceId}`).expect(204);

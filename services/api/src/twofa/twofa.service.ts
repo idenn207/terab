@@ -35,7 +35,7 @@ export class TwoFaService {
       const remainingSeconds = Math.max(0, Math.floor((challenge.expiresAt.getTime() - Date.now()) / 1000));
       return {
         status: 'PENDING',
-        optoins: challenge.options.split(','),
+        options: challenge.options.split(','),
         correctNum: challenge.correctNum,
         remainingSeconds,
       };

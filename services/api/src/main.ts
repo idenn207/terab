@@ -31,10 +31,12 @@ async function bootstrap(): Promise<void> {
   });
 
   // ───── Swagger ─────────────────────────
-  // 모든 Route 주소 확인용
-  const config = new DocumentBuilder().setTitle('API Docs').build();
-  const document = SwaggerModule.createDocument(app, config);
-  SwaggerModule.setup('swagger', app, document); // http://localhost:3000/swagger 로 접속
+  // 모든 Route 주소 확인용 (개발용)
+  if (process.env.NODE_ENV === 'development') {
+    const config = new DocumentBuilder().setTitle('API Docs').build();
+    const document = SwaggerModule.createDocument(app, config);
+    SwaggerModule.setup('swagger', app, document, {}); // http://localhost:3000/swagger 로 접속
+  }
 
   // ───── Listen ─────────────────────────
   await app.listen(port, host);

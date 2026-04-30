@@ -61,7 +61,7 @@ describe('InvitationController', () => {
   });
 
   it('GET /invitations/:token — valid: true를 반환한다', async () => {
-    mockInvitationService.validate.mockResolvedValue(true);
+    mockInvitationService.validate.mockResolvedValue({ valid: true });
 
     const res = await request(app.getHttpServer()).get('/invitations/tok-uuid').expect(HttpStatus.OK);
 

@@ -74,6 +74,7 @@ describe('TwoFaService', () => {
 
       const result = await service.getStatus('id');
 
+      if (result.status !== 'PENDING') throw new Error('Expected PENDING status');
       expect(result.status).toBe('PENDING');
       expect(result.options).toEqual(['47', '82', '13']);
       expect(result.correctNum).toBe('47');
@@ -115,6 +116,7 @@ describe('TwoFaService', () => {
 
       const result = await service.getStatus('id');
 
+      if (result.status !== 'APPROVED') throw new Error('Expected APPROVED status');
       expect(result.status).toBe('APPROVED');
       expect(result.accessToken).toBe('mock.access.token');
       expect(result.user?.id).toBe('user-id');

@@ -179,6 +179,7 @@ describe('AuthService', () => {
 
       const result = await service.login({ username: 'user1', password: 'correct' }, undefined, undefined);
 
+      if (result.response.status !== 'AUTHENTICATED') throw new Error('Expected AUTHENTICATED status');
       expect(result.response.accessToken).toBe('mock.access.token');
       expect(result.rawRefreshToken).toBe('mock-raw-refresh-token');
       expect(mockTokenService.generateAccessToken).toHaveBeenCalledWith(
