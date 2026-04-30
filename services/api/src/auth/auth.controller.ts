@@ -1,19 +1,15 @@
-import { Body, Controller, Get, Headers, HttpCode, HttpStatus, Param, Post, Req, Res } from '@nestjs/common';
+import { Controller, Headers, HttpStatus, Req, Res } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
 import { Cookies } from '@terab/common';
+import { contract } from '@terab/contract';
+import { tsRestHandler, TsRestHandler } from '@ts-rest/nest';
 import type { Request, Response } from 'express';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { Public } from '../common/decorators/public.decorator';
 import { AuthService } from './auth.service';
-import { BackupLoginDto } from './dto/backup-login.dto';
-import { LoginResponseDto } from './dto/login-response.dto';
-import { LoginDto } from './dto/login.dto';
-import { RegisterResponseDto } from './dto/register-response.dto';
-import { RegisterDto } from './dto/register.dto';
-import { UserResponseDto } from './dto/user-response.dto';
 import type { AuthUser } from './types/auth-user.type';
 
-@Controller('api/auth')
+@Controller()
 export class AuthController {
   protected REFRESH_TOKEN_COOKIE = 'refreshToken';
   protected COOKIE_PATH = '/api/auth';
@@ -21,80 +17,91 @@ export class AuthController {
 
   @Public()
   @Throttle({ default: { ttl: 60000, limit: 5 } })
-  @Post('register')
-  @HttpCode(HttpStatus.CREATED)
-  async register(@Body() dto: RegisterDto, @Res({ passthrough: true }) res: Response): Promise<RegisterResponseDto> {
-    const { accessToken, user, backupCodes, rawRefreshToken, refreshTokenExpMs } = await this.authService.register(dto);
-    this.setRefreshTokenCookie(res, rawRefreshToken, refreshTokenExpMs);
-    return { accessToken, user, backupCodes };
-  }
-
-  @Public()
-  @Throttle({ default: { ttl: 60000, limit: 5 } })
-  @Post('login')
-  @HttpCode(HttpStatus.OK)
-  async login(
-    @Body() dto: LoginDto,
-    @Cookies('trustToken') trustToken: string | undefined,
-    @Headers('user-agent') userAgent: string | undefined,
-    @Res({ passthrough: true }) res: Response,
-  ): Promise<LoginResponseDto> {
-    const { response, rawRefreshToken, refreshTokenExpMs } = await this.authService.login(dto, trustToken, userAgent);
-    if (rawRefreshToken && refreshTokenExpMs) {
+  @TsRestHandler(contract.auth.register)
+  handleRegister(@Res({ passthrough: true }) res: Response) {
+    return tsRestHandler(contract.auth.register, async ({ body }) => {
+      const { accessToken, user, backupCodes, rawRefreshToken, refreshTokenExpMs } =
+        await this.authService.register(body);
       this.setRefreshTokenCookie(res, rawRefreshToken, refreshTokenExpMs);
-    }
-    return response;
-  }
-
-  @Public()
-  @Throttle({ default: { ttl: 60000, limit: 5 } })
-  @Post('login/backup')
-  @HttpCode(HttpStatus.OK)
-  async loginWithBackup(
-    @Body() dto: BackupLoginDto,
-    @Res({ passthrough: true }) res: Response,
-  ): Promise<LoginResponseDto> {
-    const { response, rawRefreshToken, refreshTokenExpMs } = await this.authService.loginWithBackupCode(dto);
-    this.setRefreshTokenCookie(res, rawRefreshToken, refreshTokenExpMs);
-    return response;
-  }
-
-  @Public()
-  @Post('2fa/challenge/:id/complete')
-  @HttpCode(HttpStatus.OK)
-  async completeTwoFa(@Param('id') id: string, @Res({ passthrough: true }) res: Response): Promise<LoginResponseDto> {
-    const { response, rawRefreshToken, refreshTokenExpMs } = await this.authService.completeTwoFa(id);
-    this.setRefreshTokenCookie(res, rawRefreshToken, refreshTokenExpMs);
-    return response;
-  }
-
-  @Public()
-  @Post('refresh')
-  @HttpCode(HttpStatus.OK)
-  async refresh(@Req() req: Request, @Res({ passthrough: true }) res: Response): Promise<LoginResponseDto> {
-    const rawRefreshToken = req.cookies?.[this.REFRESH_TOKEN_COOKIE] as string | undefined;
-    const { response, rawRefreshToken: newRt, refreshTokenExpMs } = await this.authService.refresh(rawRefreshToken);
-    this.setRefreshTokenCookie(res, newRt, refreshTokenExpMs);
-    return response;
-  }
-
-  @Public()
-  @Post('logout')
-  @HttpCode(HttpStatus.NO_CONTENT)
-  async logout(@Req() req: Request, @Res({ passthrough: true }) res: Response): Promise<void> {
-    const rawRefreshToken = req.cookies?.[this.REFRESH_TOKEN_COOKIE] as string | undefined;
-    await this.authService.logout(rawRefreshToken);
-    res.clearCookie(this.REFRESH_TOKEN_COOKIE, {
-      httpOnly: true,
-      secure: true,
-      sameSite: 'strict',
-      path: this.COOKIE_PATH,
+      return { status: HttpStatus.CREATED, body: { accessToken, user, backupCodes } };
     });
   }
 
-  @Get('me')
-  async me(@CurrentUser() user: AuthUser): Promise<UserResponseDto> {
-    return this.authService.getCurrentUser(user.userId);
+  @Public()
+  @Throttle({ default: { ttl: 60000, limit: 5 } })
+  @TsRestHandler(contract.auth.login)
+  handleLogin(
+    @Cookies('trustToken') trustToken: string | undefined,
+    @Headers('user-agent') userAgent: string | undefined,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    return tsRestHandler(contract.auth.login, async ({ body }) => {
+      const { response, rawRefreshToken, refreshTokenExpMs } = await this.authService.login(
+        body,
+        trustToken,
+        userAgent,
+      );
+      if (rawRefreshToken && refreshTokenExpMs) {
+        this.setRefreshTokenCookie(res, rawRefreshToken, refreshTokenExpMs);
+      }
+      return { status: HttpStatus.OK, body: response };
+    });
+  }
+
+  @Public()
+  @Throttle({ default: { ttl: 60000, limit: 5 } })
+  @TsRestHandler(contract.auth.loginWithBackup)
+  handleLoginWithBackup(@Res({ passthrough: true }) res: Response) {
+    return tsRestHandler(contract.auth.loginWithBackup, async ({ body }) => {
+      const { response, rawRefreshToken, refreshTokenExpMs } = await this.authService.loginWithBackupCode(body);
+      this.setRefreshTokenCookie(res, rawRefreshToken, refreshTokenExpMs);
+      return { status: HttpStatus.OK, body: response };
+    });
+  }
+
+  @Public()
+  @TsRestHandler(contract.auth.completeTwoFa)
+  handleCompleteTwoFa(@Res({ passthrough: true }) res: Response) {
+    return tsRestHandler(contract.auth.completeTwoFa, async ({ params }) => {
+      const { response, rawRefreshToken, refreshTokenExpMs } = await this.authService.completeTwoFa(params.id);
+      this.setRefreshTokenCookie(res, rawRefreshToken, refreshTokenExpMs);
+      return { status: HttpStatus.OK, body: response };
+    });
+  }
+
+  @Public()
+  @TsRestHandler(contract.auth.refresh)
+  handleRefresh(@Req() req: Request, @Res({ passthrough: true }) res: Response) {
+    return tsRestHandler(contract.auth.refresh, async () => {
+      const rawRefreshToken = req.cookies?.[this.REFRESH_TOKEN_COOKIE] as string | undefined;
+      const { response, rawRefreshToken: newRt, refreshTokenExpMs } = await this.authService.refresh(rawRefreshToken);
+      this.setRefreshTokenCookie(res, newRt, refreshTokenExpMs);
+      return { status: HttpStatus.OK, body: response };
+    });
+  }
+
+  @Public()
+  @TsRestHandler(contract.auth.logout)
+  handleLogout(@Req() req: Request, @Res({ passthrough: true }) res: Response) {
+    return tsRestHandler(contract.auth.logout, async () => {
+      const rawRefreshToken = req.cookies?.[this.REFRESH_TOKEN_COOKIE] as string | undefined;
+      await this.authService.logout(rawRefreshToken);
+      res.clearCookie(this.REFRESH_TOKEN_COOKIE, {
+        httpOnly: true,
+        secure: true,
+        sameSite: 'strict',
+        path: this.COOKIE_PATH,
+      });
+      return { status: HttpStatus.NO_CONTENT, body: undefined };
+    });
+  }
+
+  @TsRestHandler(contract.auth.me)
+  handleMe(@CurrentUser() user: AuthUser) {
+    return tsRestHandler(contract.auth.me, async () => {
+      const result = await this.authService.getCurrentUser(user.userId);
+      return { status: HttpStatus.OK, body: result };
+    });
   }
 
   private setRefreshTokenCookie(res: Response, rawToken: string, maxAgeMs: number): void {

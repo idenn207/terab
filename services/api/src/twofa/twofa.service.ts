@@ -2,7 +2,6 @@ import { Injectable } from '@nestjs/common';
 import { ApiException } from '@terab/common';
 import { TokenService } from '@terab/core';
 import { randomInt } from 'node:crypto';
-import { UserResponseDto } from '../auth/dto/user-response.dto';
 import { ChallengeStatusResponseDto } from './dto/challenge-status-response.dto';
 import { TwoFaRepository } from './twofa.repository';
 
@@ -40,10 +39,11 @@ export class TwoFaService {
       const user = await this.twoFaRepository.findUserWithPermissionsById(challenge.userId);
       if (!user) throw new ApiException('TWO_FA_CHALLENGE_NOT_FOUND');
       const accessToken = this.tokenService.generateAccessToken(user.id, user.username, user.permissions);
-      return ChallengeStatusResponseDto.approved(
-        accessToken,
-        new UserResponseDto(user.id, user.username, user.nickname),
-      );
+      return ChallengeStatusResponseDto.approved(accessToken, {
+        id: user.id,
+        username: user.username,
+        nickname: user.nickname,
+      });
     }
 
     return ChallengeStatusResponseDto.denied();

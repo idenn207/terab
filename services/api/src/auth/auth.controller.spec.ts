@@ -1,72 +1,98 @@
+import { ExecutionContext, HttpStatus, INestApplication } from '@nestjs/common';
+import { APP_GUARD } from '@nestjs/core';
 import { Test } from '@nestjs/testing';
+import { mockAuthUser, mockUser } from '@terab/test';
+import { TsRestModule } from '@ts-rest/nest';
+import request from 'supertest';
 import { AuthController } from './auth.controller.js';
 import { AuthService } from './auth.service.js';
-import { LoginResponseDto } from './dto/login-response.dto.js';
-import { UserResponseDto } from './dto/user-response.dto.js';
 
-const mockResponse = () => {
-  const res: any = {};
-  res.cookie = jest.fn().mockReturnValue(res);
-  res.clearCookie = jest.fn().mockReturnValue(res);
-  return res;
-};
-
-const loginResult = {
-  response: LoginResponseDto.authenticated('at.token', new UserResponseDto('uid', 'user1', 'User')),
+const authenticatedResult = {
+  response: { status: 'AUTHENTICATED' as const, accessToken: 'at.token', user: mockUser },
   rawRefreshToken: 'raw.rt',
   refreshTokenExpMs: 604800000,
 };
 
 const mockAuthService = {
-  login: jest.fn().mockResolvedValue(loginResult),
-  loginWithBackupCode: jest.fn().mockResolvedValue(loginResult),
-  completeTwoFa: jest.fn().mockResolvedValue(loginResult),
-  refresh: jest.fn().mockResolvedValue(loginResult),
+  register: jest.fn().mockResolvedValue({
+    accessToken: 'at.token',
+    user: mockAuthUser,
+    backupCodes: ['code1', 'code2'],
+    rawRefreshToken: 'raw.rt',
+    refreshTokenExpMs: 604800000,
+  }),
+  login: jest.fn().mockResolvedValue(authenticatedResult),
+  loginWithBackupCode: jest.fn().mockResolvedValue(authenticatedResult),
+  completeTwoFa: jest.fn().mockResolvedValue(authenticatedResult),
+  refresh: jest.fn().mockResolvedValue(authenticatedResult),
   logout: jest.fn().mockResolvedValue(undefined),
-  getCurrentUser: jest.fn().mockResolvedValue(new UserResponseDto('uid', 'user1', 'User')),
+  getCurrentUser: jest.fn().mockResolvedValue(mockUser),
 };
 
 describe('AuthController', () => {
-  let controller: AuthController;
+  let app: INestApplication;
 
-  beforeEach(async () => {
+  beforeAll(async () => {
     const module = await Test.createTestingModule({
+      imports: [TsRestModule.register({ isGlobal: true })],
       controllers: [AuthController],
-      providers: [{ provide: AuthService, useValue: mockAuthService }],
+      providers: [
+        { provide: AuthService, useValue: mockAuthService },
+        {
+          provide: APP_GUARD,
+          useValue: {
+            canActivate: (ctx: ExecutionContext) => {
+              ctx.switchToHttp().getRequest().user = mockUser;
+              return true;
+            },
+          },
+        },
+      ],
     }).compile();
 
-    controller = module.get(AuthController);
-    jest.clearAllMocks();
+    app = module.createNestApplication();
+    await app.init();
   });
 
-  it('POST /login — RT 쿠키를 설정하고 LoginResponseDto를 반환한다', async () => {
-    const res = mockResponse();
-    const result = await controller.login({ username: 'u', password: 'p' } as any, undefined, undefined, res);
-    expect(res.cookie).toHaveBeenCalledWith('refreshToken', 'raw.rt', expect.objectContaining({ httpOnly: true }));
-    expect(result.status).toBe('AUTHENTICATED');
+  afterAll(() => app.close());
+
+  beforeEach(() => jest.clearAllMocks());
+
+  it('POST /auth/login — RT 쿠키를 설정하고 AUTHENTICATED 응답을 반환한다', async () => {
+    const res = await request(app.getHttpServer())
+      .post('/auth/login')
+      .send({ username: 'user1', password: 'pass' })
+      .expect(HttpStatus.OK);
+
+    expect(res.headers['set-cookie']).toBeDefined();
+    expect(res.headers['set-cookie']).toEqual(expect.arrayContaining([expect.stringMatching(/refreshToken=raw.rt;/)]));
+    expect(res.body.status).toBe('AUTHENTICATED');
+    expect(res.body.accessToken).toBe('at.token');
   });
 
-  it('POST /logout — RT 쿠키를 삭제한다', async () => {
-    const res = mockResponse();
-    const mockReq = { cookies: { refreshToken: 'raw.rt' } } as any;
-    await controller.logout(mockReq, res);
-    expect(res.clearCookie).toHaveBeenCalledWith('refreshToken', expect.objectContaining({ path: '/api/auth' }));
+  it('POST /auth/logout — RT 쿠키를 삭제하고 204를 반환한다', async () => {
+    const res = await request(app.getHttpServer()).post('/auth/logout').send({}).expect(HttpStatus.NO_CONTENT);
+
+    expect(mockAuthService.logout).toHaveBeenCalled();
+    expect(res.get('Set-Cookie')).toEqual(expect.arrayContaining([expect.stringMatching(/refreshToken=;/)]));
   });
 
-  it('POST /2fa/challenge/:id/complete — RT 쿠키를 설정하고 LoginResponseDto를 반환한다', async () => {
-    const res = mockResponse();
-    const result = await controller.completeTwoFa('challenge-id', res);
-    expect(mockAuthService.completeTwoFa).toHaveBeenCalledWith('challenge-id');
-    expect(res.cookie).toHaveBeenCalledWith('refreshToken', 'raw.rt', expect.objectContaining({ httpOnly: true }));
-    expect(result.status).toBe('AUTHENTICATED');
+  it('POST /auth/2fa/challenge/:id/complete — RT 쿠키를 설정하고 AUTHENTICATED 응답을 반환한다', async () => {
+    const challengeId = 'challenge-id';
+    const res = await request(app.getHttpServer())
+      .post(`/auth/2fa/challenge/${challengeId}/complete`)
+      .send({})
+      .expect(HttpStatus.OK);
+
+    expect(mockAuthService.completeTwoFa).toHaveBeenCalledWith(challengeId);
+    expect(res.headers['set-cookie']).toBeDefined();
+    expect(res.headers['set-cookie']).toEqual(expect.arrayContaining([expect.stringMatching(/refreshToken=raw.rt/)]));
+    expect(res.body.status).toBe('AUTHENTICATED');
   });
 
-  it('GET /me — UserResponseDto를 반환한다', async () => {
-    const result = await controller.me({
-      userId: 'uid',
-      username: 'user1',
-      permissions: [],
-    });
-    expect(result.id).toBe('uid');
+  it('GET /auth/me — 현재 사용자를 반환한다', async () => {
+    const res = await request(app.getHttpServer()).get('/auth/me').expect(HttpStatus.OK);
+
+    expect(res.body.id).toBe(mockUser.id);
   });
 });

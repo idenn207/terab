@@ -1,7 +1,9 @@
 import { ConflictException, Injectable, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { ApiException } from '@terab/common';
+import { contract } from '@terab/contract';
 import { TokenService } from '@terab/core';
+import { ServerInferRequest, ServerInferResponseBody } from '@ts-rest/core';
 import bcrypt from 'bcryptjs';
 import { randomBytes } from 'node:crypto';
 import { DeviceService } from '../device/device.service.js';
@@ -10,12 +12,6 @@ import { TrustedDeviceService } from '../trusted-device/trusted-device.service.j
 import { PushChallengePublisher } from '../twofa/push-challenge.publisher.js';
 import { TwoFaService } from '../twofa/twofa.service.js';
 import { AuthRepository, UserWithPermissions } from './auth.repository.js';
-import { BackupLoginDto } from './dto/backup-login.dto.js';
-import { LoginResponseDto } from './dto/login-response.dto.js';
-import { LoginDto } from './dto/login.dto.js';
-import { RegisterResponseDto } from './dto/register-response.dto.js';
-import { RegisterDto } from './dto/register.dto.js';
-import { UserResponseDto } from './dto/user-response.dto.js';
 
 interface AuthTokens {
   accessToken: string;
@@ -45,14 +41,16 @@ export class AuthService implements OnModuleInit {
   // ─── Register ────────────────────────────────────────────────────────
 
   async register(
-    dto: RegisterDto,
-  ): Promise<RegisterResponseDto & Pick<AuthTokens, 'rawRefreshToken' | 'refreshTokenExpMs'>> {
-    await this.invitationService.validateOrThrow(dto.token);
+    data: ServerInferRequest<typeof contract.auth.register>['body'],
+  ): Promise<
+    ServerInferResponseBody<typeof contract.auth.register> & Pick<AuthTokens, 'rawRefreshToken' | 'refreshTokenExpMs'>
+  > {
+    await this.invitationService.validateOrThrow(data.token);
 
     const userRole = await this.authRepository.findRoleByName('USER');
     if (!userRole) throw new Error('USER 역할 없음 - 마이그레이션 실행 여부를 확인하세요');
 
-    const pepperedPassword = this.tokenService.pepperPassword(dto.password);
+    const pepperedPassword = this.tokenService.pepperPassword(data.password);
     const hashedPassword = await bcrypt.hash(pepperedPassword, this.BCRYPT_ROUNDS);
 
     const rawCodes = this.generateBackupCodes();
@@ -61,12 +59,12 @@ export class AuthService implements OnModuleInit {
     let newUser: { id: string };
     try {
       newUser = await this.authRepository.registerUser({
-        username: dto.username,
-        nickname: dto.nickname,
+        username: data.username,
+        nickname: data.nickname,
         password: hashedPassword,
         roleId: userRole.id,
         codeHashes,
-        invitationToken: dto.token,
+        invitationToken: data.token,
       });
     } catch (err) {
       if (err instanceof ConflictException) throw new ApiException('INVITATION_ALREADY_USED');
@@ -81,7 +79,11 @@ export class AuthService implements OnModuleInit {
 
     return {
       accessToken: tokens.accessToken,
-      user: new UserResponseDto(newUser.id, dto.username, dto.nickname),
+      user: {
+        id: newUser.id,
+        nickname: data.username,
+        username: data.nickname,
+      },
       backupCodes: rawCodes,
       rawRefreshToken: tokens.rawRefreshToken,
       refreshTokenExpMs: tokens.refreshTokenExpMs,
@@ -91,26 +93,31 @@ export class AuthService implements OnModuleInit {
   // ─── Login ───────────────────────────────────────────────────────────
 
   async login(
-    dto: LoginDto,
+    data: ServerInferRequest<typeof contract.auth.login>['body'],
     trustToken: string | undefined,
     userAgent: string | undefined,
-  ): Promise<{
-    response: LoginResponseDto;
-    rawRefreshToken?: string;
-    refreshTokenExpMs?: number;
-  }> {
-    const user = await this.authRepository.findUserWithPermissionsByUsername(dto.username);
+  ): Promise<
+    {
+      response: ServerInferResponseBody<typeof contract.auth.login>;
+    } & Partial<Pick<AuthTokens, 'rawRefreshToken' | 'refreshTokenExpMs'>>
+  > {
+    const user = await this.authRepository.findUserWithPermissionsByUsername(data.username);
     if (!user) throw new ApiException('INVALID_CREDENTIALS');
-    await this.validateCredentials(user, dto.password);
+    await this.validateCredentials(user, data.password);
 
     // 신뢰기기 쿠키 유효 시 2FA 스킵
     if (trustToken && (await this.trustedDeviceService.verify(trustToken, user.id))) {
       const tokens = await this.issueTokenPair(user);
       return {
-        response: LoginResponseDto.authenticated(
-          tokens.accessToken,
-          new UserResponseDto(user.id, user.username, user.nickname),
-        ),
+        response: {
+          status: 'AUTHENTICATED',
+          accessToken: tokens.accessToken,
+          user: {
+            id: user.id,
+            username: user.username,
+            nickname: user.nickname,
+          },
+        },
         rawRefreshToken: tokens.rawRefreshToken,
         refreshTokenExpMs: tokens.refreshTokenExpMs,
       };
@@ -121,10 +128,15 @@ export class AuthService implements OnModuleInit {
     if (pushTokens.length === 0) {
       const tokens = await this.issueTokenPair(user);
       return {
-        response: LoginResponseDto.authenticated(
-          tokens.accessToken,
-          new UserResponseDto(user.id, user.username, user.nickname),
-        ),
+        response: {
+          status: 'AUTHENTICATED',
+          accessToken: tokens.accessToken,
+          user: {
+            id: user.id,
+            username: user.username,
+            nickname: user.nickname,
+          },
+        },
         rawRefreshToken: tokens.rawRefreshToken,
         refreshTokenExpMs: tokens.refreshTokenExpMs,
       };
@@ -145,46 +157,60 @@ export class AuthService implements OnModuleInit {
     );
 
     return {
-      response: LoginResponseDto.twoFactorRequired(challenge.id, challenge.options.split(','), challenge.expiresAt),
+      response: {
+        status: '2FA_REQUIRED',
+        challengeId: challenge.id,
+        options: challenge.options.split(','),
+        expiresAt: challenge.expiresAt,
+      },
     };
   }
 
-  async completeTwoFa(challengeId: string): Promise<{
-    response: LoginResponseDto;
-    rawRefreshToken: string;
-    refreshTokenExpMs: number;
-  }> {
+  async completeTwoFa(challengeId: string): Promise<
+    {
+      response: ServerInferResponseBody<typeof contract.auth.login>;
+    } & Pick<AuthTokens, 'rawRefreshToken' | 'refreshTokenExpMs'>
+  > {
     const userId = await this.twoFaService.claimApprovedChallenge(challengeId);
     const user = await this.authRepository.findUserWithPermissionsById(userId);
     if (!user) throw new ApiException('TWO_FA_CHALLENGE_NOT_FOUND');
     const tokens = await this.issueTokenPair(user);
     return {
-      response: LoginResponseDto.authenticated(
-        tokens.accessToken,
-        new UserResponseDto(user.id, user.username, user.nickname),
-      ),
+      response: {
+        status: 'AUTHENTICATED',
+        accessToken: tokens.accessToken,
+        user: {
+          id: user.id,
+          username: user.username,
+          nickname: user.nickname,
+        },
+      },
       rawRefreshToken: tokens.rawRefreshToken,
       refreshTokenExpMs: tokens.refreshTokenExpMs,
     };
   }
 
-  async loginWithBackupCode(dto: BackupLoginDto): Promise<{
-    response: LoginResponseDto;
-    rawRefreshToken: string;
-    refreshTokenExpMs: number;
-  }> {
-    const user = await this.authRepository.findUserWithPermissionsByUsername(dto.username);
+  async loginWithBackupCode(data: ServerInferRequest<typeof contract.auth.loginWithBackup>['body']): Promise<
+    {
+      response: ServerInferResponseBody<typeof contract.auth.login>;
+    } & Pick<AuthTokens, 'rawRefreshToken' | 'refreshTokenExpMs'>
+  > {
+    const user = await this.authRepository.findUserWithPermissionsByUsername(data.username);
     if (!user) throw new ApiException('INVALID_CREDENTIALS');
-    await this.validateCredentials(user, dto.password);
-    await this.verifyAndConsumeBackupCode(user.id, dto.backupCode);
+    await this.validateCredentials(user, data.password);
+    await this.verifyAndConsumeBackupCode(user.id, data.backupCode);
 
     const tokens = await this.issueTokenPair(user);
-    const response = LoginResponseDto.authenticated(
-      tokens.accessToken,
-      new UserResponseDto(user.id, user.username, user.nickname),
-    );
     return {
-      response,
+      response: {
+        status: 'AUTHENTICATED',
+        accessToken: tokens.accessToken,
+        user: {
+          id: user.id,
+          username: user.username,
+          nickname: user.nickname,
+        },
+      },
       rawRefreshToken: tokens.rawRefreshToken,
       refreshTokenExpMs: tokens.refreshTokenExpMs,
     };
@@ -192,11 +218,11 @@ export class AuthService implements OnModuleInit {
 
   // ─── Refresh ─────────────────────────────────────────────────────────
 
-  async refresh(rawRefreshToken: string | undefined): Promise<{
-    response: LoginResponseDto;
-    rawRefreshToken: string;
-    refreshTokenExpMs: number;
-  }> {
+  async refresh(rawRefreshToken: string | undefined): Promise<
+    {
+      response: ServerInferResponseBody<typeof contract.auth.login>;
+    } & Pick<AuthTokens, 'rawRefreshToken' | 'refreshTokenExpMs'>
+  > {
     if (!rawRefreshToken) throw new ApiException('REFRESH_TOKEN_INVALID');
 
     const now = new Date();
@@ -215,12 +241,16 @@ export class AuthService implements OnModuleInit {
     if (!user) throw new ApiException('REFRESH_TOKEN_INVALID');
 
     const tokens = await this.issueTokenPair(user);
-    const response = LoginResponseDto.authenticated(
-      tokens.accessToken,
-      new UserResponseDto(user.id, user.username, user.nickname),
-    );
     return {
-      response,
+      response: {
+        status: 'AUTHENTICATED',
+        accessToken: tokens.accessToken,
+        user: {
+          id: user.id,
+          username: user.username,
+          nickname: user.nickname,
+        },
+      },
       rawRefreshToken: tokens.rawRefreshToken,
       refreshTokenExpMs: tokens.refreshTokenExpMs,
     };
@@ -240,10 +270,14 @@ export class AuthService implements OnModuleInit {
 
   // ─── Me ──────────────────────────────────────────────────────────────
 
-  async getCurrentUser(userId: string): Promise<UserResponseDto> {
+  async getCurrentUser(userId: string): Promise<ServerInferResponseBody<typeof contract.auth.me>> {
     const user = await this.authRepository.findUserWithPermissionsById(userId);
     if (!user) throw new ApiException('INVALID_CREDENTIALS');
-    return new UserResponseDto(user.id, user.username, user.nickname);
+    return {
+      id: user.id,
+      username: user.username,
+      nickname: user.nickname,
+    };
   }
 
   // ─── 내부 인증 로직 ──────────────────────────────────────────────────
