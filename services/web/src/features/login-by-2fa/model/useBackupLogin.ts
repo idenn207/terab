@@ -1,9 +1,8 @@
 import { useUserStore } from '@/entities';
-import type { AxiosError } from 'axios';
-import { useState } from 'react';
+import { parseApiError } from '@/shared/api';
 import { useNavigate } from 'react-router-dom';
-import { twoFactorApi } from '../api/twoFactorApi';
-import type { ApiErrorCode } from './twoFactorErrors';
+import { useLoginWithBackupMutation } from '../api/mutation';
+import { TWO_FACTOR_ERROR_MESSAGES, type ApiErrorCode } from './twoFactorErrors';
 
 export interface BackupLoginForm {
   username: string;
@@ -11,35 +10,28 @@ export interface BackupLoginForm {
   backupCode: string;
 }
 
-interface BackupLoginError {
-  code: ApiErrorCode;
-  message: string;
-}
-
 export function useBackupLogin() {
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<BackupLoginError | null>(null);
-  const resetError = () => setError(null);
   const navigate = useNavigate();
   const setAuth = useUserStore((s) => s.setAuth);
+  const mutation = useLoginWithBackupMutation();
 
-  const login = async (form: BackupLoginForm) => {
-    setIsLoading(true);
-    setError(null);
-    try {
-      const data = await twoFactorApi.backupLogin(form);
-      setAuth(data.accessToken, data.user);
-      navigate('/drive');
-    } catch (err) {
-      const { code, message } = (err as AxiosError<BackupLoginError>)?.response?.data ?? {};
-      setError({
-        code: code ?? 'UNKNOWN',
-        message: message ?? '로그인에 실패했습니다.',
-      });
-    } finally {
-      setIsLoading(false);
-    }
+  const loginWithBackup = async (form: BackupLoginForm) => {
+    mutation.mutate(
+      { body: form },
+      {
+        onSuccess: (response) => {
+          if (response.status !== 200) return;
+          const data = response.body;
+          if (data.status === 'AUTHENTICATED') {
+            setAuth(data.accessToken, data.user);
+            navigate('/drive');
+          }
+        },
+      },
+    );
   };
 
-  return { login, isLoading, error, resetError };
+  const apiError = mutation.isError ? parseApiError<ApiErrorCode>(mutation.error, { code: 'UNKNOWN', message: TWO_FACTOR_ERROR_MESSAGES.UNKNOWN }) : null;
+
+  return { loginWithBackup, isLoading: mutation.isPending, apiError };
 }

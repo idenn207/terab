@@ -1,32 +1,35 @@
-import { Body, Controller, Delete, Get, Headers, HttpCode, HttpStatus, Param, Post } from '@nestjs/common';
+import { Controller, Headers, HttpStatus } from '@nestjs/common';
 import { CurrentUser } from '@terab/common';
+import { contract } from '@terab/contract';
+import { tsRestHandler, TsRestHandler } from '@ts-rest/nest';
 import type { AuthUser } from '../auth/types/auth-user.type';
 import { DeviceService } from './device.service';
-import { DeviceResponseDto } from './dto/device-response.dto';
-import { RegisterDeviceDto } from './dto/register-device.dto';
 
-@Controller('api/devices')
+@Controller()
 export class DeviceController {
   constructor(private readonly deviceService: DeviceService) {}
 
-  @Post()
-  @HttpCode(HttpStatus.NO_CONTENT)
-  async register(
-    @Body() dto: RegisterDeviceDto,
-    @CurrentUser() user: AuthUser,
-    @Headers('user-agent') userAgent?: string,
-  ): Promise<void> {
-    await this.deviceService.register(user.userId, dto.pushToken, userAgent);
+  @TsRestHandler(contract.device.register)
+  handleRegister(@CurrentUser() user: AuthUser, @Headers('user-agent') userAgent?: string) {
+    return tsRestHandler(contract.device.register, async ({ body }) => {
+      await this.deviceService.register(user.userId, body.pushToken, userAgent);
+      return { status: HttpStatus.NO_CONTENT, body: undefined };
+    });
   }
 
-  @Get()
-  async findAll(@CurrentUser() user: AuthUser): Promise<DeviceResponseDto[]> {
-    return this.deviceService.findAll(user.userId);
+  @TsRestHandler(contract.device.list)
+  handleList(@CurrentUser() user: AuthUser) {
+    return tsRestHandler(contract.device.list, async () => {
+      const result = await this.deviceService.findAll(user.userId);
+      return { status: HttpStatus.OK, body: result };
+    });
   }
 
-  @Delete(':id')
-  @HttpCode(HttpStatus.NO_CONTENT)
-  async remove(@Param('id') id: string, @CurrentUser() user: AuthUser): Promise<void> {
-    await this.deviceService.remove(id, user.userId);
+  @TsRestHandler(contract.device.remove)
+  handleRemove(@CurrentUser() user: AuthUser) {
+    return tsRestHandler(contract.device.remove, async ({ params }) => {
+      await this.deviceService.remove(params.id, user.userId);
+      return { status: HttpStatus.NO_CONTENT, body: undefined };
+    });
   }
 }

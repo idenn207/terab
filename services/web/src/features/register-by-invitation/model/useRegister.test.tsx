@@ -1,4 +1,5 @@
 import { useUserStore } from '@/entities';
+import { makeQueryWrapper } from '@tests/wrappers';
 import { act, renderHook } from '@testing-library/react';
 import { server } from '@tests/mocks';
 import { http, HttpResponse } from 'msw';
@@ -25,7 +26,7 @@ describe('useRegister', () => {
     );
 
     const onSuccess = vi.fn();
-    const { result } = renderHook(() => useRegister('test-token', onSuccess));
+    const { result } = renderHook(() => useRegister('test-token', onSuccess), { wrapper: makeQueryWrapper() });
     await act(() =>
       result.current.submit({
         username: 'newuser',
@@ -40,11 +41,11 @@ describe('useRegister', () => {
     expect(onSuccess).toHaveBeenCalledWith(mockBackupCodes);
   });
 
-  it('USERNAME_TAKEN 응답 시 error.code를 설정한다', async () => {
+  it('USERNAME_TAKEN 응답 시 apiError.code를 설정한다', async () => {
     server.use(http.post('/api/auth/register', () => HttpResponse.json({ code: 'USERNAME_TAKEN', message: '이미 사용 중인 아이디입니다.' }, { status: 409 })));
 
     const onSuccess = vi.fn();
-    const { result } = renderHook(() => useRegister('test-token', onSuccess));
+    const { result } = renderHook(() => useRegister('test-token', onSuccess), { wrapper: makeQueryWrapper() });
     await act(() =>
       result.current.submit({
         username: 'taken',
@@ -54,7 +55,7 @@ describe('useRegister', () => {
       }),
     );
 
-    expect(result.current.error?.code).toBe('USERNAME_TAKEN');
+    expect(result.current.apiError?.code).toBe('USERNAME_TAKEN');
     expect(useUserStore.getState().accessToken).toBeNull();
     expect(onSuccess).not.toHaveBeenCalled();
   });

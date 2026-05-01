@@ -1,3 +1,4 @@
+export * from './api-provider';
 export * from './AppShell';
 export * from './router';
-export * from './theme';
+export * from './theme-provider';

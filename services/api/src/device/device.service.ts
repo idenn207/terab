@@ -1,7 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import { ApiException } from '@terab/common';
+import { contract } from '@terab/contract';
+import { ServerInferResponseBody } from '@ts-rest/core';
 import { DeviceRepository } from './device.repository';
-import { DeviceResponseDto } from './dto/device-response.dto';
 
 @Injectable()
 export class DeviceService {
@@ -11,7 +12,7 @@ export class DeviceService {
     await this.deviceRepository.upsert(userId, pushToken, userAgent);
   }
 
-  async findAll(userId: string): Promise<DeviceResponseDto[]> {
+  async findAll(userId: string): Promise<ServerInferResponseBody<typeof contract.device.list>> {
     const rows = await this.deviceRepository.findByUserId(userId);
     return rows.map((r) => ({ ...r, userAgent: r.userAgent ?? undefined }));
   }

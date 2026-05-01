@@ -1,7 +1,7 @@
 import { useUserStore, type User } from '@/entities/user';
-import axios from 'axios';
 import { useEffect, useState } from 'react';
 import { Navigate } from 'react-router-dom';
+import { axiosBasic } from '../api';
 
 interface LoginResponse {
   accessToken: string;
@@ -14,7 +14,7 @@ export function PrivateRoute({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (accessToken) return;
-    axios
+    axiosBasic
       .post<LoginResponse>('/api/auth/refresh', {}, { withCredentials: true })
       .then(({ data }) => setAuth(data.accessToken, data.user))
       .catch(() => {})

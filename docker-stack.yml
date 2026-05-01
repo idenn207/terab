@@ -56,9 +56,8 @@ services:
     image: redis:7
     command: redis-server /usr/local/etc/redis/redis.conf
     volumes:
-      # - /volume2/docker/terab/volumes/redis:/data
       - redis_data:/data
-      - /volume2/docker/terab/redis.prod.conf:/usr/local/etc/redis/redis.conf:ro
+      - /volume3/docker/terab/redis.prod.conf:/usr/local/etc/redis/redis.conf:ro
     ports:
       - '6379:6379'
     networks:
@@ -171,7 +170,7 @@ services:
     ports:
       - '8080:80'
     volumes:
-      - /volume2/docker/terab/services/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - /volume3/docker/terab/services/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
     networks:
       - terab-net
     healthcheck:
@@ -212,7 +211,7 @@ services:
       AGENT_CLUSTER_ADDR: tasks.portainer_agent
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
-      - /volume2/@docker/volumes:/var/lib/docker/volumes
+      - /volume3/@docker/volumes:/var/lib/docker/volumes
     networks:
       - terab-net
     deploy:

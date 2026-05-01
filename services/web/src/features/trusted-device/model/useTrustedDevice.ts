@@ -1,7 +1,32 @@
-import { trustedDeviceApi } from '../api/trustedDeviceApi';
+import { useQueryClient } from '@tanstack/react-query';
+import { contract } from '@terab/contract';
+import { useRegisterTrustedDeviceMutation, useRevokeTrustedDeviceMutation } from '../api/mutation';
 
 export function useTrustedDevice() {
-  const register = () => trustedDeviceApi.register();
-  const revoke = (id: string) => trustedDeviceApi.revoke(id);
-  return { register, revoke };
+  const queryClient = useQueryClient();
+  const registerMutation = useRegisterTrustedDeviceMutation();
+  const revokeMutation = useRevokeTrustedDeviceMutation();
+
+  const register = () => {
+    registerMutation.mutate(
+      { body: {} },
+      {
+        onSuccess: () => {
+          queryClient.invalidateQueries({ queryKey: [contract.trustedDevice.list] });
+        },
+      },
+    );
+  };
+  const revoke = (id: string) => {
+    revokeMutation.mutate(
+      { params: { id }, body: {} },
+      {
+        onSuccess: () => {
+          queryClient.invalidateQueries({ queryKey: [contract.trustedDevice.list] });
+        },
+      },
+    );
+  };
+
+  return { register, revoke, isRegistering: registerMutation.isPending, isRevoking: revokeMutation.isPending };
 }

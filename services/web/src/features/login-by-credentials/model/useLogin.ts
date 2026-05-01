@@ -1,50 +1,44 @@
 import { useUserStore } from '@/entities';
-import { AxiosError } from 'axios';
-import { useState } from 'react';
+import { parseApiError } from '@/shared/api';
 import { useNavigate } from 'react-router-dom';
-import { loginApi } from '../api/loginApi';
+import { useLoginMutation } from '../api/mutation';
 import type { ApiErrorCode } from './loginErrors';
+import { LOGIN_ERROR_MESSAGES } from './loginErrors';
 
 export interface LoginCredentials {
   username: string;
   password: string;
 }
 
-interface LoginError {
-  code: ApiErrorCode;
-  message: string;
-}
-
 export function useLogin() {
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<LoginError | null>(null);
-  const resetError = () => setError(null);
-  const navigate = useNavigate();
   const setAuth = useUserStore((s) => s.setAuth);
+  const navigate = useNavigate();
+  const mutation = useLoginMutation();
 
   const login = async (credentials: LoginCredentials) => {
-    setIsLoading(true);
-    setError(null);
-    try {
-      const data = await loginApi.login(credentials);
-      if (data.status === 'AUTHENTICATED') {
-        setAuth(data.accessToken!, data.user!);
-        navigate('/drive');
-      } else if (data.status === '2FA_REQUIRED') {
-        navigate(`/login/2fa?id=${data.challengeId}`);
-      } else {
-        // ...something else
-      }
-    } catch (err: unknown) {
-      const { code, message } = (err as AxiosError<LoginError>)?.response?.data ?? {};
-      setError({
-        code: code ?? 'UNKNOWN',
-        message: message ?? '로그인에 실패했습니다.',
-      });
-    } finally {
-      setIsLoading(false);
-    }
+    mutation.mutate(
+      { body: credentials },
+      {
+        onSuccess: (response) => {
+          if (response.status !== 200) return;
+          const data = response.body;
+          if (data.status === 'AUTHENTICATED') {
+            setAuth(data.accessToken, data.user);
+            navigate('/drive');
+          } else if (data.status === '2FA_REQUIRED') {
+            navigate(`/login/2fa?id=${data.challengeId}`);
+          }
+        },
+      },
+    );
   };
 
-  return { login, isLoading, error, resetError };
+  const apiError = mutation.isError ? parseApiError<ApiErrorCode>(mutation.error, { code: 'UNKNOWN', message: LOGIN_ERROR_MESSAGES.UNKNOWN }) : null;
+
+  return {
+    login,
+    apiError,
+    isLoading: mutation.isPending,
+    resetError: mutation.reset,
+  };
 }

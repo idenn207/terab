@@ -1,13 +1,19 @@
 import { useUserStore } from '@/entities';
 import axios, { AxiosError, type InternalAxiosRequestConfig } from 'axios';
 
-/** accessToken 으로 요철 */
-const axiosUser = axios.create({
+/** accessToken 없이 일반 요청 */
+const axiosBasic = axios.create({
   baseURL: '/api',
   withCredentials: true,
 });
 
-axiosUser.interceptors.request.use((config) => {
+/** accessToken 으로 요청 + refreshToken 검증 */
+const axiosAuth = axios.create({
+  baseURL: '/api',
+  withCredentials: true,
+});
+
+axiosAuth.interceptors.request.use((config) => {
   const token = useUserStore.getState().accessToken;
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
@@ -29,7 +35,7 @@ const processQueue = (error: unknown, token: string | null = null) => {
   failedQueue = [];
 };
 
-axiosUser.interceptors.response.use(
+axiosAuth.interceptors.response.use(
   (response) => response,
   async (error: AxiosError | unknown) => {
     // AxiosError
@@ -45,7 +51,7 @@ axiosUser.interceptors.response.use(
           failedQueue.push({ resolve, reject });
         }).then((token) => {
           originalRequest.headers.Authorization = `Bearer ${token}`;
-          return axiosUser(originalRequest);
+          return axiosAuth(originalRequest);
         });
       }
 
@@ -53,11 +59,11 @@ axiosUser.interceptors.response.use(
       isRefreshing = true;
 
       try {
-        const { data } = await axios.post<{ accessToken: string; user: unknown }>('/api/auth/refresh', {}, { withCredentials: true });
+        const { data } = await axiosBasic.post<{ accessToken: string; user: unknown }>('/auth/refresh', {}, { withCredentials: true });
         useUserStore.getState().setAccessToken(data.accessToken);
         processQueue(null, data.accessToken);
         originalRequest.headers.Authorization = `Bearer ${data.accessToken}`;
-        return axiosUser(originalRequest);
+        return axiosAuth(originalRequest);
       } catch (refreshError) {
         processQueue(refreshError, null);
         useUserStore.getState().clearAuth();
@@ -74,4 +80,4 @@ axiosUser.interceptors.response.use(
   },
 );
 
-export { axiosUser };
+export { axiosAuth, axiosBasic };

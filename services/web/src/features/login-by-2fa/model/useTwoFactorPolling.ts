@@ -1,62 +1,67 @@
+import { useUserStore } from '@/entities';
 import { useEffect, useRef, useState } from 'react';
-import { twoFactorApi, type ChallengeStatus } from '../api/twoFactorApi';
+import { useNavigate } from 'react-router-dom';
+import { useCompleteTwoFaMutation, useResendChallengeMutation } from '../api/mutation';
+import { useChallengeStatusQuery } from '../api/query';
 
-const POLL_INTERVAL_MS = 3000; // 3초마다
-
-type PollStatus = 'polling' | 'approved' | 'denied';
-
-export interface ApprovedData {
-  accessToken: string;
-  user: { id: string; username: string; nickname: string };
-}
-
-export function useTwoFactorPolling(initialChallengeId: string) {
+export function useTwoFactorPolling(initialChallengeId: string, onAuthenticated?: () => void) {
   const [challengeId, setChallengeId] = useState(initialChallengeId);
-  const [options, setOptions] = useState<string[]>([]);
-  const [correctNum, setCorrectNum] = useState<string>('');
-  const [remainingSeconds, setRemainingSeconds] = useState(60);
-  const [pollStatus, setPollStatus] = useState<PollStatus>('polling');
-  const [approvedData, setApprovedData] = useState<ApprovedData | null>(null);
-  const pollRef = useRef<ReturnType<typeof setInterval>>(0);
+  const [pollEnabled, setPollEnabled] = useState(true);
+  const setAuth = useUserStore((s) => s.setAuth);
+  const navigate = useNavigate();
+  const resendMutation = useResendChallengeMutation();
+  const completeMutation = useCompleteTwoFaMutation();
+  const onAuthenticatedRef = useRef(onAuthenticated);
+  onAuthenticatedRef.current = onAuthenticated;
+
+  const { data } = useChallengeStatusQuery(challengeId, pollEnabled);
 
   useEffect(() => {
-    const poll = async () => {
-      try {
-        const data: ChallengeStatus = await twoFactorApi.getStatus(challengeId);
-        if (data.status === 'PENDING') {
-          setOptions(data.options);
-          setCorrectNum(data.correctNum);
-          setRemainingSeconds(data.remainingSeconds);
-        } else if (data.status === 'APPROVED') {
-          clearInterval(pollRef.current);
-          try {
-            const completed = await twoFactorApi.complete(challengeId);
-            setApprovedData({ accessToken: completed.accessToken, user: completed.user });
-            setPollStatus('approved');
-          } catch {
-            setPollStatus('denied');
-          }
-        } else {
-          setPollStatus('denied');
-          clearInterval(pollRef.current);
-        }
-      } catch {
-        // 네트워크 일시 오류 무시 - 다음 폴링에서 재시도
-      }
-    };
+    if (!data || data.status !== 200) return;
+    const body = data.body;
 
-    poll();
-    pollRef.current = setInterval(poll, POLL_INTERVAL_MS);
-    return () => clearInterval(pollRef.current);
-  }, [challengeId]);
+    if (body.status === 'DENIED' || body.status === 'EXPIRED') {
+      setPollEnabled(false);
+      navigate('/login?error=2fa_denied');
+      return;
+    }
+
+    if (body.status === 'APPROVED') {
+      setPollEnabled(false);
+      completeMutation
+        .mutateAsync({ params: { id: challengeId }, body: {} })
+        .then((completeRes) => {
+          if (completeRes.status === 200 && completeRes.body.status === 'AUTHENTICATED') {
+            setAuth(completeRes.body.accessToken, completeRes.body.user);
+            onAuthenticatedRef.current?.();
+            navigate('/drive');
+            return;
+          }
+        })
+        .catch(() => navigate('/login?error=2fa_failed'));
+    }
+  }, [data, completeMutation, navigate, challengeId]);
+
+  const pendingData = data?.status === 200 && data.body.status === 'PENDING' ? data.body : null;
 
   const resend = async () => {
-    const data = await twoFactorApi.resend(challengeId);
-    setChallengeId(data.challengeId);
-    setOptions(data.options);
-    setRemainingSeconds(60);
-    setPollStatus('polling');
+    resendMutation.mutate(
+      { params: { id: challengeId }, body: {} },
+      {
+        onSuccess: (response) => {
+          if (response.status === 200) {
+            setChallengeId(response.body.challengeId);
+            setPollEnabled(true);
+          }
+        },
+      },
+    );
   };
 
-  return { options, correctNum, remainingSeconds, pollStatus, approvedData, resend };
+  return {
+    options: pendingData?.options ?? [],
+    correctNum: pendingData?.correctNum ?? '',
+    remainingSeconds: pendingData?.remainingSeconds ?? 0,
+    resend,
+  };
 }

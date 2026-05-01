@@ -48,7 +48,9 @@ describe('InvitationService', () => {
   describe('validate', () => {
     it('토큰이 없으면 false를 반환한다', async () => {
       mockInvitationRepository.findByToken.mockResolvedValue(null);
-      expect(await service.validate('no-token')).toBe(false);
+
+      const result = await service.validate('no-token');
+      expect(result.valid).toBe(false);
     });
 
     it('비활성화된 초대는 false를 반환한다', async () => {
@@ -57,7 +59,8 @@ describe('InvitationService', () => {
         usedAt: null,
         expiresAt: new Date(Date.now() + 100_000),
       });
-      expect(await service.validate('token')).toBe(false);
+      const result = await service.validate('token');
+      expect(result.valid).toBe(false);
     });
 
     it('사용된 초대는 false를 반환한다', async () => {
@@ -66,7 +69,8 @@ describe('InvitationService', () => {
         usedAt: new Date(),
         expiresAt: new Date(Date.now() + 100_000),
       });
-      expect(await service.validate('token')).toBe(false);
+      const result = await service.validate('token');
+      expect(result.valid).toBe(false);
     });
 
     it('만료된 초대는 false를 반환한다', async () => {
@@ -75,7 +79,8 @@ describe('InvitationService', () => {
         usedAt: null,
         expiresAt: new Date(Date.now() - 1000),
       });
-      expect(await service.validate('token')).toBe(false);
+      const result = await service.validate('token');
+      expect(result.valid).toBe(false);
     });
 
     it('유효한 초대는 true를 반환한다', async () => {
@@ -84,7 +89,8 @@ describe('InvitationService', () => {
         usedAt: null,
         expiresAt: new Date(Date.now() + 100_000),
       });
-      expect(await service.validate('token')).toBe(true);
+      const result = await service.validate('token');
+      expect(result.valid).toBe(true);
     });
   });
 

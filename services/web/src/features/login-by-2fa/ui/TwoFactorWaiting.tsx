@@ -1,29 +1,19 @@
+import { TrustThisDeviceCheckbox, useTrustedDevice } from '@/features/trusted-device';
 import { Button, Heading } from '@/shared/ui';
-import { useEffect } from 'react';
+import { useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { useTwoFactorPolling, type ApprovedData } from '../model/useTwoFactorPolling';
+import { useTwoFactorPolling } from '../model/useTwoFactorPolling';
 
-interface TwoFactorWaitingProps {
-  onApproved: (data: ApprovedData) => void;
-}
-
-export function TwoFactorWaiting({ onApproved }: TwoFactorWaitingProps) {
+export function TwoFactorWaiting() {
+  const [trustChecked, setTrustChecked] = useState(false);
   const [searchParams] = useSearchParams();
   const challengeId = searchParams.get('id') ?? '';
   const navigate = useNavigate();
-  const { correctNum, remainingSeconds, pollStatus, approvedData, resend } = useTwoFactorPolling(challengeId);
-
-  useEffect(() => {
-    if (pollStatus === 'approved' && approvedData) {
-      onApproved(approvedData);
-    }
-  }, [pollStatus, approvedData, onApproved]);
-
-  useEffect(() => {
-    if (pollStatus === 'denied') {
-      navigate('/login');
-    }
-  }, [pollStatus, navigate]);
+  const { register } = useTrustedDevice();
+  const { options, correctNum, remainingSeconds, resend } = useTwoFactorPolling(
+    challengeId,
+    trustChecked ? register : undefined,
+  );
 
   const minutes = String(Math.floor(remainingSeconds / 60)).padStart(2, '0');
   const seconds = String(remainingSeconds % 60).padStart(2, '0');
@@ -38,6 +28,9 @@ export function TwoFactorWaiting({ onApproved }: TwoFactorWaitingProps) {
       <p className="text-sm text-gray-500">
         남은 시간: {minutes}:{seconds}
       </p>
+      <div className="flex gap-4">
+        <TrustThisDeviceCheckbox checked={trustChecked} onChange={setTrustChecked} />
+      </div>
       <div className="flex gap-4 text-sm">
         <Button onClick={resend} className="text-blue-600 underline" plain>
           재전송

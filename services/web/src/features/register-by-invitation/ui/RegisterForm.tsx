@@ -9,7 +9,7 @@ interface RegisterFormProps {
 }
 
 export function RegisterForm({ token, onSuccess }: RegisterFormProps) {
-  const { submit, isLoading, error } = useRegister(token, onSuccess);
+  const { submit, isLoading, apiError } = useRegister(token, onSuccess);
   const {
     register,
     handleSubmit,
@@ -84,9 +84,9 @@ export function RegisterForm({ token, onSuccess }: RegisterFormProps) {
           </p>
         )}
       </Field>
-      {error && (
+      {apiError && (
         <p role="alert" className="text-sm text-red-500">
-          {error.message}
+          {apiError.message}
         </p>
       )}
       <Button type="submit" disabled={isLoading}>

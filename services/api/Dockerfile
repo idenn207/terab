@@ -1,44 +1,61 @@
-# ─── Stage 1: Build ──────────────────────────────────────────────
-FROM node:24-alpine AS builder
-
-WORKDIR /app
-
-COPY package*.json ./
-RUN npm ci --ignore-scripts
-
-COPY tsconfig*.json nest-cli.json .swcrc ./
-COPY src ./src
-RUN npm run build
-
-# ─── Stage 2: Runtime ────────────────────────────────────────────
-FROM node:24-alpine
-
-WORKDIR /app
-
+# ─── Stage 0: 공통 변수 정의 ──────────────────────────────────────────────
+FROM node:24-alpine AS base
 RUN apk add --no-cache bash
 
-# wait-for-it.sh 설치
-COPY wait-for-it.sh /usr/local/bin/wait-for-it.sh
-RUN sed -i 's/\r$//' /usr/local/bin/wait-for-it.sh && chmod +x /usr/local/bin/wait-for-it.sh
+# ─── Stage 1: Contracts Build ──────────────────────────────────────────────
+FROM base AS contracts-builder
+WORKDIR /packages/contracts
 
-# entrypoint 설치
-COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
-RUN sed -i 's/\r$//' /usr/local/bin/docker-entrypoint.sh && chmod +x /usr/local/bin/docker-entrypoint.sh
+COPY packages/contracts/package*.json ./
+RUN npm ci --ignore-scripts
+
+COPY packages/contracts/tsconfig.json ./
+COPY packages/contracts/src ./src
+RUN npm run build
+
+# ─── Stage 2: Api Build ──────────────────────────────────────────────
+FROM base AS builder
+WORKDIR /app/services/api
+
+COPY --from=contracts-builder /packages/contracts/dist /app/packages/contracts/dist
+COPY --from=contracts-builder /packages/contracts/package.json /app/packages/contracts/package.json
+COPY services/api/package*.json ./
+
+RUN npm ci --ignore-scripts
+# file: 의존성으로 생성된 dangling symlink를 실제 파일로 대체
+RUN rm -rf node_modules/@terab/contract && mkdir -p node_modules/@terab/contract
+
+COPY --from=contracts-builder /packages/contracts/dist ./node_modules/@terab/contract/dist
+COPY --from=contracts-builder /packages/contracts/package.json ./node_modules/@terab/contract/package.json
+
+COPY services/api/tsconfig*.json services/api/nest-cli.json services/api/.swcrc ./
+COPY services/api/src ./src
+
+RUN npm run build
+
+# ─── Stage 3: Runtime ────────────────────────────────────────────
+FROM base AS runner
+WORKDIR /app/services/api
 
 # 보안: non-root 사용자
 RUN addgroup -S appgroup && adduser -S appuser -G appgroup
 
-# 프로덕션 의존성만 설치 (root 상태에서 실행 후 소유권 이전)
-COPY package*.json ./
+COPY services/api/package*.json ./
+
 RUN npm ci --omit=dev --ignore-scripts
+# file: 의존성으로 생성된 dangling symlink를 실제 파일로 대체
+RUN rm -rf node_modules/@terab/contract && mkdir -p node_modules/@terab/contract
+
+COPY --from=contracts-builder /packages/contracts/dist ./node_modules/@terab/contract/dist
+COPY --from=contracts-builder /packages/contracts/package.json ./node_modules/@terab/contract/package.json
 
 # 빌드 결과물 및 마이그레이션 파일 복사
-COPY --from=builder /app/dist ./dist
-COPY drizzle ./drizzle
+COPY --from=builder /app/services/api/dist ./dist
+COPY services/api/drizzle ./drizzle
 
 RUN chown -R appuser:appgroup /app
 USER appuser
 
 EXPOSE 3000
 
-ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]
+# ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]

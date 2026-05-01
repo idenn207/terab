@@ -1,33 +1,40 @@
-import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, Post } from '@nestjs/common';
+import { Controller, HttpStatus } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
 import { CurrentUser, Public, RequirePermission } from '@terab/common';
+import { contract } from '@terab/contract';
+import { tsRestHandler, TsRestHandler } from '@ts-rest/nest';
 import type { AuthUser } from '../auth/types/auth-user.type';
-import { CreateInvitationDto } from './dto/create-invitation.dto';
-import { InvitationResponseDto } from './dto/invitation-response.dto';
 import { InvitationService } from './invitation.service';
 
-@Controller('api/invitations')
+@Controller()
 export class InvitationController {
   constructor(private readonly invitationService: InvitationService) {}
 
-  @Post()
   @RequirePermission('user:invite')
-  async create(@Body() dto: CreateInvitationDto, @CurrentUser() user: AuthUser): Promise<InvitationResponseDto> {
-    return this.invitationService.create(user.userId, dto.expiresInDays);
+  @TsRestHandler(contract.invitation.create)
+  handleCreate(@CurrentUser() user: AuthUser) {
+    return tsRestHandler(contract.invitation.create, async ({ body }) => {
+      const result = await this.invitationService.create(user.userId, body.expiresInDays);
+      return { status: HttpStatus.CREATED, body: result };
+    });
   }
 
-  @Throttle({ default: { ttl: 60000, limit: 30 } })
-  @Get(':token')
   @Public()
-  async validate(@Param('token') token: string): Promise<{ valid: boolean }> {
-    const valid = await this.invitationService.validate(token);
-    return { valid };
+  @Throttle({ default: { ttl: 60000, limit: 30 } })
+  @TsRestHandler(contract.invitation.validate)
+  handleValidate() {
+    return tsRestHandler(contract.invitation.validate, async ({ params }) => {
+      const result = await this.invitationService.validate(params.token);
+      return { status: HttpStatus.OK, body: result };
+    });
   }
 
-  @Delete(':token')
-  @HttpCode(HttpStatus.NO_CONTENT)
   @RequirePermission('user:manage')
-  async deactivate(@Param('token') token: string): Promise<void> {
-    await this.invitationService.deactivate(token);
+  @TsRestHandler(contract.invitation.deactivate)
+  handleDeactivate() {
+    return tsRestHandler(contract.invitation.deactivate, async ({ params }) => {
+      await this.invitationService.deactivate(params.token);
+      return { status: HttpStatus.NO_CONTENT, body: undefined };
+    });
   }
 }

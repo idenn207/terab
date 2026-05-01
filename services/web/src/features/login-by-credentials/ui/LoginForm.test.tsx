@@ -1,12 +1,14 @@
 import { useUserStore } from '@/entities';
-import { render, screen } from '@testing-library/react';
+import { renderWithProviders } from '@tests/wrappers';
+import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { server } from '@tests/mocks';
 import { http, HttpResponse } from 'msw';
-import { MemoryRouter } from 'react-router-dom';
 import { LoginForm } from '../ui/LoginForm';
 
-const renderWithRouter = (children: React.ReactNode) => render(<MemoryRouter initialEntries={['/login']}>{children}</MemoryRouter>);
+function renderWithRouter(children: React.ReactElement) {
+  return renderWithProviders(children, { initialEntries: ['/login'] });
+}
 
 describe('LoginForm', () => {
   afterEach(() => useUserStore.getState().clearAuth());
