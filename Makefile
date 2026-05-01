@@ -63,16 +63,16 @@ dev-update:
 .PHONY: ensure-volumes
 ensure-volumes: ## 운영 스택 bind mount 경로 생성 (없을 경우에만)
 	@mkdir -p \
-		/volume2/docker/terab/volumes/db \
-		/volume2/docker/terab/volumes/redis \
-		/volume2/docker/terab/services/nginx \
+		/volume3/docker/terab/volumes/db \
+		/volume3/docker/terab/volumes/redis \
+		/volume3/docker/terab/services/nginx \
 		/volume1/storage
 	@chown -R 999:999 \
-		/volume2/docker/terab/volumes/db \
-		/volume2/docker/terab/volumes/redis
+		/volume3/docker/terab/volumes/db \
+		/volume3/docker/terab/volumes/redis
 
 .PHONY: stack
-stack: ensure-volumes
+stack:
 	@bash scripts/stack-deploy.sh
 
 .PHONY: stack-down
