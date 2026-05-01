@@ -11,7 +11,7 @@ services:
   db:
     image: postgres:16-alpine
     env_file:
-      - infra.env
+      - infra.dev.env
     volumes:
       - ./volumes/db:/var/lib/postgresql/data
     deploy:
@@ -20,7 +20,7 @@ services:
 
   minio:
     env_file:
-      - infra.env
+      - infra.dev.env
     volumes:
       - ./volumes/storage:/data
     ports:
@@ -28,9 +28,9 @@ services:
       - '9001:9001'
 
   redis:
-    image: redis:7-alpine
+    image: redis:8-alpine
     volumes:
-      - ./volumes/redis:data
+      - ./volumes/redis:/data
       - ./redis.conf:/usr/local/etc/redis/redis.conf:ro
     deploy:
       placement:
@@ -41,21 +41,21 @@ services:
   api:
     image: terab-api:local
     env_file:
-      - api.env
+      - api.dev.env
     deploy:
       replicas: 1
 
   mq:
     image: terab-mq:local
     env_file:
-      - mq.env
+      - mq.dev.env
     deploy:
       replicas: 1
 
   web:
     image: terab-web:local
     env_file:
-      - web.env
+      - web.dev.env
     deploy:
       replicas: 1
 

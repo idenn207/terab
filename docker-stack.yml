@@ -53,7 +53,7 @@ services:
 
   # ─── Redis (BullMQ 브로커) ────────────────────────────────────
   redis:
-    image: redis:7
+    image: redis:8
     command: redis-server /usr/local/etc/redis/redis.conf
     volumes:
       - redis_data:/data
