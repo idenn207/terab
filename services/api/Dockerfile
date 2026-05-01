@@ -40,6 +40,16 @@ WORKDIR /app/services/api
 # 보안: non-root 사용자
 RUN addgroup -S appgroup && adduser -S appuser -G appgroup
 
+
+# wait-for-it.sh 설치
+COPY services/api/wait-for-it.sh /usr/local/bin/wait-for-it.sh
+RUN sed -i 's/\r$//' /usr/local/bin/wait-for-it.sh && chmod +x /usr/local/bin/wait-for-it.sh
+
+# entrypoint 설치
+COPY services/api/docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
+RUN sed -i 's/\r$//' /usr/local/bin/docker-entrypoint.sh && chmod +x /usr/local/bin/docker-entrypoint.sh
+
+
 COPY services/api/package*.json ./
 
 RUN npm ci --omit=dev --ignore-scripts
@@ -58,4 +68,4 @@ USER appuser
 
 EXPOSE 3000
 
-# ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]
+ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]
