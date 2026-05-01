@@ -93,7 +93,7 @@ describe('TwoFaService', () => {
 
       const result = await service.getStatus('id');
 
-      expect(result.status).toBe('DENIED');
+      expect(result.status).toBe('EXPIRED');
       expect(mockTwoFaRepository.updateStatus).toHaveBeenCalledWith('id', 'EXPIRED');
     });
 
