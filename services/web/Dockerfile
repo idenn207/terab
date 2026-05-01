@@ -1,46 +1,34 @@
-# ─── Stage 0: 공통 변수 정의 ──────────────────────────────────────────────
-ARG WEB_PATH=services/web
-ARG CONTRACTS_PATH=packages/contracts
-
-# ─── Stage 1: Contracts Build ──────────────────────────────────────────────
+# # ─── Stage 1: Contracts Build (결과물 생성) ──────────────────────────────
 FROM node:24-alpine AS contracts-builder
+WORKDIR /packages/contracts
 
-ARG CONTRACTS_PATH
-WORKDIR /${CONTRACTS_PATH}
-
-COPY ${CONTRACTS_PATH}/package*.json ./
+COPY packages/contracts/package*.json ./
 RUN npm ci --ignore-scripts
 
-COPY ${CONTRACTS_PATH}/tsconfig.json ./
-COPY ${CONTRACTS_PATH}/src ./src
+COPY packages/contracts/tsconfig.json ./
+COPY packages/contracts/src ./src
 RUN npm run build
 
-# ─── Stage 2: Web Build ─────────────────────────────────────────────
+# # ─── Stage 2: Web Build ──────────────────────────────────────────────────
 FROM node:24-alpine AS builder
+WORKDIR /app/services/web
 
-ARG WEB_PATH
-ARG CONTRACTS_PATH
-WORKDIR /app
+COPY --from=contracts-builder /packages/contracts/dist /app/packages/contracts/dist
+COPY --from=contracts-builder /packages/contracts/package.json /app/packages/contracts/package.json
+COPY services/web/package*.json services/web/.npmrc ./
 
-# file: 로컬 패키지 의존성(contracts)을 먼저 확보 후 의존성 설치
-COPY --from=contracts-builder /${CONTRACTS_PATH}/dist /${CONTRACTS_PATH}/dist
-COPY --from=contracts-builder /${CONTRACTS_PATH}/package.json /${CONTRACTS_PATH}/package.json
-COPY ${WEB_PATH}/package.json ${WEB_PATH}/package-lock.json ./
 RUN npm ci --ignore-scripts
+# file: 의존성으로 생성된 dangling symlink를 실제 파일로 대체
+RUN rm -rf node_modules/@terab/contract && mkdir -p node_modules/@terab/contract
 
-# 소스 복사 및 빌드
-COPY ${WEB_PATH} .
+COPY --from=contracts-builder /packages/contracts/dist ./node_modules/@terab/contract/dist
+COPY --from=contracts-builder /packages/contracts/package.json ./node_modules/@terab/contract/package.json
+
+COPY services/web .
 RUN npm run build
 
-# ─── Stage 3: Runtime (Nginx로 정적 파일 서빙) ───────────────────
-FROM node:24-alpine
-
-ARG WEB_PATH
-
-# React 빌드 결과물을 Nginx 기본 경로로 복사
-COPY --from=builder /app/dist /usr/share/nginx/html
-
-# SPA 라우팅 지원 (새로고침 시 404 방지)
-COPY ${WEB_PATH}/nginx-spa.conf /etc/nginx/conf.d/default.conf
-
+# # ─── Stage 3: Runtime (Nginx) ──────────────────────────────────────────
+FROM nginx:alpine
+COPY --from=builder /app/services/web/dist /usr/share/nginx/html
+COPY services/web/nginx-spa.conf /etc/nginx/conf.d/default.conf
 EXPOSE 80
