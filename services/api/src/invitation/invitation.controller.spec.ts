@@ -36,7 +36,7 @@ describe('InvitationController', () => {
     }).compile();
 
     app = module.createNestApplication();
-    app.init();
+    await app.init();
   });
 
   afterAll(() => app.close());

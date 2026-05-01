@@ -59,7 +59,7 @@ const loginWithBackup = c.mutation({
 });
 
 const completeTwoFa = c.mutation({
-  summary: '2FA 팰린지 완료',
+  summary: '2FA 챌린지 완료',
   method: 'POST',
   path: '/auth/2fa/challenge/:id/complete',
   pathParams: z.object({ id: z.string() }),

@@ -28,7 +28,7 @@ export class TwoFaService {
 
     if (challenge.status === 'PENDING' && challenge.expiresAt <= new Date()) {
       await this.twoFaRepository.updateStatus(challengeId, 'EXPIRED');
-      return { status: 'DENIED' };
+      return { status: 'EXPIRED' };
     }
 
     if (challenge.status === 'PENDING') {
@@ -48,7 +48,11 @@ export class TwoFaService {
       return {
         status: 'APPROVED',
         accessToken,
-        user: { ...user },
+        user: {
+          id: user.id,
+          nickname: user.nickname,
+          username: user.username,
+        },
       };
     }
 

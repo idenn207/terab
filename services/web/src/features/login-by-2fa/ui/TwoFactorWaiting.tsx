@@ -1,4 +1,4 @@
-import { TrustThisDeviceCheckbox } from '@/features/trusted-device';
+import { TrustThisDeviceCheckbox, useTrustedDevice } from '@/features/trusted-device';
 import { Button, Heading } from '@/shared/ui';
 import { useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
@@ -9,7 +9,11 @@ export function TwoFactorWaiting() {
   const [searchParams] = useSearchParams();
   const challengeId = searchParams.get('id') ?? '';
   const navigate = useNavigate();
-  const { options, correctNum, remainingSeconds, resend } = useTwoFactorPolling(challengeId);
+  const { register } = useTrustedDevice();
+  const { options, correctNum, remainingSeconds, resend } = useTwoFactorPolling(
+    challengeId,
+    trustChecked ? register : undefined,
+  );
 
   const minutes = String(Math.floor(remainingSeconds / 60)).padStart(2, '0');
   const seconds = String(remainingSeconds % 60).padStart(2, '0');

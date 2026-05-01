@@ -13,7 +13,7 @@ export function useInvitationValidation(token: string) {
     }
 
     setValid(data.body.valid);
-  }, [token]);
+  }, [token, data]);
 
   return { valid };
 }

@@ -1,16 +1,18 @@
 import { useUserStore } from '@/entities';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCompleteTwoFaMutation, useResendChallengeMutation } from '../api/mutation';
 import { useChallengeStatusQuery } from '../api/query';
 
-export function useTwoFactorPolling(initialChallengeId: string) {
+export function useTwoFactorPolling(initialChallengeId: string, onAuthenticated?: () => void) {
   const [challengeId, setChallengeId] = useState(initialChallengeId);
   const [pollEnabled, setPollEnabled] = useState(true);
   const setAuth = useUserStore((s) => s.setAuth);
   const navigate = useNavigate();
   const resendMutation = useResendChallengeMutation();
   const completeMutation = useCompleteTwoFaMutation();
+  const onAuthenticatedRef = useRef(onAuthenticated);
+  onAuthenticatedRef.current = onAuthenticated;
 
   const { data } = useChallengeStatusQuery(challengeId, pollEnabled);
 
@@ -31,13 +33,14 @@ export function useTwoFactorPolling(initialChallengeId: string) {
         .then((completeRes) => {
           if (completeRes.status === 200 && completeRes.body.status === 'AUTHENTICATED') {
             setAuth(completeRes.body.accessToken, completeRes.body.user);
+            onAuthenticatedRef.current?.();
             navigate('/drive');
             return;
           }
         })
         .catch(() => navigate('/login?error=2fa_failed'));
     }
-  }, [data]);
+  }, [data, completeMutation, navigate, challengeId]);
 
   const pendingData = data?.status === 200 && data.body.status === 'PENDING' ? data.body : null;
 

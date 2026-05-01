@@ -59,7 +59,7 @@ axiosAuth.interceptors.response.use(
       isRefreshing = true;
 
       try {
-        const { data } = await axios.post<{ accessToken: string; user: unknown }>('/api/auth/refresh', {}, { withCredentials: true });
+        const { data } = await axiosBasic.post<{ accessToken: string; user: unknown }>('/auth/refresh', {}, { withCredentials: true });
         useUserStore.getState().setAccessToken(data.accessToken);
         processQueue(null, data.accessToken);
         originalRequest.headers.Authorization = `Bearer ${data.accessToken}`;
