@@ -34,7 +34,7 @@ infra-reset:
 
 # ─── 개발 환경 (전체 서비스, 로컬 빌드) ──────────────────────────
 .PHONY: dev
-dev: infra-down build-local
+dev: infra-down
 	docker stack deploy -c docker-stack.yml -c docker-stack.local.yml --resolve-image=never terab-dev
 
 .PHONY: dev-down
