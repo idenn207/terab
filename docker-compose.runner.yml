@@ -18,15 +18,9 @@ services:
     restart: always
     env_file:
       - runner.env
-    environment:
-      REPO_URL: https://github.com/idenn207/terab
-      RUNNER_NAME: terab-nas-runner
-      LABELS: self-hosted,nas
-      EPHEMERAL: 'true'
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - runner_data:/home/runner
-    # terab 스택 네트워크 불필요 - GitHub에 아웃바운드 연결만 사용
 
 volumes:
   runner_data:

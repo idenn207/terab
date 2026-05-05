@@ -188,3 +188,7 @@ test-web:
 .PHONY: runner
 runner:
 	docker compose -f docker-compose.runner.yml up
+
+.PHONY: runner-down
+runner-down:
+	docker compose -f docker-compose.runner.yml down
