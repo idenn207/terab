@@ -24,7 +24,7 @@ services:
         constraints:
           - node.role == manager
       restart_policy:
-        condition: any
+        condition: on-failure
         delay: 5s
         window: 120s
 
@@ -48,7 +48,7 @@ services:
     deploy:
       replicas: 1
       restart_policy:
-        condition: any
+        condition: on-failure
         window: 60s
 
   # ─── Redis (BullMQ 브로커) ────────────────────────────────────
@@ -73,7 +73,7 @@ services:
         constraints:
           - node.role == manager
       restart_policy:
-        condition: any
+        condition: on-failure
         delay: 5s
         window: 60s
 
@@ -102,9 +102,9 @@ services:
         order: stop-first
         parallelism: 1
       restart_policy:
-        condition: any
+        condition: on-failure
         delay: 10s
-        window: 180s
+        window: 60s
 
   # ─── MQ 서비스 (BullMQ Worker) ──────────────────────────────────────────
   mq:
@@ -133,9 +133,9 @@ services:
         order: stop-first
         parallelism: 1
       restart_policy:
-        condition: any
+        condition: on-failure
         delay: 10s
-        window: 120s
+        window: 60s
 
   # ─── React Frontend ───────────────────────────────────────────
   web:
@@ -161,7 +161,7 @@ services:
       rollback_config:
         order: start-first
       restart_policy:
-        condition: any
+        condition: on-failure
         window: 60s
 
   # ─── Nginx (리버스 프록시) ─────────────────────────────────────
@@ -182,7 +182,7 @@ services:
     deploy:
       replicas: 1
       restart_policy:
-        condition: any
+        condition: on-failure
         window: 60s
 
   # ─── Portainer CE (컨테이너 모니터링 UI) ─────────────────────────
@@ -202,7 +202,7 @@ services:
         constraints:
           - node.role == manager
       restart_policy:
-        condition: any
+        condition: on-failure
         window: 60s
 
   portainer_agent:
@@ -217,7 +217,7 @@ services:
     deploy:
       mode: global
       restart_policy:
-        condition: any
+        condition: on-failure
         window: 60s
 
 volumes:
