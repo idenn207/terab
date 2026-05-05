@@ -31,10 +31,21 @@ make mq           # MQ 개발 서버 실행
 
 ```bash
 make setup        # Docker Config/Secret 등록 (configs.env + secrets.env 필요)
-make stack-deploy # Docker Swarm 스택 배포
+make stack        # Docker Swarm 스택 배포
 make stack-update # API/Web 이미지 롤링 업데이트
-make stack-rm     # 스택 제거
+make stack-down   # 스택 제거
 ```
+
+### 환경 설정
+
+각 서비스의 필요 환경변수는 루트의 `*.env.example` 파일을 참조한다.
+
+| 파일 | 대상 서비스 |
+| --- | --- |
+| `api.env.example` | services/api |
+| `mq.env.example` | services/mq |
+| `web.env.example` | services/web |
+| `infra.env.example` | DB / Redis / MinIO |
 
 ## 디렉토리 구조
 
