@@ -46,6 +46,7 @@ make stack-down   # 스택 제거
 | `mq.env.example` | services/mq |
 | `web.env.example` | services/web |
 | `infra.env.example` | DB / Redis / MinIO |
+| `runner.env.example` | GitHub Actions Self-Hosted Runner |
 
 ## 디렉토리 구조
 
@@ -53,7 +54,7 @@ make stack-down   # 스택 제거
 packages/
   contracts/    # API·Web 공유 계약 (ts-rest + Zod) — 세부 컨벤션은 packages/contracts/CLAUDE.md 참조
 services/
-  api/          # Spring Boot — 세부 컨벤션은 services/api/CLAUDE.md 참조
+  api/          # NestJS 11 (REST API) — 세부 컨벤션은 services/api/CLAUDE.md 참조
   mq/           # MQ 서비스 (BullMQ Worker + FCM) — 별도 NestJS 서비스
   web/          # React + Vite — 세부 컨벤션은 services/web/CLAUDE.md 참조
   nginx/        # 리버스 프록시 설정

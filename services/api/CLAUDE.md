@@ -108,12 +108,12 @@ npm run db:push       # 마이그레이션 적용 (개발 환경)
 ### 신규 모듈 생성 시 체크리스트
 
 1. `src/{domain}/` 디렉토리 생성
-2. `{domain}.module.ts`, `{domain}.controller.ts`, `{domain}.service.ts`, `{domain}.repository.ts` 생성
+2. `{domain}.module.ts`, `{domain}.controller.ts`, `{domain}.service.ts`, `{domain}.repository.ts` 생성 (각 파일 옆에 `*.spec.ts` 함께 생성)
 3. `AppModule`의 `imports` 배열에 등록
 4. 필요한 외부 모듈(`BullModule`, `PassportModule` 등) 해당 모듈에서 직접 import
 5. DB Schema가 필요하면 `src/database/schema/`에 `{domain}.schema.ts` 추가 후 `index.ts`에 re-export
 
 ### 오류 추가 절차
 
-1. `src/common/exceptions/error-code.enum.ts`의 `ErrorCode` 객체에 항목 추가
+1. `src/common/exceptions/error-code.enum.ts`의 `ErrorCode` 객체에 항목 추가 (`{ message: '한글 오류 메시지', status: HttpStatus.XXX }` 구조 필수)
 2. 서비스 코드에서 `throw new ApiException('NEW_ERROR_KEY')`로 사용
