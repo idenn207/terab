@@ -39,8 +39,9 @@ export type ExampleTable$Select = typeof exampleTable.$inferSelect;
 | PK | uuid | `t.uuid('id').primaryKey().defaultRandom()` |
 | 문자열 | varchar | `t.varchar('col', { length: N }).notNull()` |
 | 생성/수정 시각 | timestamp | `t.timestamp('created_at', { withTimezone: true }).notNull().defaultNow()` |
-| 외래 키 | uuid | `t.uuid('user_id').notNull().references(() => users.id)` |
+| 외래 키 | uuid | `t.uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' })` — soft reference(감사 로그 등)는 `onDelete` 생략 가능 |
 | nullable 시각 (used_at 등) | timestamp | `t.timestamp('used_at', { withTimezone: true })` (`.notNull()` 없음) |
+| Junction PK | — | `(table) => [t.primaryKey({ columns: [table.aId, table.bId] })]` |
 
 ## 타입 네이밍
 
