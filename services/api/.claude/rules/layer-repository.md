@@ -21,7 +21,7 @@ export class ExampleRepository {
 ```ts
 async findById(id: string): Promise<ExampleTable$Select | null> {
   const [row = null] = await this.database.db
-    .select({ id: exampleTable.id, name: exampleTable.name })  // 컬럼 명시
+    .select()
     .from(exampleTable)
     .where(eq(exampleTable.id, id))
     .limit(1);
@@ -29,7 +29,7 @@ async findById(id: string): Promise<ExampleTable$Select | null> {
 }
 ```
 
-- `select()` 빈 호출(전체 컬럼) 지양 — 필요한 컬럼만 명시
+- 단일 테이블은 `select()` 전체 컬럼 허용; Join 포함 시 컬럼 명시 필수 (컬럼 이름 충돌 방지)
 - `.limit(1)` 필수 — 단건 조회 의도를 명확히
 
 ## 다건 조회 + Join 집계 패턴
