@@ -1,5 +1,6 @@
 export * from './backup-codes.schema';
 export * from './devices.schema';
+export * from './files.schema';
 export * from './folders.schema';
 export * from './invitations.schema';
 export * from './permissions.schema';
