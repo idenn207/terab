@@ -1,4 +1,6 @@
+import { createKeyv } from '@keyv/redis';
 import { BullModule } from '@nestjs/bullmq';
+import { CacheModule } from '@nestjs/cache-manager';
 import { Module, ValidationPipe } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { APP_FILTER, APP_GUARD, APP_PIPE } from '@nestjs/core';
@@ -10,14 +12,23 @@ import { AuthModule } from './auth/auth.module';
 import { DeviceModule } from './device/device.module';
 import { HealthModule } from './health/health.module';
 import { InvitationModule } from './invitation/invitation.module';
+import { MinioModule } from './minio/minio.module';
 import { TrustedDeviceModule } from './trusted-device/trusted-device.module';
 import { TwoFaModule } from './twofa/twofa.module';
-import { MinioModule } from './minio/minio.module';
 
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
     ThrottlerModule.forRoot([{ ttl: 60000, limit: 60 }]),
+    CacheModule.registerAsync({
+      isGlobal: true,
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: (config: ConfigService) => ({
+        stores: [createKeyv(config.getOrThrow<string>('REDIS_URL'))],
+        ttl: 60_000,
+      }),
+    }),
     BullModule.forRootAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
@@ -28,6 +39,7 @@ import { MinioModule } from './minio/minio.module';
       }),
     }),
     DatabaseModule,
+    MinioModule,
     CoreModule,
     HealthModule,
     AuthModule,
@@ -35,7 +47,6 @@ import { MinioModule } from './minio/minio.module';
     TrustedDeviceModule,
     TwoFaModule,
     InvitationModule,
-    MinioModule,
   ],
   providers: [
     // 전역 Guard: ThrottlerGuard → JwtAuthGuard(401) → PermissionGuard(403) 순서 보장
