@@ -6,7 +6,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { APP_FILTER, APP_GUARD, APP_PIPE } from '@nestjs/core';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { ApiExceptionFilter, JwtAuthGuard, PermissionGuard } from '@terab/common';
-import { CoreModule } from '@terab/core';
+import { SecurityModule } from '@terab/security';
 import { DatabaseModule } from '@terab/db';
 import { AuthModule } from './auth/auth.module';
 import { DeviceModule } from './device/device.module';
@@ -15,6 +15,8 @@ import { InvitationModule } from './invitation/invitation.module';
 import { MinioModule } from './minio/minio.module';
 import { TrustedDeviceModule } from './trusted-device/trusted-device.module';
 import { TwoFaModule } from './twofa/twofa.module';
+import { FolderModule } from './folder/folder.module';
+import { FileModule } from './file/file.module';
 
 @Module({
   imports: [
@@ -40,13 +42,15 @@ import { TwoFaModule } from './twofa/twofa.module';
     }),
     DatabaseModule,
     MinioModule,
-    CoreModule,
+    SecurityModule,
     HealthModule,
     AuthModule,
     DeviceModule,
     TrustedDeviceModule,
     TwoFaModule,
     InvitationModule,
+    FolderModule,
+    FileModule,
   ],
   providers: [
     // 전역 Guard: ThrottlerGuard → JwtAuthGuard(401) → PermissionGuard(403) 순서 보장

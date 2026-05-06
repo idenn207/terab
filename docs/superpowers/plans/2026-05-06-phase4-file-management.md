@@ -1255,6 +1255,9 @@ git commit -m "feat: FolderRepository 구현"
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import { Test } from '@nestjs/testing';
 import { ApiException } from '@terab/common';
+import { DatabaseService, TransactionContext } from '@terab/db';
+import { mockDatabaseService } from '@terab/test';
+import { FileService } from '../file/file.service';
 import { FolderRepository } from './folder.repository';
 import { FolderService } from './folder.service';
 
@@ -1267,6 +1270,7 @@ const mockFolderRepository = {
   move: jest.fn(),
   isDescendant: jest.fn(),
   softDeleteCascade: jest.fn(),
+  toFolderItem: jest.fn((row) => ({ ...row, parentId: row.parentId ?? null })),
 };
 
 const mockCacheManager = {
@@ -1275,9 +1279,14 @@ const mockCacheManager = {
   del: jest.fn(),
 };
 
-const mockFileRepository = {
-  findByFolder: jest.fn(),
-  findRootFiles: jest.fn(),
+const mockFileService = {
+  listRootFiles: jest.fn(),
+  listByFolder: jest.fn(),
+};
+
+const mockTransactionContext = {
+  current: undefined,
+  run: jest.fn((_tx: unknown, fn: () => Promise<unknown>) => fn()),
 };
 
 describe('FolderService', () => {
@@ -1287,8 +1296,10 @@ describe('FolderService', () => {
     const module = await Test.createTestingModule({
       providers: [
         FolderService,
+        { provide: DatabaseService, useValue: mockDatabaseService },
+        { provide: TransactionContext, useValue: mockTransactionContext },
         { provide: FolderRepository, useValue: mockFolderRepository },
-        { provide: 'FileRepository', useValue: mockFileRepository },
+        { provide: FileService, useValue: mockFileService },
         { provide: CACHE_MANAGER, useValue: mockCacheManager },
       ],
     }).compile();
@@ -1303,7 +1314,7 @@ describe('FolderService', () => {
   it('getRoot는 캐시 미스 시 DB를 조회하고 캐시를 저장한다', async () => {
     mockCacheManager.get.mockResolvedValue(null);
     mockFolderRepository.findRootChildren.mockResolvedValue([]);
-    mockFileRepository.findRootFiles.mockResolvedValue([]);
+    mockFileService.listRootFiles.mockResolvedValue([]);
 
     const result = await service.getRoot('user-1');
 
@@ -1352,20 +1363,24 @@ Expected: FAIL.
 
 ```ts
 import { Cache, CACHE_MANAGER } from '@nestjs/cache-manager';
-import { Inject, Injectable } from '@nestjs/common';
+import { forwardRef, Inject, Injectable } from '@nestjs/common';
 import { ApiException } from '@terab/common';
-import type { FileItem, FolderChildrenResponse, FolderItem } from '@terab/contract';
-import type { Folders$Select } from '@terab/db';
-import { FileRepository } from '../file/file.repository';
+import type { FolderChildrenResponse, FolderItem } from '@terab/contract';
+import { DatabaseService, ServiceCore, TransactionContext } from '@terab/db';
+import { FileService } from '../file/file.service';
 import { FolderRepository } from './folder.repository';
 
 @Injectable()
-export class FolderService {
+export class FolderService extends ServiceCore {
   constructor(
+    database: DatabaseService,
+    txContext: TransactionContext,
+    @Inject(forwardRef(() => FileService)) private readonly fileService: FileService,
     private readonly folderRepository: FolderRepository,
-    private readonly fileRepository: FileRepository,
     @Inject(CACHE_MANAGER) private readonly cache: Cache,
-  ) {}
+  ) {
+    super(database, txContext);
+  }
 
   private cacheKey(userId: string, folderId: string | null): string {
     return `files:user:${userId}:folder:${folderId ?? 'root'}`;
@@ -1375,8 +1390,9 @@ export class FolderService {
     await this.cache.del(this.cacheKey(userId, folderId));
   }
 
-  private toFolderItem(row: Folders$Select): FolderItem {
-    return { id: row.id, name: row.name, parentId: row.parentId ?? null, createdAt: row.createdAt, updatedAt: row.updatedAt };
+  async findById(id: string, userId: string): Promise<FolderItem | null> {
+    const row = await this.folderRepository.findByIdAndUser(id, userId);
+    return row ? this.folderRepository.toFolderItem(row) : null;
   }
 
   async getRoot(userId: string): Promise<FolderChildrenResponse> {
@@ -1384,13 +1400,13 @@ export class FolderService {
     const cached = await this.cache.get<FolderChildrenResponse>(key);
     if (cached) return cached;
 
-    const [folderRows, fileRows] = await Promise.all([
+    const [folderRows, files] = await Promise.all([
       this.folderRepository.findRootChildren(userId),
-      this.fileRepository.findRootFiles(userId),
+      this.fileService.listRootFiles(userId),
     ]);
     const result: FolderChildrenResponse = {
-      folders: folderRows.map((f) => this.toFolderItem(f)),
-      files: fileRows.map((f) => this.fileRepository.toFileItem(f)),
+      folders: folderRows.map((f) => this.folderRepository.toFolderItem(f)),
+      files,
     };
     await this.cache.set(key, result);
     return result;
@@ -1404,13 +1420,13 @@ export class FolderService {
     const cached = await this.cache.get<FolderChildrenResponse>(key);
     if (cached) return cached;
 
-    const [folderRows, fileRows] = await Promise.all([
+    const [folderRows, files] = await Promise.all([
       this.folderRepository.findChildren(folderId, userId),
-      this.fileRepository.findByFolder(folderId, userId),
+      this.fileService.listByFolder(folderId, userId),
     ]);
     const result: FolderChildrenResponse = {
-      folders: folderRows.map((f) => this.toFolderItem(f)),
-      files: fileRows.map((f) => this.fileRepository.toFileItem(f)),
+      folders: folderRows.map((f) => this.folderRepository.toFolderItem(f)),
+      files,
     };
     await this.cache.set(key, result);
     return result;
@@ -1423,14 +1439,14 @@ export class FolderService {
     }
     const row = await this.folderRepository.insert({ userId, name, parentId: parentId ?? null });
     await this.invalidate(userId, parentId ?? null);
-    return this.toFolderItem(row);
+    return this.folderRepository.toFolderItem(row);
   }
 
   async rename(id: string, userId: string, name: string): Promise<FolderItem> {
     const row = await this.folderRepository.rename(id, userId, name);
     if (!row) throw new ApiException('FOLDER_NOT_FOUND');
     await this.invalidate(userId, row.parentId ?? null);
-    return this.toFolderItem(row);
+    return this.folderRepository.toFolderItem(row);
   }
 
   async move(id: string, userId: string, parentId: string | null): Promise<FolderItem> {
@@ -1451,7 +1467,7 @@ export class FolderService {
       this.invalidate(userId, folder.parentId ?? null),
       this.invalidate(userId, parentId),
     ]);
-    return this.toFolderItem(row);
+    return this.folderRepository.toFolderItem(row);
   }
 
   async remove(id: string, userId: string): Promise<void> {
@@ -1597,21 +1613,22 @@ export class FolderController {
 - [ ] **Step 4: folder.module.ts 작성**
 
 ```ts
-import { Module } from '@nestjs/common';
-import { FileRepository } from '../file/file.repository';
+import { forwardRef, Module } from '@nestjs/common';
+import { FileModule } from '../file/file.module';
 import { FolderController } from './folder.controller';
 import { FolderRepository } from './folder.repository';
 import { FolderService } from './folder.service';
 
 @Module({
+  imports: [forwardRef(() => FileModule)],
   controllers: [FolderController],
-  providers: [FolderService, FolderRepository, FileRepository],
-  exports: [FolderRepository],
+  providers: [FolderService, FolderRepository],
+  exports: [FolderService, FolderRepository],
 })
 export class FolderModule {}
 ```
 
-> **Note:** `FolderService`가 `FileRepository`에 의존하므로 여기서 함께 제공한다. `FileModule`이 생성된 이후 `FileModule`을 import하는 방식으로 변경해도 무방하다.
+> **Note:** `FolderService` → `FileService`, `FileService` → `FolderService` 양방향 의존이 발생하므로 `forwardRef`로 순환 참조를 해결한다. `FolderService`는 `FileService`에 `@Inject(forwardRef(() => FileService))`로 주입받는다. `FolderService`를 export해야 `FileModule`에서 폴더 유효성 검증에 사용할 수 있다.
 
 - [ ] **Step 5: app.module.ts에 FolderModule 등록**
 
@@ -1812,8 +1829,10 @@ git commit -m "feat: FileRepository 구현"
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import { Test } from '@nestjs/testing';
 import { ApiException } from '@terab/common';
+import { DatabaseService, TransactionContext } from '@terab/db';
+import { mockDatabaseService } from '@terab/test';
+import { FolderService } from '../folder/folder.service';
 import { MinioService } from '../minio/minio.service';
-import { FolderRepository } from '../folder/folder.repository';
 import { FileRepository } from './file.repository';
 import { FileService } from './file.service';
 
@@ -1829,8 +1848,8 @@ const mockFileRepository = {
   toFileItem: jest.fn((row) => ({ ...row, folderId: row.folderId ?? null })),
 };
 
-const mockFolderRepository = {
-  findByIdAndUser: jest.fn(),
+const mockFolderService = {
+  findById: jest.fn(),
 };
 
 const mockMinioService = {
@@ -1844,6 +1863,11 @@ const mockMinioService = {
 
 const mockCacheManager = { get: jest.fn(), set: jest.fn(), del: jest.fn() };
 
+const mockTransactionContext = {
+  current: undefined,
+  run: jest.fn((_tx: unknown, fn: () => Promise<unknown>) => fn()),
+};
+
 describe('FileService', () => {
   let service: FileService;
 
@@ -1851,8 +1875,10 @@ describe('FileService', () => {
     const module = await Test.createTestingModule({
       providers: [
         FileService,
+        { provide: DatabaseService, useValue: mockDatabaseService },
+        { provide: TransactionContext, useValue: mockTransactionContext },
         { provide: FileRepository, useValue: mockFileRepository },
-        { provide: FolderRepository, useValue: mockFolderRepository },
+        { provide: FolderService, useValue: mockFolderService },
         { provide: MinioService, useValue: mockMinioService },
         { provide: CACHE_MANAGER, useValue: mockCacheManager },
       ],
@@ -1865,6 +1891,20 @@ describe('FileService', () => {
     expect(service).toBeDefined();
   });
 
+  it('listRootFiles는 루트 파일 목록을 FileItem 배열로 반환한다', async () => {
+    mockFileRepository.findRootFiles.mockResolvedValue([]);
+    const result = await service.listRootFiles('u1');
+    expect(mockFileRepository.findRootFiles).toHaveBeenCalledWith('u1');
+    expect(result).toEqual([]);
+  });
+
+  it('listByFolder는 폴더 내 파일 목록을 FileItem 배열로 반환한다', async () => {
+    mockFileRepository.findByFolder.mockResolvedValue([]);
+    const result = await service.listByFolder('folder-1', 'u1');
+    expect(mockFileRepository.findByFolder).toHaveBeenCalledWith('folder-1', 'u1');
+    expect(result).toEqual([]);
+  });
+
   it('rename은 파일이 없으면 FILE_NOT_FOUND를 던진다', async () => {
     mockFileRepository.rename.mockResolvedValue(null);
     await expect(service.rename('f1', 'u1', 'new.txt')).rejects.toThrow(ApiException);
@@ -1872,13 +1912,24 @@ describe('FileService', () => {
 
   it('move는 대상 폴더가 없으면 FOLDER_NOT_FOUND를 던진다', async () => {
     mockFileRepository.findByIdAndUser.mockResolvedValue({ id: 'f1', folderId: null });
-    mockFolderRepository.findByIdAndUser.mockResolvedValue(null);
+    mockFolderService.findById.mockResolvedValue(null);
     await expect(service.move('f1', 'u1', 'folder-1')).rejects.toThrow(ApiException);
   });
 
   it('remove는 파일이 없으면 FILE_NOT_FOUND를 던진다', async () => {
     mockFileRepository.softDelete.mockResolvedValue(false);
     await expect(service.remove('f1', 'u1')).rejects.toThrow(ApiException);
+  });
+
+  it('resolveZipFiles는 유효한 파일만 name·key 형태로 반환한다', async () => {
+    const row = { id: 'f1', name: 'a.txt', minioKey: 'u1/uuid-1', folderId: null };
+    mockFileRepository.findByIdAndUser
+      .mockResolvedValueOnce(row)
+      .mockResolvedValueOnce(null);
+
+    const result = await service.resolveZipFiles(['f1', 'ghost'], 'u1');
+
+    expect(result).toEqual([{ name: 'a.txt', key: 'u1/uuid-1' }]);
   });
 
   it('upload는 multer 파일 메타데이터를 DB에 저장하고 FileItem을 반환한다', async () => {
@@ -1919,23 +1970,28 @@ Expected: FAIL.
 
 ```ts
 import { Cache, CACHE_MANAGER } from '@nestjs/cache-manager';
-import { Inject, Injectable } from '@nestjs/common';
+import { forwardRef, Inject, Injectable } from '@nestjs/common';
 import { ApiException } from '@terab/common';
 import type { FileItem, FileSearchResponse } from '@terab/contract';
-import { Readable } from 'stream';
+import { DatabaseService, ServiceCore, TransactionContext } from '@terab/db';
 import { randomUUID } from 'crypto';
-import { FolderRepository } from '../folder/folder.repository';
+import { Readable } from 'stream';
+import { FolderService } from '../folder/folder.service';
 import { MinioService } from '../minio/minio.service';
 import { FileRepository } from './file.repository';
 
 @Injectable()
-export class FileService {
+export class FileService extends ServiceCore {
   constructor(
+    database: DatabaseService,
+    txContext: TransactionContext,
     private readonly fileRepository: FileRepository,
-    private readonly folderRepository: FolderRepository,
+    @Inject(forwardRef(() => FolderService)) private readonly folderService: FolderService,
     private readonly minioService: MinioService,
     @Inject(CACHE_MANAGER) private readonly cache: Cache,
-  ) {}
+  ) {
+    super(database, txContext);
+  }
 
   private cacheKey(userId: string, folderId: string | null): string {
     return `files:user:${userId}:folder:${folderId ?? 'root'}`;
@@ -1945,9 +2001,19 @@ export class FileService {
     await this.cache.del(this.cacheKey(userId, folderId));
   }
 
+  async listRootFiles(userId: string): Promise<FileItem[]> {
+    const rows = await this.fileRepository.findRootFiles(userId);
+    return rows.map((r) => this.fileRepository.toFileItem(r));
+  }
+
+  async listByFolder(folderId: string, userId: string): Promise<FileItem[]> {
+    const rows = await this.fileRepository.findByFolder(folderId, userId);
+    return rows.map((r) => this.fileRepository.toFileItem(r));
+  }
+
   async upload(userId: string, file: Express.Multer.File, folderId?: string): Promise<FileItem> {
     if (folderId) {
-      const folder = await this.folderRepository.findByIdAndUser(folderId, userId);
+      const folder = await this.folderService.findById(folderId, userId);
       if (!folder) throw new ApiException('FOLDER_NOT_FOUND');
     }
 
@@ -1975,6 +2041,15 @@ export class FileService {
     return this.minioService.getObject(minioKey);
   }
 
+  async resolveZipFiles(fileIds: string[], userId: string): Promise<Array<{ name: string; key: string }>> {
+    const rows = await Promise.all(
+      fileIds.map((id) => this.fileRepository.findByIdAndUser(id, userId)),
+    );
+    return rows
+      .filter((r): r is NonNullable<typeof r> => r !== null)
+      .map((r) => ({ name: r.name, key: r.minioKey }));
+  }
+
   async rename(id: string, userId: string, name: string): Promise<FileItem> {
     const row = await this.fileRepository.rename(id, userId, name);
     if (!row) throw new ApiException('FILE_NOT_FOUND');
@@ -1987,7 +2062,7 @@ export class FileService {
     if (!file) throw new ApiException('FILE_NOT_FOUND');
 
     if (folderId !== null) {
-      const folder = await this.folderRepository.findByIdAndUser(folderId, userId);
+      const folder = await this.folderService.findById(folderId, userId);
       if (!folder) throw new ApiException('FOLDER_NOT_FOUND');
     }
 
@@ -2006,7 +2081,7 @@ export class FileService {
     if (!file) throw new ApiException('FILE_NOT_FOUND');
 
     if (folderId !== null) {
-      const folder = await this.folderRepository.findByIdAndUser(folderId, userId);
+      const folder = await this.folderService.findById(folderId, userId);
       if (!folder) throw new ApiException('FOLDER_NOT_FOUND');
     }
 
@@ -2187,7 +2262,6 @@ import { Readable } from 'stream';
 import archiver from 'archiver';
 import type { AuthUser } from '../auth/types/auth-user.type';
 import { FileService } from './file.service';
-import { FileRepository } from './file.repository';
 
 const ZIP_LIMIT = 100;
 
@@ -2195,7 +2269,6 @@ const ZIP_LIMIT = 100;
 export class FileDownloadController {
   constructor(
     private readonly fileService: FileService,
-    private readonly fileRepository: FileRepository,
   ) {}
 
   // archiver가 해당 엔트리를 처리할 시점에만 MinIO 연결을 여는 lazy 스트림
@@ -2246,17 +2319,14 @@ export class FileDownloadController {
       throw new ApiException('ZIP_LIMIT_EXCEEDED');
     }
 
-    const fileRows = await Promise.all(
-      body.fileIds.map((id) => this.fileRepository.findByIdAndUser(id, user.userId)),
-    );
-    const validFiles = fileRows.filter((f): f is NonNullable<typeof f> => f !== null);
+    const files = await this.fileService.resolveZipFiles(body.fileIds, user.userId);
 
     const archive = archiver('zip', { zlib: { level: 1 } });
 
-    for (const file of validFiles) {
+    for (const { name, key } of files) {
       archive.append(
-        this.lazyStream(() => this.fileService.getObjectStream(file.minioKey)),
-        { name: file.name },
+        this.lazyStream(() => this.fileService.getObjectStream(key)),
+        { name },
       );
     }
 
@@ -2278,10 +2348,12 @@ export class FileDownloadController {
 import { Test } from '@nestjs/testing';
 import { FileDownloadController } from './file-download.controller';
 import { FileService } from './file.service';
-import { FileRepository } from './file.repository';
 
-const mockFileService = { getDownloadStream: jest.fn(), getObjectStream: jest.fn() };
-const mockFileRepository = { findByIdAndUser: jest.fn() };
+const mockFileService = {
+  getDownloadStream: jest.fn(),
+  getObjectStream: jest.fn(),
+  resolveZipFiles: jest.fn(),
+};
 
 describe('FileDownloadController', () => {
   let controller: FileDownloadController;
@@ -2291,7 +2363,6 @@ describe('FileDownloadController', () => {
       controllers: [FileDownloadController],
       providers: [
         { provide: FileService, useValue: mockFileService },
-        { provide: FileRepository, useValue: mockFileRepository },
       ],
     }).compile();
     controller = module.get(FileDownloadController);
@@ -2307,11 +2378,11 @@ describe('FileDownloadController', () => {
 - [ ] **Step 6: file.module.ts 작성**
 
 ```ts
-import { Module } from '@nestjs/common';
+import { forwardRef, Module } from '@nestjs/common';
 import { MulterModule } from '@nestjs/platform-express';
 import { MinioService } from '../minio/minio.service';
 import { MinioStorageEngine } from '../minio/minio-storage.engine';
-import { FolderRepository } from '../folder/folder.repository';
+import { FolderModule } from '../folder/folder.module';
 import { FileDownloadController } from './file-download.controller';
 import { FileController } from './file.controller';
 import { FileRepository } from './file.repository';
@@ -2319,6 +2390,7 @@ import { FileService } from './file.service';
 
 @Module({
   imports: [
+    forwardRef(() => FolderModule),
     MulterModule.registerAsync({
       inject: [MinioService],
       useFactory: (minioService: MinioService) => ({
@@ -2327,13 +2399,13 @@ import { FileService } from './file.service';
     }),
   ],
   controllers: [FileController, FileDownloadController],
-  providers: [FileService, FileRepository, FolderRepository],
-  exports: [FileRepository, FileService],
+  providers: [FileService, FileRepository],
+  exports: [FileService],
 })
 export class FileModule {}
 ```
 
-> **Note:** `MinioModule`이 `@Global()`이므로 `MinioService`는 별도 `imports` 없이 `inject`에서 직접 참조 가능하다.
+> **Note:** `MinioModule`이 `@Global()`이므로 `MinioService`는 별도 `imports` 없이 `inject`에서 직접 참조 가능하다. `FolderModule`은 `forwardRef`로 import하여 순환 의존성을 해결한다. `FileRepository`는 `FileModule` 내부에서만 사용하므로 export하지 않는다.
 
 - [ ] **Step 7: app.module.ts 업데이트**
 
@@ -2345,20 +2417,20 @@ import { FileModule } from './file/file.module';
 FileModule,
 ```
 
-또한 `FolderModule`에서 `FileRepository` 중복 제공 문제를 해결하기 위해 `folder.module.ts`를 수정:
+또한 `FolderModule`이 Task 12에서 이미 `forwardRef(() => FileModule)`을 import하고 있음을 확인한다:
 
 ```ts
-import { Module } from '@nestjs/common';
+import { forwardRef, Module } from '@nestjs/common';
 import { FileModule } from '../file/file.module';
 import { FolderController } from './folder.controller';
 import { FolderRepository } from './folder.repository';
 import { FolderService } from './folder.service';
 
 @Module({
-  imports: [FileModule],
+  imports: [forwardRef(() => FileModule)],
   controllers: [FolderController],
   providers: [FolderService, FolderRepository],
-  exports: [FolderRepository],
+  exports: [FolderService, FolderRepository],
 })
 export class FolderModule {}
 ```
