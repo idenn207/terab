@@ -17,7 +17,7 @@ NestJS 11 기반 REST API 서버. Controller → Service → Repository 3-tier �
 | `src/twofa/` | 2FA 챌린지 |
 | `src/invitation/` | 초대 링크 |
 | `src/common/` | 전역 Guard, Filter, Decorator, Exception |
-| `src/core/` | TokenService (JWT·암호화 유틸) |
+| `src/security/` | TokenService (JWT·암호화 유틸) |
 | `src/database/` | DatabaseService, Schema, Seed, Migration |
 | `src/health/` | 헬스체크 엔드포인트 |
 
@@ -28,7 +28,7 @@ NestJS 11 기반 REST API 서버. Controller → Service → Repository 3-tier �
 | `@terab/contract` | `packages/contracts/` | ts-rest 계약 + Zod 스키마 |
 | `@terab/db` | `src/database/` (path alias) | DatabaseService, Schema 타입 |
 | `@terab/common` | `src/common/` (path alias) | Guards, Decorators, Exceptions |
-| `@terab/core` | `src/core/` (path alias) | TokenService |
+| `@terab/security` | `src/security/` (path alias) | TokenService |
 | `@terab/test` | `src/test/` (path alias) | Mock 유틸 |
 
 ### 주요 명령어
@@ -66,8 +66,8 @@ test/
 신규 모듈 추가 시 아래 의존 방향을 참고한다.
 
 - `DatabaseModule` — `@Global()` 선언. 각 도메인 모듈이 직접 import하지 않아도 `DatabaseService`를 주입받을 수 있다.
-- `CoreModule` — `TokenService`를 export. 필요한 모듈이 직접 import한다.
-- 도메인 모듈 간 순환 의존 금지. 공통 로직은 `CoreModule` 또는 `DatabaseModule`로 위임한다.
+- `SecurityModule` — `TokenService`를 export. `@Global()` 선언으로 전역 제공.
+- 도메인 모듈 간 순환 의존 금지. 공통 로직은 `SecurityModule` 또는 `DatabaseModule`로 위임한다.
 - `AppModule`은 모든 도메인 모듈을 import한다. 신규 모듈 추가 시 반드시 등록한다.
 - 각 모듈은 필요한 외부 모듈(`BullModule`, `PassportModule` 등)을 직접 import한다.
 
