@@ -41,5 +41,5 @@ await this.database.db.select()...
 
 - DB 직접 접근 금지 — 항상 Repository 경유
 - 트랜잭션이 필요한 경우 Repository에 전용 메서드 위임 (서비스에서 `database.db.transaction` 호출 금지)
-- 상수는 클래스 최상단 `private readonly XXX_MS = ...` 패턴으로 추출
+- 상수·헬퍼 함수는 클래스 내부에 (`private readonly` / `private` 메서드) — `class-patterns.md` 참조
 - `ApiException` import: `import { ApiException } from '@terab/common'`
