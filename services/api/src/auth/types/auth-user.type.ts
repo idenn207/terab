@@ -1,6 +1,11 @@
+import { type Request } from 'express';
+
 interface AuthUser {
   userId: string;
   username: string;
   permissions: string[];
 }
-export type { AuthUser };
+
+type RequestWithAuthUser = Request & { user?: AuthUser };
+
+export type { AuthUser, RequestWithAuthUser };

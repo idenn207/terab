@@ -12,6 +12,7 @@ import { HealthModule } from './health/health.module';
 import { InvitationModule } from './invitation/invitation.module';
 import { TrustedDeviceModule } from './trusted-device/trusted-device.module';
 import { TwoFaModule } from './twofa/twofa.module';
+import { MinioModule } from './minio/minio.module';
 
 @Module({
   imports: [
@@ -34,6 +35,7 @@ import { TwoFaModule } from './twofa/twofa.module';
     TrustedDeviceModule,
     TwoFaModule,
     InvitationModule,
+    MinioModule,
   ],
   providers: [
     // 전역 Guard: ThrottlerGuard → JwtAuthGuard(401) → PermissionGuard(403) 순서 보장
