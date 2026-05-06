@@ -20,6 +20,7 @@ export interface ErrorCodeDefinition {
 }
 
 export const ErrorCode = {
+  // ───── Login ──────────────────────────────
   INVALID_CREDENTIALS: {
     message: '아이디 또는 비밀번호가 올바르지 않습니다.',
     status: HttpStatus.UNAUTHORIZED,
@@ -48,6 +49,7 @@ export const ErrorCode = {
     message: '비활성화된 계정입니다.',
     status: HttpStatus.LOCKED,
   },
+  // ───── 2FA ──────────────────────────────
   BACKUP_CODE_INVALID: {
     message: '유효하지 않은 백업 코드입니다.',
     status: HttpStatus.UNAUTHORIZED,
@@ -64,6 +66,7 @@ export const ErrorCode = {
     message: '등록되지 않은 신뢰기기입니다.',
     status: HttpStatus.NOT_FOUND,
   },
+  // ───── Invitation ──────────────────────────────
   INVITATION_NOT_FOUND: {
     message: '유효하지 않은 초대 링크입니다.',
     status: HttpStatus.NOT_FOUND,
@@ -75,6 +78,35 @@ export const ErrorCode = {
   INVITATION_ALREADY_USED: {
     message: '이미 사용된 초대 링크입니다.',
     status: HttpStatus.CONFLICT,
+  },
+  // ───── Folder/File ──────────────────────────────
+  FILE_NOT_FOUND: {
+    message: '파일을 찾을 수 없습니다.',
+    status: HttpStatus.NOT_FOUND,
+  },
+  FOLDER_NOT_FOUND: {
+    message: '폴더를 찾을 수 없습니다.',
+    status: HttpStatus.NOT_FOUND,
+  },
+  FILE_UPLOAD_FAILED: {
+    message: '파일 업로드에 실패했습니다.',
+    status: HttpStatus.INTERNAL_SERVER_ERROR,
+  },
+  FILE_ALREADY_DELETED: {
+    message: '이미 삭제된 파일입니다.',
+    status: HttpStatus.CONFLICT,
+  },
+  FOLDER_ALREADY_DELETED: {
+    message: '이미 삭제된 폴더입니다.',
+    status: HttpStatus.CONFLICT,
+  },
+  INVALID_MOVE_TARGET: {
+    message: '하위 폴더로 이동할 수 없습니다.',
+    status: HttpStatus.BAD_REQUEST,
+  },
+  ZIP_LIMIT_EXCEEDED: {
+    message: 'ZIP 다운로드는 최대 100개까지 가능합니다.',
+    status: HttpStatus.BAD_REQUEST,
   },
 } as const satisfies Record<string, ErrorCodeDefinition>;
 
