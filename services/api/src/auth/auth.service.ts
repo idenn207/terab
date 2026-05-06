@@ -2,7 +2,7 @@ import { ConflictException, Injectable, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { ApiException } from '@terab/common';
 import { contract } from '@terab/contract';
-import { TokenService } from '@terab/core';
+import { TokenService } from '@terab/security';
 import { ServerInferRequest, ServerInferResponseBody } from '@ts-rest/core';
 import bcrypt from 'bcryptjs';
 import { randomBytes } from 'node:crypto';
@@ -95,7 +95,7 @@ export class AuthService implements OnModuleInit {
   async login(
     data: ServerInferRequest<typeof contract.auth.login>['body'],
     trustToken: string | undefined,
-    userAgent: string | undefined,
+    _userAgent: string | undefined,
   ): Promise<
     {
       response: ServerInferResponseBody<typeof contract.auth.login>;

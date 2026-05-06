@@ -1,6 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { ApiException } from '@terab/common';
-import { TokenService } from '@terab/core';
+import { TokenService } from '@terab/security';
 import { TrustedDeviceRepository } from './trusted-device.repository';
 import { TrustedDeviceService } from './trusted-device.service';
 

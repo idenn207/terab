@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { ApiException } from '@terab/common';
-import { TokenService } from '@terab/core';
+import { TokenService } from '@terab/security';
 import { randomUUID } from 'node:crypto';
 import { TrustedDeviceResponseDto } from './dto/trusted-device-response.dto';
 import { TrustedDeviceRepository } from './trusted-device.repository';

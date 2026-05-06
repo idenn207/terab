@@ -1,7 +1,7 @@
 import { ConfigService } from '@nestjs/config';
 import { Test } from '@nestjs/testing';
 import { ApiException } from '@terab/common';
-import { TokenService } from '@terab/core';
+import { TokenService } from '@terab/security';
 import { mockConfigService, mockUser } from '@terab/test';
 import bcrypt from 'bcryptjs';
 import { DeviceService } from '../device/device.service';
