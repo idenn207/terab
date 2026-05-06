@@ -7,6 +7,6 @@
   "model": "opusplan",
   "enabledPlugins": {},
   "outputStyle": "Learning",
-  "effortLevel": "medium",
+  "effortLevel": "high",
   "autoUpdatesChannel": "latest"
 }
