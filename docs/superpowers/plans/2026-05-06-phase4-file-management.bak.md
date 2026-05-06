@@ -76,7 +76,7 @@ services/api/src/
 
 ```bash
 cd services/api
-npm install minio archiver @nestjs/cache-manager cache-manager @keyv/redis
+npm install minio archiver @nestjs/cache-manager cache-manager cache-manager-ioredis-yet
 npm install --save-dev @types/multer @types/minio @types/archiver
 ```
 
@@ -1971,10 +1971,6 @@ export class FileService {
     return { stream, name: file.name, size: file.size, mimeType: file.mimeType };
   }
 
-  async getObjectStream(minioKey: string): Promise<Readable> {
-    return this.minioService.getObject(minioKey);
-  }
-
   async rename(id: string, userId: string, name: string): Promise<FileItem> {
     const row = await this.fileRepository.rename(id, userId, name);
     if (!row) throw new ApiException('FILE_NOT_FOUND');
@@ -2180,14 +2176,15 @@ export class FileController {
 바이너리 스트림 응답은 ts-rest 대신 표준 NestJS 라우팅으로 처리한다.
 
 ```ts
-import { Body, Controller, Get, Param, Post, Res, StreamableFile } from '@nestjs/common';
-import { ApiException, CurrentUser } from '@terab/common';
+import { Controller, Delete, Get, Param, Post, Res, StreamableFile } from '@nestjs/common';
+import { CurrentUser } from '@terab/common';
 import type { Response } from 'express';
-import { Readable } from 'stream';
 import archiver from 'archiver';
 import type { AuthUser } from '../auth/types/auth-user.type';
 import { FileService } from './file.service';
 import { FileRepository } from './file.repository';
+import { ApiException } from '@terab/common';
+import { Body } from '@nestjs/common';
 
 const ZIP_LIMIT = 100;
 
@@ -2197,29 +2194,6 @@ export class FileDownloadController {
     private readonly fileService: FileService,
     private readonly fileRepository: FileRepository,
   ) {}
-
-  // archiver가 해당 엔트리를 처리할 시점에만 MinIO 연결을 여는 lazy 스트림
-  private lazyStream(factory: () => Promise<Readable>): Readable {
-    let source: Readable | null = null;
-    let connected = false;
-    return new Readable({
-      read() {
-        if (source) {
-          source.resume();
-        } else if (!connected) {
-          connected = true;
-          factory()
-            .then(s => {
-              source = s;
-              s.on('data', chunk => { if (!this.push(chunk)) s.pause(); });
-              s.on('end', () => this.push(null));
-              s.on('error', err => this.destroy(err));
-            })
-            .catch(err => this.destroy(err));
-        }
-      },
-    });
-  }
 
   @Get('/files/:id/download')
   async downloadFile(
@@ -2240,8 +2214,8 @@ export class FileDownloadController {
   async downloadZip(
     @CurrentUser() user: AuthUser,
     @Body() body: { fileIds: string[] },
-    @Res({ passthrough: true }) res: Response,
-  ): Promise<StreamableFile> {
+    @Res() res: Response,
+  ): Promise<void> {
     if (!body.fileIds || body.fileIds.length > ZIP_LIMIT) {
       throw new ApiException('ZIP_LIMIT_EXCEEDED');
     }
@@ -2251,23 +2225,20 @@ export class FileDownloadController {
     );
     const validFiles = fileRows.filter((f): f is NonNullable<typeof f> => f !== null);
 
-    const archive = archiver('zip', { zlib: { level: 1 } });
-
-    for (const file of validFiles) {
-      archive.append(
-        this.lazyStream(() => this.fileService.getObjectStream(file.minioKey)),
-        { name: file.name },
-      );
-    }
-
-    void archive.finalize();
-
     res.set({
       'Content-Type': 'application/zip',
       'Content-Disposition': 'attachment; filename="download.zip"',
     });
 
-    return new StreamableFile(archive as unknown as Readable);
+    const archive = archiver('zip', { zlib: { level: 6 } });
+    archive.pipe(res);
+
+    for (const file of validFiles) {
+      const stream = await this.fileService.getDownloadStream(user.userId, file.id);
+      archive.append(stream.stream, { name: file.name });
+    }
+
+    await archive.finalize();
   }
 }
 ```
@@ -2280,7 +2251,7 @@ import { FileDownloadController } from './file-download.controller';
 import { FileService } from './file.service';
 import { FileRepository } from './file.repository';
 
-const mockFileService = { getDownloadStream: jest.fn(), getObjectStream: jest.fn() };
+const mockFileService = { getDownloadStream: jest.fn() };
 const mockFileRepository = { findByIdAndUser: jest.fn() };
 
 describe('FileDownloadController', () => {
