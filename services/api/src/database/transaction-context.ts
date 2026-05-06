@@ -1,5 +1,5 @@
 import { AsyncLocalStorage } from 'node:async_hooks';
-import { DrizzleTx } from './types/database.type';
+import type { DrizzleTx } from './types/database.type';
 
 export class TransactionContext {
   private readonly storage = new AsyncLocalStorage<DrizzleTx>();
