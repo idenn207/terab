@@ -1,0 +1,138 @@
+import { Cache, CACHE_MANAGER } from '@nestjs/cache-manager';
+import { Inject, Injectable } from '@nestjs/common';
+import { ApiException } from '@terab/common';
+import { FileItem, FileSearchResponse } from '@terab/contract';
+import { DatabaseService, ServiceCore, TransactionContext } from '@terab/db';
+import { randomUUID } from 'node:crypto';
+import { Readable } from 'node:stream';
+import { MinioService } from '../minio/minio.service';
+import { FileRepository } from './file.repository';
+
+@Injectable()
+export class FileService extends ServiceCore {
+  constructor(
+    database: DatabaseService,
+    txContext: TransactionContext,
+    private readonly fileRepository: FileRepository,
+    private readonly minioService: MinioService,
+    @Inject(CACHE_MANAGER) private readonly cache: Cache,
+  ) {
+    super(database, txContext);
+  }
+
+  private cacheKey(userId: string, folderId: string | null): string {
+    return `files:user:${userId}:folder:${folderId ?? 'root'}`;
+  }
+
+  private async invalidate(userId: string, folderId: string | null): Promise<void> {
+    await this.cache.del(this.cacheKey(userId, folderId));
+  }
+
+  async listRootFiles(userId: string): Promise<FileItem[]> {
+    const rows = await this.fileRepository.findRootFiles(userId);
+    return rows.map((r) => this.fileRepository.toFileItem(r));
+  }
+
+  async listByFolder(folderId: string, userId: string): Promise<FileItem[]> {
+    const rows = await this.fileRepository.findByFolder(folderId, userId);
+    return rows.map((r) => this.fileRepository.toFileItem(r));
+  }
+
+  async upload(userId: string, file: Express.Multer.File, folderId?: string): Promise<FileItem> {
+    if (folderId) {
+      const exists = await this.fileRepository.folderBelongsToUser(folderId, userId);
+      if (!exists) throw new ApiException('FOLDER_NOT_FOUND');
+    }
+
+    const row = await this.fileRepository.insert({
+      userId,
+      folderId: folderId ?? null,
+      name: file.originalname,
+      minioKey: file.filename,
+      size: file.size,
+      mimeType: file.mimetype,
+    });
+
+    await this.invalidate(userId, folderId ?? null);
+    return this.fileRepository.toFileItem(row);
+  }
+
+  async getDownloadStream(
+    userId: string,
+    fileId: string,
+  ): Promise<{ stream: Readable; name: string; size: number; mimeType: string }> {
+    const file = await this.fileRepository.findByIdAndUser(fileId, userId);
+    if (!file) throw new ApiException('FILE_NOT_FOUND');
+    const stream = await this.getObjectStream(file.minioKey);
+    return { stream, name: file.name, size: file.size, mimeType: file.mimeType };
+  }
+
+  async getObjectStream(minioKey: string): Promise<Readable> {
+    return this.minioService.getObject(minioKey);
+  }
+
+  async resolveZipFiles(fileIds: string[], userId: string): Promise<Array<{ name: string; key: string }>> {
+    const rows = await Promise.all(fileIds.map((id) => this.fileRepository.findByIdAndUser(id, userId)));
+    return rows.filter((r): r is NonNullable<typeof r> => r !== null).map((r) => ({ name: r.name, key: r.minioKey }));
+  }
+
+  async rename(id: string, userId: string, name: string): Promise<FileItem> {
+    const row = await this.fileRepository.rename(id, userId, name);
+    if (!row) throw new ApiException('FILE_NOT_FOUND');
+    await this.invalidate(userId, row.folderId ?? null);
+    return this.fileRepository.toFileItem(row);
+  }
+
+  async move(id: string, userId: string, folderId: string | null): Promise<FileItem> {
+    const file = await this.fileRepository.findByIdAndUser(id, userId);
+    if (!file) throw new ApiException('FILE_NOT_FOUND');
+
+    if (folderId !== null) {
+      const exists = await this.fileRepository.folderBelongsToUser(folderId, userId);
+      if (!exists) throw new ApiException('FOLDER_NOT_FOUND');
+    }
+
+    const row = await this.fileRepository.move(id, userId, folderId);
+    if (!row) throw new ApiException('FILE_NOT_FOUND');
+
+    await Promise.all([this.invalidate(userId, file.folderId ?? null), this.invalidate(userId, folderId)]);
+    return this.fileRepository.toFileItem(row);
+  }
+
+  async copy(id: string, userId: string, folderId: string | null): Promise<FileItem> {
+    const file = await this.fileRepository.findByIdAndUser(id, userId);
+    if (!file) throw new ApiException('FILE_NOT_FOUND');
+
+    if (folderId !== null) {
+      const exists = await this.fileRepository.folderBelongsToUser(folderId, userId);
+      if (!exists) throw new ApiException('FOLDER_NOT_FOUND');
+    }
+
+    const newKey = `${userId}/${randomUUID()}`;
+    await this.minioService.copyObject(file.minioKey, newKey);
+    const row = await this.fileRepository.insert({
+      userId,
+      folderId,
+      name: file.name,
+      minioKey: newKey,
+      size: file.size,
+      mimeType: file.mimeType,
+    });
+    await this.invalidate(userId, folderId);
+    return this.fileRepository.toFileItem(row);
+  }
+
+  async remove(id: string, userId: string): Promise<void> {
+    const file = await this.fileRepository.findByIdAndUser(id, userId);
+    if (!file) throw new ApiException('FILE_NOT_FOUND');
+    const deleted = await this.fileRepository.softDelete(id, userId);
+    if (!deleted) throw new ApiException('FILE_NOT_FOUND');
+    await this.invalidate(userId, file.folderId ?? null);
+  }
+
+  async search(userId: string, q: string, scope: 'all' | 'folder', folderId?: string): Promise<FileSearchResponse> {
+    if (scope === 'folder' && !folderId) throw new ApiException('FOLDER_NOT_FOUND');
+    const rows = await this.fileRepository.search(userId, q, scope === 'folder' ? folderId : undefined);
+    return { files: rows.map((r) => this.fileRepository.toFileItem(r)) };
+  }
+}
