@@ -1,14 +1,15 @@
 import { HttpStatus } from '@terab/common';
-import { EmptySchema, UserSchema } from '@terab/schema';
-import { initContract } from '@ts-rest/core';
-import z from 'zod';
 import {
   BackupLoginBodySchema,
+  EmptySchema,
   LoginBodySchema,
   LoginResponseSchema,
   RegisterBodySchema,
   RegisterResponseSchema,
-} from '../schemas/auth.schema';
+  UserSchema,
+} from '@terab/schema';
+import { initContract } from '@ts-rest/core';
+import z from 'zod';
 
 const c = initContract();
 

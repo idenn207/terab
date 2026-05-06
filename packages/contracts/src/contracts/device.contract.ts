@@ -1,8 +1,7 @@
 import { HttpStatus } from '@terab/common';
-import { EmptySchema } from '@terab/schema';
+import { DeviceResponseSchema, EmptySchema, RegisterDeviceBodySchema } from '@terab/schema';
 import { initContract } from '@ts-rest/core';
 import z from 'zod';
-import { DeviceResponseSchema, RegisterDeviceBodySchema } from '../schemas/device.schema';
 
 const c = initContract();
 
