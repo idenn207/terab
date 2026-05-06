@@ -15,6 +15,13 @@
       "when": 1777395128527,
       "tag": "0001_create_invitations",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1778070997361,
+      "tag": "0002_create_folders",
+      "breakpoints": true
     }
   ]
 }
