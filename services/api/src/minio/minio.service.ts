@@ -1,33 +1,45 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Client } from 'minio';
+import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
 import { Readable } from 'node:stream';
 
 @Injectable()
 export class MinioService {
   private readonly client: Client;
+  private readonly endpoint: string;
   readonly bucketName: string;
 
-  constructor(private readonly config: ConfigService) {
-    const endpoint = config.getOrThrow<string>('MINIO_ENDPOINT');
-    const [host, portStr] = endpoint.split(':');
+  constructor(
+    private readonly config: ConfigService,
+    @InjectPinoLogger(MinioService.name) private readonly logger: PinoLogger,
+  ) {
+    this.endpoint = this.config.getOrThrow<string>('MINIO_ENDPOINT');
+    const [host, portStr] = this.endpoint.split(':');
     const port = portStr ? parseInt(portStr, 10) : 9000;
 
     this.client = new Client({
       endPoint: host,
       port,
       useSSL: false,
-      accessKey: config.getOrThrow<string>('MINIO_ROOT_USER'),
-      secretKey: config.getOrThrow<string>('MINIO_ROOT_PASSWORD'),
+      accessKey: this.config.getOrThrow<string>('MINIO_ROOT_USER'),
+      secretKey: this.config.getOrThrow<string>('MINIO_ROOT_PASSWORD'),
     });
 
-    this.bucketName = config.getOrThrow<string>('MINIO_DEFAULT_BUCKETS');
+    this.bucketName = this.config.getOrThrow<string>('MINIO_DEFAULT_BUCKETS');
+    this.logger.debug({ endpoint: this.endpoint, bucket: this.bucketName }, 'MinioService 초기화');
   }
 
   async putObject(key: string, stream: Readable, mimeType: string): Promise<void> {
-    await this.client.putObject(this.bucketName, key, stream, undefined, {
-      'Content-Type': mimeType,
-    });
+    this.logger.debug({ bucket: this.bucketName, key, mimeType }, 'putObject 시작');
+    try {
+      await this.client.putObject(this.bucketName, key, stream, undefined, {
+        'Content-Type': mimeType,
+      });
+    } catch (err) {
+      this.logger.error({ err, bucket: this.bucketName, key, endpoint: this.endpoint }, 'putObject 실패');
+      throw err;
+    }
   }
 
   async getObject(key: string): Promise<Readable> {
