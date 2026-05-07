@@ -6,26 +6,27 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { APP_FILTER, APP_GUARD, APP_PIPE } from '@nestjs/core';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { ApiExceptionFilter, JwtAuthGuard, PermissionGuard } from '@terab/common';
-import { SecurityModule } from '@terab/security';
 import { DatabaseModule } from '@terab/db';
+import { SecurityModule } from '@terab/security';
 import { AuthModule } from './auth/auth.module';
 import { DeviceModule } from './device/device.module';
+import { FileModule } from './file/file.module';
+import { FolderModule } from './folder/folder.module';
 import { HealthModule } from './health/health.module';
 import { InvitationModule } from './invitation/invitation.module';
+import { LoggerModule } from './logger/logger.module';
 import { MinioModule } from './minio/minio.module';
+import { TrashModule } from './trash/trash.module';
 import { TrustedDeviceModule } from './trusted-device/trusted-device.module';
 import { TwoFaModule } from './twofa/twofa.module';
-import { FolderModule } from './folder/folder.module';
-import { FileModule } from './file/file.module';
-import { TrashModule } from './trash/trash.module';
 
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
+    LoggerModule,
     ThrottlerModule.forRoot([{ ttl: 60000, limit: 60 }]),
     CacheModule.registerAsync({
       isGlobal: true,
-      imports: [ConfigModule],
       inject: [ConfigService],
       useFactory: (config: ConfigService) => ({
         stores: [createKeyv(config.getOrThrow<string>('REDIS_URL'))],
@@ -33,7 +34,6 @@ import { TrashModule } from './trash/trash.module';
       }),
     }),
     BullModule.forRootAsync({
-      imports: [ConfigModule],
       inject: [ConfigService],
       useFactory: (config: ConfigService) => ({
         connection: {
