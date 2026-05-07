@@ -1,6 +1,5 @@
 import { StorageEngine } from 'multer';
 import { randomUUID } from 'node:crypto';
-import { PassThrough } from 'node:stream';
 import { RequestWithAuthUser } from '../auth/types/auth-user.type';
 import { MinioService } from './minio.service';
 
@@ -16,16 +15,10 @@ export class MinioStorageEngine implements StorageEngine {
     if (!userId) return callback(new Error('Unauthenticated'));
 
     const key = `${userId}/${randomUUID()}`;
-    const counter = new PassThrough();
-    let size = 0;
-    counter.on('data', (chunk: Buffer) => {
-      size += chunk.length;
-    });
-    file.stream.pipe(counter);
-
     this.minioService
-      .putObject(key, counter, file.mimetype)
-      .then(() => callback(null, { filename: key, size }))
+      .putObject(key, file.stream, file.mimetype)
+      .then(() => this.minioService.statObject(key))
+      .then(({ size }) => callback(null, { filename: key, size }))
       .catch(callback);
   }
 
