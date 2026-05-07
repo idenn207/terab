@@ -80,6 +80,12 @@ services:
   # ─── Spring Boot API ──────────────────────────────────────────
   api:
     image: ghcr.io/idenn207/terab-api:latest
+    command: >-
+      sh -c "
+      wait-for-it.sh db:5432 --timeout=30 &&
+      wait-for-it.sh redis:6379 --timeout=30 &&
+      wait-for-it.sh minio:9000 --timeout=30 &&
+      node dist/main.js"
     env_file:
       - api.prod.env
     networks:
