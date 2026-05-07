@@ -17,6 +17,7 @@ import { TrustedDeviceModule } from './trusted-device/trusted-device.module';
 import { TwoFaModule } from './twofa/twofa.module';
 import { FolderModule } from './folder/folder.module';
 import { FileModule } from './file/file.module';
+import { TrashModule } from './trash/trash.module';
 
 @Module({
   imports: [
@@ -51,6 +52,7 @@ import { FileModule } from './file/file.module';
     InvitationModule,
     FolderModule,
     FileModule,
+    TrashModule,
   ],
   providers: [
     // 전역 Guard: ThrottlerGuard → JwtAuthGuard(401) → PermissionGuard(403) 순서 보장
