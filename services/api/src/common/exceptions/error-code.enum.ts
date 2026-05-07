@@ -104,6 +104,10 @@ export const ErrorCode = {
     message: '하위 폴더로 이동할 수 없습니다.',
     status: HttpStatus.BAD_REQUEST,
   },
+  FOLDER_DEPTH_EXCEEDED: {
+    message: '폴더 중첩 깊이 한도를 초과했습니다.',
+    status: HttpStatus.BAD_REQUEST,
+  },
   ZIP_LIMIT_EXCEEDED: {
     message: 'ZIP 다운로드는 최대 100개까지 가능합니다.',
     status: HttpStatus.BAD_REQUEST,

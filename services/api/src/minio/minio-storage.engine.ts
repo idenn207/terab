@@ -4,7 +4,22 @@ import { RequestWithAuthUser } from '../auth/types/auth-user.type';
 import { MinioService } from './minio.service';
 
 export class MinioStorageEngine implements StorageEngine {
+  // 브라우저가 실행할 수 있는 콘텐츠 타입 — 저장 시점에 차단
+  private readonly DANGEROUS_MIME_PREFIXES = [
+    'text/html',
+    'application/javascript',
+    'text/javascript',
+    'application/xhtml+xml',
+    'text/xml',
+    'application/xml',
+  ];
+
   constructor(private readonly minioService: MinioService) {}
+
+  private sanitizeMimeType(mimeType: string): string {
+    const normalized = mimeType.split(';')[0].trim().toLowerCase();
+    return this.DANGEROUS_MIME_PREFIXES.includes(normalized) ? 'application/octet-stream' : mimeType;
+  }
 
   _handleFile(
     req: RequestWithAuthUser,
@@ -15,10 +30,11 @@ export class MinioStorageEngine implements StorageEngine {
     if (!userId) return callback(new Error('Unauthenticated'));
 
     const key = `${userId}/${randomUUID()}`;
+    const safeMimeType = this.sanitizeMimeType(file.mimetype);
     this.minioService
-      .putObject(key, file.stream, file.mimetype)
+      .putObject(key, file.stream, safeMimeType)
       .then(() => this.minioService.statObject(key))
-      .then(({ size }) => callback(null, { filename: key, size }))
+      .then(({ size }) => callback(null, { filename: key, size, mimetype: safeMimeType }))
       .catch(callback);
   }
 

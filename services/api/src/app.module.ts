@@ -28,10 +28,11 @@ import { TwoFaModule } from './twofa/twofa.module';
     CacheModule.registerAsync({
       isGlobal: true,
       inject: [ConfigService],
-      useFactory: (config: ConfigService) => ({
-        stores: [createKeyv(config.getOrThrow<string>('REDIS_URL'))],
-        ttl: 60_000,
-      }),
+      useFactory: (config: ConfigService) => {
+        const store = createKeyv(config.getOrThrow<string>('REDIS_URL'));
+        store.namespace = 'cache';
+        return { stores: [store], ttl: 60_000 };
+      },
     }),
     BullModule.forRootAsync({
       inject: [ConfigService],

@@ -72,7 +72,7 @@ export class TrashRepository extends RepositoryCore {
         UNION ALL
         SELECT f.id FROM folders f
         INNER JOIN subtree s ON f.parent_id = s.id
-      )
+      ),
       update_folders As (
         UPDATE folders SET soft_deleted_at = NULL
         WHERE id IN (SELECT id FROM subtree)

@@ -72,6 +72,20 @@ export class FolderRepository extends RepositoryCore {
     return row;
   }
 
+  async getDepth(folderId: string): Promise<number> {
+    const result = await this.conn.execute(sql`
+      WITH RECURSIVE ancestors(id, parent_id) AS (
+        SELECT id, parent_id FROM folders WHERE id = ${folderId}
+        UNION ALL
+        SELECT f.id, f.parent_id FROM folders f
+        JOIN ancestors a ON a.parent_id = f.id
+      )
+      SELECT COUNT(*) - 1 AS depth FROM ancestors
+    `);
+    const row = result.rows[0] as { depth: string | number } | undefined;
+    return row ? Number(row.depth) : 0;
+  }
+
   async isDescendant(folderId: string, potentialAncestorId: string): Promise<boolean> {
     const result = await this.conn.execute(sql`
       WITH RECURSIVE ancestors AS (

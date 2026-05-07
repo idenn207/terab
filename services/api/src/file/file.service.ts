@@ -3,8 +3,11 @@ import { Inject, Injectable } from '@nestjs/common';
 import { ApiException } from '@terab/common';
 import { FileItem, FileSearchResponse } from '@terab/contract';
 import { DatabaseService, ServiceCore, TransactionContext } from '@terab/db';
+import { extension as mimeExtension } from 'mime-types';
 import { randomUUID } from 'node:crypto';
+import { extname } from 'node:path';
 import { Readable } from 'node:stream';
+import sanitizeFilename from 'sanitize-filename';
 import { MinioService } from '../minio/minio.service';
 import { FileRepository } from './file.repository';
 
@@ -28,6 +31,12 @@ export class FileService extends ServiceCore {
     await this.cache.del(this.cacheKey(userId, folderId));
   }
 
+  private ensureExtension(name: string, mimeType: string): string {
+    if (extname(name)) return name;
+    const ext = mimeExtension(mimeType);
+    return ext ? `${name}.${ext}` : name;
+  }
+
   async listRootFiles(userId: string): Promise<FileItem[]> {
     const rows = await this.fileRepository.findRootFiles(userId);
     return rows.map((r) => this.fileRepository.toFileItem(r));
@@ -47,7 +56,7 @@ export class FileService extends ServiceCore {
     const row = await this.fileRepository.insert({
       userId,
       folderId: folderId ?? null,
-      name: file.originalname,
+      name: sanitizeFilename(file.originalname),
       minioKey: file.filename,
       size: file.size,
       mimeType: file.mimetype,
@@ -64,7 +73,8 @@ export class FileService extends ServiceCore {
     const file = await this.fileRepository.findByIdAndUser(fileId, userId);
     if (!file) throw new ApiException('FILE_NOT_FOUND');
     const stream = await this.getObjectStream(file.minioKey);
-    return { stream, name: file.name, size: file.size, mimeType: file.mimeType };
+    const name = this.ensureExtension(file.name, file.mimeType);
+    return { stream, name, size: file.size, mimeType: file.mimeType };
   }
 
   async getObjectStream(minioKey: string): Promise<Readable> {
@@ -73,7 +83,9 @@ export class FileService extends ServiceCore {
 
   async resolveZipFiles(fileIds: string[], userId: string): Promise<Array<{ name: string; key: string }>> {
     const rows = await Promise.all(fileIds.map((id) => this.fileRepository.findByIdAndUser(id, userId)));
-    return rows.filter((r): r is NonNullable<typeof r> => r !== null).map((r) => ({ name: r.name, key: r.minioKey }));
+    return rows
+      .filter((r): r is NonNullable<typeof r> => r !== null)
+      .map((r) => ({ name: this.ensureExtension(r.name, r.mimeType), key: r.minioKey }));
   }
 
   async rename(id: string, userId: string, name: string): Promise<FileItem> {
@@ -110,14 +122,13 @@ export class FileService extends ServiceCore {
 
     const newKey = `${userId}/${randomUUID()}`;
     await this.minioService.copyObject(file.minioKey, newKey);
-    const row = await this.fileRepository.insert({
-      userId,
-      folderId,
-      name: file.name,
-      minioKey: newKey,
-      size: file.size,
-      mimeType: file.mimeType,
-    });
+    // DB insert 실패 시 MinIO에 생성된 복사본을 정리하여 orphan 방지
+    const row = await this.fileRepository
+      .insert({ userId, folderId, name: file.name, minioKey: newKey, size: file.size, mimeType: file.mimeType })
+      .catch(async (err) => {
+        await this.minioService.removeObject(newKey).catch(() => undefined);
+        throw err;
+      });
     await this.invalidate(userId, folderId);
     return this.fileRepository.toFileItem(row);
   }

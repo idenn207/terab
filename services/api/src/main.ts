@@ -27,6 +27,7 @@ async function bootstrap(): Promise<void> {
   app.enableCors({
     origin: allowedOrigins,
     credentials: true,
+    exposedHeaders: ['Content-Disposition'],
   });
 
   // ───── Swagger ─────────────────────────

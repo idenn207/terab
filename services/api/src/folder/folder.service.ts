@@ -8,6 +8,8 @@ import { FolderRepository } from './folder.repository';
 
 @Injectable()
 export class FolderService extends ServiceCore {
+  private readonly MAX_FOLDER_DEPTH = 20;
+
   constructor(
     database: DatabaseService,
     txContext: TransactionContext,
@@ -72,6 +74,8 @@ export class FolderService extends ServiceCore {
     if (parentId) {
       const parent = await this.folderRepository.findByIdAndUser(parentId, userId);
       if (!parent) throw new ApiException('FOLDER_NOT_FOUND');
+      const depth = await this.folderRepository.getDepth(parentId);
+      if (depth >= this.MAX_FOLDER_DEPTH) throw new ApiException('FOLDER_DEPTH_EXCEEDED');
     }
     const row = await this.folderRepository.insert({ userId, name, parentId: parentId ?? null });
     await this.invalidate(userId, parentId ?? null);
