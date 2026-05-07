@@ -120,9 +120,60 @@ src/test/fixtures/
 - 모든 fixture는 `@terab/test`로 import (`import { mockUser } from '@terab/test'`)
 - fixture 값은 실제 제약조건(uuid 형식, 길이 등)을 지키되 단순하게 유지
 
+## 실패 케이스 우선 작성
+
+테스트 케이스는 **실패·예외 경로를 먼저, 더 많이** 작성한다. 성공 경로는 최소한으로만 작성한다.
+
+### throw 케이스
+
+서비스에서 `throw new ApiException(...)` 이 발생해야 하는 조건을 반드시 검증한다.
+
+```ts
+it('파일이 존재하지 않으면 FILE_NOT_FOUND 예외를 던진다', async () => {
+  mockFileRepository.findById.mockResolvedValue(null);
+
+  await expect(service.getFile('ghost-id', mockAuthUser)).rejects.toThrow(ApiException);
+  await expect(service.getFile('ghost-id', mockAuthUser)).rejects.toMatchObject({
+    errorCode: 'FILE_NOT_FOUND',
+  });
+});
+```
+
+### false / null / 빈 결과 케이스
+
+조건 불충족·조회 실패 경로를 명시적으로 검증한다.
+
+```ts
+it('일치하는 파일이 없으면 null을 반환한다', async () => {
+  mockDbLimit.mockResolvedValue([]);
+
+  const result = await repo.findById('ghost-id');
+
+  expect(result).toBeNull();
+});
+
+it('권한이 없으면 false를 반환한다', async () => {
+  mockPermissionRepository.findByUserAndFile.mockResolvedValue(null);
+
+  const result = await service.hasAccess(mockAuthUser.id, 'file-id');
+
+  expect(result).toBe(false);
+});
+```
+
+### 케이스 작성 순서
+
+각 메서드/핸들러에 대해 아래 순서로 케이스를 작성한다.
+
+1. **입력 없음·빈 값** — null, [], 빈 문자열 등 경계 입력
+2. **조회 실패** — 존재하지 않는 id, 삭제된 리소스 등
+3. **권한·상태 불일치** — 권한 없음, 만료, 비활성 등
+4. **성공** — 정상 경로 (위 케이스를 모두 다룬 뒤 마지막에 작성)
+
 ## 핵심 규칙
 
 - 테스트 설명(`describe`/`it`)은 한글로 작성
+- **실패 케이스가 성공 케이스보다 많아야 한다** — 성공 경로는 최소한으로, 실패·예외 경로는 빠짐없이 작성
 - `setupMockDbSelectChain()`은 `jest.clearAllMocks()` 호출 직후 실행 (순서 바꾸면 mock 체인 깨짐)
 - Mock 유틸 import: `@terab/test` 패키지 (`mockDatabaseService`, `setupMockDbSelectChain`, `mockDbLimit` 등)
 - 첫 번째 테스트는 항상 `it('인스턴스가 생성된다', () => { expect(target).toBeDefined(); })`
