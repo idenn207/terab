@@ -16,7 +16,7 @@ export const FolderChildrenResponseSchema = z.object({
 
 export const CreateFolderBodySchema = z.object({
   name: z.string().min(1).max(255),
-  parentId: z.string().uuid().optional(),
+  parentId: z.string().uuid().nullable(),
 });
 
 export const RenameFolderBodySchema = z.object({

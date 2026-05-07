@@ -9,7 +9,7 @@ import { TrustedDeviceService } from './trusted-device.service';
 @Controller()
 export class TrustedDeviceController {
   private readonly TRUST_TOKEN_COOKIE = 'trustToken';
-  private readonly COOKIE_PATH = '/api/auth';
+  private readonly COOKIE_PATH = '/';
 
   constructor(private readonly trustedDeviceService: TrustedDeviceService) {}
 
