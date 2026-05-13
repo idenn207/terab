@@ -113,4 +113,9 @@ export class FolderService extends ServiceCore {
     await this.folderRepository.softDeleteCascade(id, userId);
     await this.invalidate(userId, folder.parentId ?? null);
   }
+
+  async assertBelongsToUser(folderId: string, userId: string): Promise<void> {
+    const folder = await this.folderRepository.findByIdAndUser(folderId, userId);
+    if (!folder) throw new ApiException('FOLDER_NOT_FOUND');
+  }
 }
