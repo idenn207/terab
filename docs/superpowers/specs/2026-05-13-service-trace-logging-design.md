@@ -55,7 +55,7 @@ DrizzleQueryLogger
 | 구성 요소 | 책임 |
 |---|---|
 | `RequestTraceContext` (CLS / `AsyncLocalStorage`) | `reqId`, `userId`, `route`, `spans[]`, `startedAt`을 한 요청 동안 보관. service wrapper와 drizzle logger가 같은 컨테이너에 누적 |
-| `ServiceMethodWrapper` | `ServiceCore` 자손 클래스의 `public` 메서드를 `onModuleInit`에 자동 wrap. 진입/완료/예외를 span으로 push |
+| `ServiceMethodWrapper` | `ServiceCore` 자손 클래스의 `public` 메서드를 자동 wrap. NestJS `DiscoveryService`로 부팅 시 모든 provider를 순회하면서 대상 클래스의 prototype 메서드를 wrap 함수로 교체. 진입/완료/예외를 span으로 push |
 | `@AutoTrace()` 클래스 데코레이터 | `ServiceCore`를 extends하지 않은 service의 자동 wrap 옵트인 |
 | `@LogReplay({ captureResult? })` 메서드 데코레이터 | A 레벨 표기. 입력 페이로드(옵션: 결과값)까지 캡처 |
 | `@SkipTrace()` 메서드 데코레이터 | 자동 wrap에서 제외 |
