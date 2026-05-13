@@ -71,6 +71,15 @@ test/
 - `AppModule`은 모든 도메인 모듈을 import한다. 신규 모듈 추가 시 반드시 등록한다.
 - 각 모듈은 필요한 외부 모듈(`BullModule`, `PassportModule` 등)을 직접 import한다.
 
+### 도메인 간 의존 관계
+
+```
+FileModule → FolderModule
+```
+
+- `FileModule`이 `FolderModule`을 import한다. `UploadSessionService`·`FileService`가 `FolderService`(폴더 소유권 검증 등)를 주입받기 위해 필요하다.
+- `FolderModule`은 `FolderService`를 export한다.
+
 ## 인프라 & 빌드
 
 ### Docker 빌드
