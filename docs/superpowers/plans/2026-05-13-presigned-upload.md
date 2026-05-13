@@ -31,7 +31,6 @@
 | `services/web/src/features/file-upload/upload-file.ts`        | 클라이언트 헬퍼 (init → PUT → complete)             |
 | `services/web/src/features/file-upload/upload-parts.ts`       | part 분할·병렬 PUT·재시도                           |
 | `services/nginx/storage.conf`                                 | `storage.skypark207.com` 가상호스트                 |
-| `scripts/setup-minio.sh`                                      | bucket lifecycle + CORS 멱등성 셋업                 |
 
 ### 수정 (Modify)
 
@@ -48,9 +47,10 @@
 | `services/api/src/file/file.module.ts`                  | MulterModule 제거, BullModule + 신규 provider, FolderModule import |
 | `services/api/src/file/file.controller.spec.ts`         | `handleUpload` 테스트 제거                                         |
 | `services/api/src/file/file.service.spec.ts`            | `upload()` 테스트 제거                                             |
-| `api.env.example`, `infra.env.example`                  | `MINIO_PUBLIC_ENDPOINT`, `WEB_ORIGIN` 추가                         |
+| `api.env.example`                                       | `MINIO_PUBLIC_ENDPOINT` 추가                                       |
+| `infra.env.example`                                     | `MINIO_API_CORS_ALLOW_ORIGIN` 추가                                 |
 | `services/nginx/` 기존 host 설정                        | `client_max_body_size` 축소                                        |
-| `Makefile`                                              | `setup-minio` 타겟 추가                                            |
+| `docker-stack.yml`, `docker-stack.infra.local.yml`      | `minio-init` 서비스에 lifecycle import 추가 (prod에는 신규 추가)   |
 
 ### 삭제 (Delete)
 
@@ -2334,97 +2334,64 @@ git commit -m "feat(nginx): storage 서브도메인 + 기존 host client_max_bod
 
 ---
 
-### Task 23: MinIO bucket lifecycle + CORS 셋업 스크립트
+### Task 23: MinIO bucket lifecycle + CORS — minio-init 통합
+
+**배경**: NAS(DSM)는 host에 `make`/`mc`를 깔기 어렵고(보안 면적 증가) `mc anonymous set-json`은 CORS가 아닌 anonymous policy 설정용이므로 기존 호스트 스크립트 접근은 폐기. MinIO의 CORS는 **서버 전역 env (`MINIO_API_CORS_ALLOW_ORIGIN`)** 로만 제어 가능하므로 stack 안에서 lifecycle은 `minio-init` 컨테이너가, CORS는 minio 서비스 환경변수가 담당한다.
 
 **Files:**
 
-- Create: `scripts/setup-minio.sh`
-- Modify: `Makefile`
+- Modify: `docker-stack.infra.local.yml` (lifecycle import 추가)
+- Modify: `docker-stack.yml` (`minio-init` 서비스 신규 + lifecycle import)
+- Modify: `infra.env.example` (`MINIO_API_CORS_ALLOW_ORIGIN` 키 추가)
 
-- [ ] **Step 1: 셋업 스크립트 작성**
+- [ ] **Step 1: minio-init entrypoint에 lifecycle import 추가 (양쪽 stack 공통)**
 
-```bash
-#!/usr/bin/env bash
-# MinIO bucket lifecycle + CORS 설정 (멱등성)
-# 환경: mc CLI 가 설치되어 있어야 하며, MINIO_* 환경변수가 사용 가능해야 한다.
-
-set -euo pipefail
-
-: "${MINIO_ENDPOINT:?MINIO_ENDPOINT 필요}"
-: "${MINIO_ROOT_USER:?MINIO_ROOT_USER 필요}"
-: "${MINIO_ROOT_PASSWORD:?MINIO_ROOT_PASSWORD 필요}"
-: "${MINIO_DEFAULT_BUCKETS:?MINIO_DEFAULT_BUCKETS 필요}"
-: "${WEB_ORIGIN:?WEB_ORIGIN 필요}"
-
-ALIAS=terab
-mc alias set "${ALIAS}" "http://${MINIO_ENDPOINT}" "${MINIO_ROOT_USER}" "${MINIO_ROOT_PASSWORD}"
-
-# 버킷이 없으면 생성
-mc mb --ignore-existing "${ALIAS}/${MINIO_DEFAULT_BUCKETS}"
-
-# Lifecycle: AbortIncompleteMultipartUpload 1일
-TMP_LIFECYCLE=$(mktemp)
-cat > "${TMP_LIFECYCLE}" <<'JSON'
-{
-  "Rules": [{
-    "ID": "AbortIncompleteMultipartUpload",
-    "Status": "Enabled",
-    "Filter": { "Prefix": "" },
-    "AbortIncompleteMultipartUpload": { "DaysAfterInitiation": 1 }
-  }]
-}
-JSON
-mc ilm import "${ALIAS}/${MINIO_DEFAULT_BUCKETS}" < "${TMP_LIFECYCLE}"
-rm -f "${TMP_LIFECYCLE}"
-
-# CORS
-TMP_CORS=$(mktemp)
-cat > "${TMP_CORS}" <<JSON
-{
-  "CORSRules": [{
-    "AllowedOrigins": ["${WEB_ORIGIN}"],
-    "AllowedMethods": ["PUT", "GET", "HEAD"],
-    "AllowedHeaders": ["*"],
-    "ExposeHeaders": ["ETag"],
-    "MaxAgeSeconds": 3600
-  }]
-}
-JSON
-mc anonymous set-json "${TMP_CORS}" "${ALIAS}/${MINIO_DEFAULT_BUCKETS}" || true
-rm -f "${TMP_CORS}"
-
-echo "MinIO 셋업 완료: bucket=${MINIO_DEFAULT_BUCKETS}, lifecycle + CORS 적용"
+```yaml
+minio-init:
+  image: minio/mc:latest
+  env_file:
+    - infra.env  # prod stack은 infra.prod.env
+  entrypoint:
+    - /bin/sh
+    - -c
+    - |
+      mc alias set local http://minio:9000 $$MINIO_ROOT_USER $$MINIO_ROOT_PASSWORD &&
+      mc mb --ignore-existing local/$$MINIO_DEFAULT_BUCKETS &&
+      echo '{"Rules":[{"ID":"AbortIncompleteMPU","Status":"Enabled","Filter":{"Prefix":""},"AbortIncompleteMultipartUpload":{"DaysAfterInitiation":1}}]}' | mc ilm import local/$$MINIO_DEFAULT_BUCKETS
+  networks:
+    - terab-net
+  deploy:
+    replicas: 1
+    restart_policy:
+      condition: on-failure
+      delay: 5s
+      max_attempts: 10
+      window: 60s
 ```
 
-> **주의**: `mc anonymous set-json`은 MinIO 버전에 따라 명령어가 다를 수 있다 (`mc admin bucket cors` 등). 실제 운영 MinIO 버전에 맞춰 명령을 조정하라.
+`mc ilm import`는 같은 ID의 룰을 멱등 덮어쓰기 하므로 재실행 안전.
 
-- [ ] **Step 2: 실행 권한 부여 + LF 라인 엔딩 확인**
+- [ ] **Step 2: `infra.env.example`에 CORS env 키 추가**
 
-Run: `chmod +x scripts/setup-minio.sh && file scripts/setup-minio.sh`
-Expected: shell script로 인식됨. CRLF면 LF로 변환 (`sed -i 's/\r$//' scripts/setup-minio.sh`).
-
-- [ ] **Step 3: Makefile 타겟 추가**
-
-`Makefile`에 다음 타겟 추가:
-
-```makefile
-.PHONY: setup-minio
-setup-minio:
-	@bash scripts/setup-minio.sh
+```dotenv
+# 브라우저 presigned PUT 용 CORS 허용 origin (콤마 구분). MinIO는 서버 전역 설정만 지원
+MINIO_API_CORS_ALLOW_ORIGIN=
 ```
 
-`setup` 타겟이 이미 있다면 그 안에서 호출하도록 dependency 추가.
+minio 서비스가 이미 `env_file: infra.env`를 읽으므로 env 키만 채우면 컨테이너에 자동 전달. prod용 `infra.prod.env`에도 동일 키를 운영자가 채워야 한다 (예: `https://app.skypark207.com`).
 
-- [ ] **Step 4: 로컬 검증**
+- [ ] **Step 3: 로컬 검증**
 
-Run: `make infra && make setup-minio`
-Expected: "MinIO 셋업 완료..." 출력. 재실행해도 멱등하게 통과 (mc commands가 idempotent).
+Run: `make infra-reset` (`./volumes/storage` 재생성 후 minio-init 재실행)
+Expected: `docker service logs terab-infra_minio-init` 출력에 `Lifecycle configuration successfully imported` 류 메시지. `mc ilm ls local/<bucket>` 로 룰 확인 가능.
 
-- [ ] **Step 5: Commit**
+브라우저 CORS 검증: dev tool에서 `OPTIONS http://localhost:9000/<bucket>/<key>` preflight 응답에 `Access-Control-Allow-Origin` 헤더가 `MINIO_API_CORS_ALLOW_ORIGIN` 값으로 반환되는지.
+
+- [ ] **Step 4: Commit**
 
 ```bash
-git add scripts/setup-minio.sh Makefile
-git commit -m "feat(infra): MinIO bucket lifecycle + CORS 셋업 스크립트 추가"
+git add docker-stack.yml docker-stack.infra.local.yml infra.env.example
+git commit -m "feat(infra): minio-init에 lifecycle + CORS env 통합, host 스크립트 제거"
 ```
 
 ---
