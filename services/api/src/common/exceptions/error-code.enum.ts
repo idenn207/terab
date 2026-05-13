@@ -112,6 +112,27 @@ export const ErrorCode = {
     message: 'ZIP 다운로드는 최대 100개까지 가능합니다.',
     status: HttpStatus.BAD_REQUEST,
   },
+  // ───── Upload Session ──────────────────────────────
+  FILE_TOO_LARGE: {
+    message: '파일 크기가 한도(100GB)를 초과했습니다.',
+    status: HttpStatus.PAYLOAD_TOO_LARGE,
+  },
+  UPLOAD_SESSION_NOT_FOUND: {
+    message: '업로드 세션을 찾을 수 없습니다.',
+    status: HttpStatus.NOT_FOUND,
+  },
+  UPLOAD_SESSION_EXPIRED: {
+    message: '업로드 세션이 만료됐습니다.',
+    status: HttpStatus.GONE,
+  },
+  UPLOAD_OBJECT_MISSING: {
+    message: '업로드된 파일을 찾을 수 없습니다.',
+    status: HttpStatus.BAD_REQUEST,
+  },
+  UPLOAD_SIZE_MISMATCH: {
+    message: '업로드된 파일 크기가 선언값과 다릅니다.',
+    status: HttpStatus.BAD_REQUEST,
+  },
 } as const satisfies Record<string, ErrorCodeDefinition>;
 
 export type ErrorCodeKey = keyof typeof ErrorCode;
