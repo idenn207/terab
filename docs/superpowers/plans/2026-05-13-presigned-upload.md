@@ -15,46 +15,49 @@
 ## File Structure
 
 ### 신규 (Create)
-| Path | Responsibility |
-|---|---|
-| `services/api/src/database/schema/upload-sessions.schema.ts` | `upload_sessions` 테이블 + 타입 |
-| `services/api/src/file/upload-session.repository.ts` | session CRUD + 만료 조회 (FOR UPDATE / SKIP LOCKED) |
-| `services/api/src/file/upload-session.repository.spec.ts` | repository 단위 테스트 |
-| `services/api/src/file/upload-session.service.ts` | init/complete/cleanup 도메인 로직 |
-| `services/api/src/file/upload-session.service.spec.ts` | service 단위 테스트 |
-| `services/api/src/file/upload-session.cleanup.worker.ts` | BullMQ `@Processor` + repeatable job 부트스트랩 |
-| `services/api/src/file/upload-session.cleanup.worker.spec.ts` | worker 단위 테스트 |
-| `services/api/src/file/file-upload.controller.ts` | uploadInit / uploadComplete 핸들러 |
-| `services/api/src/file/file-upload.controller.spec.ts` | controller 통합 테스트 |
-| `services/api/src/test/fixtures/upload-session.fixtures.ts` | session fixture |
-| `services/web/src/features/file-upload/upload-file.ts` | 클라이언트 헬퍼 (init → PUT → complete) |
-| `services/web/src/features/file-upload/upload-parts.ts` | part 분할·병렬 PUT·재시도 |
-| `services/nginx/storage.conf` | `storage.skypark207.com` 가상호스트 |
-| `scripts/setup-minio.sh` | bucket lifecycle + CORS 멱등성 셋업 |
+
+| Path                                                          | Responsibility                                      |
+| ------------------------------------------------------------- | --------------------------------------------------- |
+| `services/api/src/database/schema/upload-sessions.schema.ts`  | `upload_sessions` 테이블 + 타입                     |
+| `services/api/src/file/upload-session.repository.ts`          | session CRUD + 만료 조회 (FOR UPDATE / SKIP LOCKED) |
+| `services/api/src/file/upload-session.repository.spec.ts`     | repository 단위 테스트                              |
+| `services/api/src/file/upload-session.service.ts`             | init/complete/cleanup 도메인 로직                   |
+| `services/api/src/file/upload-session.service.spec.ts`        | service 단위 테스트                                 |
+| `services/api/src/file/upload-session.cleanup.worker.ts`      | BullMQ `@Processor` + repeatable job 부트스트랩     |
+| `services/api/src/file/upload-session.cleanup.worker.spec.ts` | worker 단위 테스트                                  |
+| `services/api/src/file/file-upload.controller.ts`             | uploadInit / uploadComplete 핸들러                  |
+| `services/api/src/file/file-upload.controller.spec.ts`        | controller 통합 테스트                              |
+| `services/api/src/test/fixtures/upload-session.fixtures.ts`   | session fixture                                     |
+| `services/web/src/features/file-upload/upload-file.ts`        | 클라이언트 헬퍼 (init → PUT → complete)             |
+| `services/web/src/features/file-upload/upload-parts.ts`       | part 분할·병렬 PUT·재시도                           |
+| `services/nginx/storage.conf`                                 | `storage.skypark207.com` 가상호스트                 |
+| `scripts/setup-minio.sh`                                      | bucket lifecycle + CORS 멱등성 셋업                 |
 
 ### 수정 (Modify)
-| Path | Change |
-|---|---|
-| `packages/contracts/src/schemas/file.schema.ts` | UploadInit/Complete 스키마 + MAX_FILE_SIZE 상수 |
-| `packages/contracts/src/contracts/file.contract.ts` | `upload` 제거, `uploadInit`/`uploadComplete` 추가 |
-| `services/api/src/database/schema/index.ts` | upload-sessions re-export |
-| `services/api/src/common/exceptions/error-code.enum.ts` | 5개 신규 ErrorCode |
-| `services/api/src/minio/minio.service.ts` | `presignClient` + presigned/multipart 메서드, statObject 확장 |
-| `services/api/src/folder/folder.service.ts` | `assertBelongsToUser` 추가 |
-| `services/api/src/file/file.controller.ts` | `handleUpload` 제거 |
-| `services/api/src/file/file.service.ts` | `upload()` 제거 |
-| `services/api/src/file/file.module.ts` | MulterModule 제거, BullModule + 신규 provider, FolderModule import |
-| `services/api/src/file/file.controller.spec.ts` | `handleUpload` 테스트 제거 |
-| `services/api/src/file/file.service.spec.ts` | `upload()` 테스트 제거 |
-| `api.env.example`, `infra.env.example` | `MINIO_PUBLIC_ENDPOINT`, `WEB_ORIGIN` 추가 |
-| `services/nginx/` 기존 host 설정 | `client_max_body_size` 축소 |
-| `Makefile` | `setup-minio` 타겟 추가 |
+
+| Path                                                    | Change                                                             |
+| ------------------------------------------------------- | ------------------------------------------------------------------ |
+| `packages/contracts/src/schemas/file.schema.ts`         | UploadInit/Complete 스키마 + MAX_FILE_SIZE 상수                    |
+| `packages/contracts/src/contracts/file.contract.ts`     | `upload` 제거, `uploadInit`/`uploadComplete` 추가                  |
+| `services/api/src/database/schema/index.ts`             | upload-sessions re-export                                          |
+| `services/api/src/common/exceptions/error-code.enum.ts` | 5개 신규 ErrorCode                                                 |
+| `services/api/src/minio/minio.service.ts`               | `presignClient` + presigned/multipart 메서드, statObject 확장      |
+| `services/api/src/folder/folder.service.ts`             | `assertBelongsToUser` 추가                                         |
+| `services/api/src/file/file.controller.ts`              | `handleUpload` 제거                                                |
+| `services/api/src/file/file.service.ts`                 | `upload()` 제거                                                    |
+| `services/api/src/file/file.module.ts`                  | MulterModule 제거, BullModule + 신규 provider, FolderModule import |
+| `services/api/src/file/file.controller.spec.ts`         | `handleUpload` 테스트 제거                                         |
+| `services/api/src/file/file.service.spec.ts`            | `upload()` 테스트 제거                                             |
+| `api.env.example`, `infra.env.example`                  | `MINIO_PUBLIC_ENDPOINT`, `WEB_ORIGIN` 추가                         |
+| `services/nginx/` 기존 host 설정                        | `client_max_body_size` 축소                                        |
+| `Makefile`                                              | `setup-minio` 타겟 추가                                            |
 
 ### 삭제 (Delete)
-| Path | Reason |
-|---|---|
-| `services/api/src/minio/minio-storage.engine.ts` | FileInterceptor 흐름 제거에 따라 불필요 |
-| `services/api/src/minio/minio-storage.engine.spec.ts` | (있다면) 함께 삭제 |
+
+| Path                                                  | Reason                                  |
+| ----------------------------------------------------- | --------------------------------------- |
+| `services/api/src/minio/minio-storage.engine.ts`      | FileInterceptor 흐름 제거에 따라 불필요 |
+| `services/api/src/minio/minio-storage.engine.spec.ts` | (있다면) 함께 삭제                      |
 
 ---
 
@@ -63,6 +66,7 @@
 ### Task 1: 신규 ErrorCode 등록
 
 **Files:**
+
 - Modify: `services/api/src/common/exceptions/error-code.enum.ts`
 
 - [ ] **Step 1: ErrorCode에 5개 키 추가**
@@ -110,6 +114,7 @@ git commit -m "feat(api): 업로드 세션 관련 ErrorCode 추가"
 ### Task 2: Contract 스키마 정의
 
 **Files:**
+
 - Modify: `packages/contracts/src/schemas/file.schema.ts`
 
 - [ ] **Step 1: 기존 파일 상단 import 확인 (z만 import되어 있어야 함, 변경 없음)**
@@ -171,6 +176,7 @@ git commit -m "feat(contracts): 업로드 Init/Complete Zod 스키마 추가"
 ### Task 3: Contract endpoint 교체
 
 **Files:**
+
 - Modify: `packages/contracts/src/contracts/file.contract.ts`
 
 - [ ] **Step 1: import 수정**
@@ -252,6 +258,7 @@ git commit -m "feat(contracts): upload contract을 uploadInit/uploadComplete로 
 ### Task 4: `upload_sessions` 스키마
 
 **Files:**
+
 - Create: `services/api/src/database/schema/upload-sessions.schema.ts`
 - Modify: `services/api/src/database/schema/index.ts`
 
@@ -284,10 +291,7 @@ export const uploadSessions = table(
     expiresAt: t.timestamp('expires_at', { withTimezone: true }).notNull(),
     createdAt: t.timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
-  (table) => [
-    t.index().on(table.userId),
-    t.index().on(table.expiresAt),
-  ],
+  (table) => [t.index().on(table.userId), t.index().on(table.expiresAt)],
 );
 
 export type UploadSessions$Insert = typeof uploadSessions.$inferInsert;
@@ -314,6 +318,7 @@ Expected: `drizzle/` 안에 새 SQL 파일이 생성됨 (`CREATE TABLE upload_se
 - [ ] **Step 4: 생성된 SQL 파일 내용 검토**
 
 생성된 `.sql` 파일을 열어 다음 항목 확인:
+
 - `CREATE TABLE "upload_sessions"` 존재
 - `user_id`, `folder_id` 외래키 cascade
 - `minio_key` unique
@@ -336,6 +341,7 @@ git commit -m "feat(api): upload_sessions 스키마 + 마이그레이션 추가"
 ### Task 5: 환경변수 추가
 
 **Files:**
+
 - Modify: `api.env.example`
 - Modify: `infra.env.example`
 
@@ -357,6 +363,7 @@ WEB_ORIGIN=http://localhost:5173
 - [ ] **Step 3: local.env (개발자 본인 환경)도 동기화**
 
 > **주의**: `local.env`는 commit 대상이 아니다. 개발자 본인 환경에서만 수동으로 추가:
+>
 > ```
 > MINIO_PUBLIC_ENDPOINT=http://localhost:9000
 > WEB_ORIGIN=http://localhost:5173
@@ -374,6 +381,7 @@ git commit -m "chore: presigned URL용 환경변수 추가 (MINIO_PUBLIC_ENDPOIN
 ### Task 6: MinioService - dual client + statObject 확장
 
 **Files:**
+
 - Modify: `services/api/src/minio/minio.service.ts`
 
 - [ ] **Step 1: `presignClient` 인스턴스 추가**
@@ -469,6 +477,7 @@ git commit -m "feat(api): MinioService에 presignClient 분리 및 statObject mi
 ### Task 7: MinioService - presigned/multipart 메서드 추가
 
 **Files:**
+
 - Modify: `services/api/src/minio/minio.service.ts`
 - Modify: `services/api/src/minio/minio.service.spec.ts`
 
@@ -480,55 +489,42 @@ git commit -m "feat(api): MinioService에 presignClient 분리 및 statObject mi
 describe('presigned 메서드', () => {
   it('presignedPutObject는 presignClient 호출 결과 URL을 반환한다', async () => {
     // presignClient는 private — spy로 접근
-    const spy = jest
-      .spyOn((service as any).presignClient, 'presignedPutObject')
-      .mockResolvedValue('https://presigned.example/put');
-    const url = await service.presignedPutObject('u1/abc', 'image/png', 3600);
-    expect(spy).toHaveBeenCalledWith('drive', 'u1/abc', 3600, { 'Content-Type': 'image/png' });
+    // minio-js 8.x: presignedPutObject(bucket, key, expires) — Content-Type 인자 없음
+    // MIME sanitization은 UploadSessionService.init()에서 담당, uploadHeaders로 클라이언트에 반환
+    const spy = jest.spyOn((service as any).presignClient, 'presignedPutObject').mockResolvedValue('https://presigned.example/put');
+    const url = await service.presignedPutObject('u1/abc', 3600);
+    expect(spy).toHaveBeenCalledWith('drive', 'u1/abc', 3600);
     expect(url).toBe('https://presigned.example/put');
   });
 
   it('createMultipartUpload는 minio-js Core API를 호출해 uploadId를 반환한다', async () => {
-    const spy = jest
-      .spyOn((service as any).client, 'initiateNewMultipartUpload')
-      .mockResolvedValue('upload-id-xyz');
+    const spy = jest.spyOn((service as any).client, 'initiateNewMultipartUpload').mockResolvedValue('upload-id-xyz');
     const result = await service.createMultipartUpload('u1/abc', 'video/mp4');
     expect(spy).toHaveBeenCalledWith('drive', 'u1/abc', { 'Content-Type': 'video/mp4' });
     expect(result).toEqual({ uploadId: 'upload-id-xyz' });
   });
 
   it('presignedPutPart는 part PUT용 URL을 반환한다', async () => {
-    const spy = jest
-      .spyOn((service as any).presignClient, 'presignedUrl')
-      .mockResolvedValue('https://presigned.example/part?uploadId=u&partNumber=1');
+    const spy = jest.spyOn((service as any).presignClient, 'presignedUrl').mockResolvedValue('https://presigned.example/part?uploadId=u&partNumber=1');
     const url = await service.presignedPutPart('u1/abc', 'upload-id-xyz', 1, 3600);
     expect(spy).toHaveBeenCalledWith('PUT', 'drive', 'u1/abc', 3600, { uploadId: 'upload-id-xyz', partNumber: '1' });
     expect(url).toMatch(/^https:\/\/presigned\.example/);
   });
 
   it('completeMultipartUpload는 minio-js completeMultipartUpload를 호출한다', async () => {
-    const spy = jest
-      .spyOn((service as any).client, 'completeMultipartUpload')
-      .mockResolvedValue(undefined);
+    const spy = jest.spyOn((service as any).client, 'completeMultipartUpload').mockResolvedValue(undefined);
     await service.completeMultipartUpload('u1/abc', 'upload-id-xyz', [
       { partNumber: 1, etag: 'etag-1' },
       { partNumber: 2, etag: 'etag-2' },
     ]);
-    expect(spy).toHaveBeenCalledWith(
-      'drive',
-      'u1/abc',
-      'upload-id-xyz',
-      [
-        { part: 1, etag: 'etag-1' },
-        { part: 2, etag: 'etag-2' },
-      ],
-    );
+    expect(spy).toHaveBeenCalledWith('drive', 'u1/abc', 'upload-id-xyz', [
+      { part: 1, etag: 'etag-1' },
+      { part: 2, etag: 'etag-2' },
+    ]);
   });
 
   it('abortMultipartUpload는 객체를 abort한다', async () => {
-    const spy = jest
-      .spyOn((service as any).client, 'abortMultipartUpload')
-      .mockResolvedValue(undefined);
+    const spy = jest.spyOn((service as any).client, 'abortMultipartUpload').mockResolvedValue(undefined);
     await service.abortMultipartUpload('u1/abc', 'upload-id-xyz');
     expect(spy).toHaveBeenCalledWith('drive', 'u1/abc', 'upload-id-xyz');
   });
@@ -545,10 +541,8 @@ Expected: FAIL — `presignedPutObject is not a function` 등
 `minio.service.ts`에 다음 추가:
 
 ```ts
-async presignedPutObject(key: string, mimeType: string, expirySec: number): Promise<string> {
-  return this.presignClient.presignedPutObject(this.bucketName, key, expirySec, {
-    'Content-Type': mimeType,
-  });
+async presignedPutObject(key: string, expirySec: number): Promise<string> {
+  return this.presignClient.presignedPutObject(this.bucketName, key, expirySec);
 }
 
 async createMultipartUpload(key: string, mimeType: string): Promise<{ uploadId: string }> {
@@ -601,6 +595,7 @@ git commit -m "feat(api): MinioService에 presigned/multipart 메서드 추가"
 ### Task 8: UploadSession fixture 추가
 
 **Files:**
+
 - Create: `services/api/src/test/fixtures/upload-session.fixtures.ts`
 - Modify: `services/api/src/test/fixtures/index.ts`
 
@@ -663,6 +658,7 @@ git commit -m "test(api): upload-session fixture 추가"
 ### Task 9: UploadSessionRepository
 
 **Files:**
+
 - Create: `services/api/src/file/upload-session.repository.ts`
 - Create: `services/api/src/file/upload-session.repository.spec.ts`
 
@@ -728,14 +724,7 @@ Expected: FAIL — `Cannot find module './upload-session.repository'`
 
 ```ts
 import { Injectable } from '@nestjs/common';
-import {
-  DatabaseService,
-  RepositoryCore,
-  TransactionContext,
-  uploadSessions,
-  UploadSessions$Insert,
-  UploadSessions$Select,
-} from '@terab/db';
+import { DatabaseService, RepositoryCore, TransactionContext, uploadSessions, UploadSessions$Insert, UploadSessions$Select } from '@terab/db';
 import { and, eq, lt, sql } from 'drizzle-orm';
 
 @Injectable()
@@ -745,21 +734,12 @@ export class UploadSessionRepository extends RepositoryCore {
   }
 
   async findById(id: string): Promise<UploadSessions$Select | null> {
-    const [row = null] = await this.conn
-      .select()
-      .from(uploadSessions)
-      .where(eq(uploadSessions.id, id))
-      .limit(1);
+    const [row = null] = await this.conn.select().from(uploadSessions).where(eq(uploadSessions.id, id)).limit(1);
     return row;
   }
 
   async findByIdForUpdate(id: string): Promise<UploadSessions$Select | null> {
-    const [row = null] = await this.conn
-      .select()
-      .from(uploadSessions)
-      .where(eq(uploadSessions.id, id))
-      .limit(1)
-      .for('update');
+    const [row = null] = await this.conn.select().from(uploadSessions).where(eq(uploadSessions.id, id)).limit(1).for('update');
     return row;
   }
 
@@ -769,10 +749,7 @@ export class UploadSessionRepository extends RepositoryCore {
   }
 
   async deleteById(id: string): Promise<boolean> {
-    const result = await this.conn
-      .delete(uploadSessions)
-      .where(eq(uploadSessions.id, id))
-      .returning({ id: uploadSessions.id });
+    const result = await this.conn.delete(uploadSessions).where(eq(uploadSessions.id, id)).returning({ id: uploadSessions.id });
     return result.length > 0;
   }
 
@@ -805,6 +782,7 @@ git commit -m "feat(api): UploadSessionRepository 구현 (FOR UPDATE / SKIP LOCK
 ### Task 10: FolderService.assertBelongsToUser
 
 **Files:**
+
 - Modify: `services/api/src/folder/folder.service.ts`
 - Modify: `services/api/src/folder/folder.service.spec.ts`
 
@@ -860,6 +838,7 @@ git commit -m "feat(api): FolderService.assertBelongsToUser 추가"
 ### Task 11: UploadSessionService — init() 단일 PUT 경로
 
 **Files:**
+
 - Create: `services/api/src/file/upload-session.service.ts`
 - Create: `services/api/src/file/upload-session.service.spec.ts`
 
@@ -930,16 +909,16 @@ describe('UploadSessionService', () => {
 
   describe('init', () => {
     it('size가 100GB를 초과하면 FILE_TOO_LARGE를 던진다', async () => {
-      await expect(
-        service.init('u1', { name: 'big.bin', size: 101 * 1024 * 1024 * 1024, mimeType: 'application/octet-stream' }),
-      ).rejects.toMatchObject({ errorCode: 'FILE_TOO_LARGE' });
+      await expect(service.init('u1', { name: 'big.bin', size: 101 * 1024 * 1024 * 1024, mimeType: 'application/octet-stream' })).rejects.toMatchObject({
+        errorCode: 'FILE_TOO_LARGE',
+      });
     });
 
     it('folderId가 주어지면 FolderService.assertBelongsToUser를 호출한다', async () => {
       mockFolderService.assertBelongsToUser.mockRejectedValue(new ApiException('FOLDER_NOT_FOUND'));
-      await expect(
-        service.init('u1', { folderId: 'ghost', name: 't.txt', size: 100, mimeType: 'text/plain' }),
-      ).rejects.toMatchObject({ errorCode: 'FOLDER_NOT_FOUND' });
+      await expect(service.init('u1', { folderId: 'ghost', name: 't.txt', size: 100, mimeType: 'text/plain' })).rejects.toMatchObject({
+        errorCode: 'FOLDER_NOT_FOUND',
+      });
     });
 
     it('100MB 미만이면 단일 PUT으로 presigned URL 1개를 발급한다', async () => {
@@ -953,9 +932,7 @@ describe('UploadSessionService', () => {
       expect(result.parts[0].partNumber).toBe(1);
       expect(result.parts[0].uploadUrl).toBe('https://storage.example/put');
       expect(result.uploadHeaders['Content-Type']).toBe('image/png');
-      expect(mockUploadSessionRepository.insert).toHaveBeenCalledWith(
-        expect.objectContaining({ uploadKind: 'single', multipartUploadId: null }),
-      );
+      expect(mockUploadSessionRepository.insert).toHaveBeenCalledWith(expect.objectContaining({ uploadKind: 'single', multipartUploadId: null }));
     });
 
     it('위험 mime은 application/octet-stream으로 sanitize한다', async () => {
@@ -965,9 +942,7 @@ describe('UploadSessionService', () => {
       const result = await service.init('u1', { name: 'evil.html', size: 100, mimeType: 'text/html' });
 
       expect(result.uploadHeaders['Content-Type']).toBe('application/octet-stream');
-      expect(mockUploadSessionRepository.insert).toHaveBeenCalledWith(
-        expect.objectContaining({ mimeType: 'application/octet-stream' }),
-      );
+      expect(mockUploadSessionRepository.insert).toHaveBeenCalledWith(expect.objectContaining({ mimeType: 'application/octet-stream' }));
     });
   });
 });
@@ -1001,14 +976,7 @@ export class UploadSessionService extends ServiceCore {
   private readonly URL_EXPIRY_SEC = 3600;
   private readonly MAX_FILE_SIZE = 100 * 1024 * 1024 * 1024;
 
-  private readonly DANGEROUS_MIME_PREFIXES = [
-    'text/html',
-    'application/javascript',
-    'text/javascript',
-    'application/xhtml+xml',
-    'text/xml',
-    'application/xml',
-  ];
+  private readonly DANGEROUS_MIME_PREFIXES = ['text/html', 'application/javascript', 'text/javascript', 'application/xhtml+xml', 'text/xml', 'application/xml'];
 
   constructor(
     database: DatabaseService,
@@ -1078,6 +1046,7 @@ git commit -m "feat(api): UploadSessionService init() 단일 PUT 경로 구현"
 ### Task 12: UploadSessionService — init() multipart 경로
 
 **Files:**
+
 - Modify: `services/api/src/file/upload-session.service.ts`
 - Modify: `services/api/src/file/upload-session.service.spec.ts`
 
@@ -1088,9 +1057,7 @@ git commit -m "feat(api): UploadSessionService init() 단일 PUT 경로 구현"
 ```ts
 it('100MB 이상이면 multipart로 part별 presigned URL을 발급한다', async () => {
   mockMinioService.createMultipartUpload.mockResolvedValue({ uploadId: 'mp-1' });
-  mockMinioService.presignedPutPart.mockImplementation(async (_k, _u, partNumber: number) =>
-    `https://storage.example/part/${partNumber}`,
-  );
+  mockMinioService.presignedPutPart.mockImplementation(async (_k, _u, partNumber: number) => `https://storage.example/part/${partNumber}`);
   mockUploadSessionRepository.insert.mockResolvedValue({
     ...mockUploadSessionSingle,
     uploadKind: 'multipart',
@@ -1104,9 +1071,7 @@ it('100MB 이상이면 multipart로 part별 presigned URL을 발급한다', asyn
   expect(mockMinioService.createMultipartUpload).toHaveBeenCalledWith(expect.any(String), 'video/mp4');
   expect(result.parts).toHaveLength(3);
   expect(result.parts.map((p) => p.partNumber)).toEqual([1, 2, 3]);
-  expect(mockUploadSessionRepository.insert).toHaveBeenCalledWith(
-    expect.objectContaining({ uploadKind: 'multipart', multipartUploadId: 'mp-1' }),
-  );
+  expect(mockUploadSessionRepository.insert).toHaveBeenCalledWith(expect.objectContaining({ uploadKind: 'multipart', multipartUploadId: 'mp-1' }));
 });
 
 it('5TB 가까운 size에도 MAX_PARTS=10000을 넘지 않도록 part size를 조정한다', async () => {
@@ -1185,6 +1150,7 @@ git commit -m "feat(api): UploadSessionService init() multipart 경로 구현"
 ### Task 13: UploadSessionService — complete() 핵심 경로
 
 **Files:**
+
 - Modify: `services/api/src/file/upload-session.service.ts`
 - Modify: `services/api/src/file/upload-session.service.spec.ts`
 
@@ -1254,13 +1220,15 @@ describe('complete', () => {
     const result = await service.complete('uuid-1', mockUploadSessionSingle.id, [{ partNumber: 1, etag: 'e' }]);
 
     expect(mockMinioService.completeMultipartUpload).not.toHaveBeenCalled();
-    expect(mockFileRepository.insert).toHaveBeenCalledWith(expect.objectContaining({
-      userId: 'uuid-1',
-      name: 'test.png',
-      minioKey: mockUploadSessionSingle.minioKey,
-      size: 1024,
-      mimeType: 'image/png',
-    }));
+    expect(mockFileRepository.insert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        userId: 'uuid-1',
+        name: 'test.png',
+        minioKey: mockUploadSessionSingle.minioKey,
+        size: 1024,
+        mimeType: 'image/png',
+      }),
+    );
     expect(mockUploadSessionRepository.deleteById).toHaveBeenCalledWith(mockUploadSessionSingle.id);
     expect(result.name).toBe('test.png');
   });
@@ -1286,14 +1254,10 @@ describe('complete', () => {
       { partNumber: 2, etag: 'e2' },
     ]);
 
-    expect(mockMinioService.completeMultipartUpload).toHaveBeenCalledWith(
-      mockUploadSessionMultipart.minioKey,
-      'multipart-upload-id-1',
-      [
-        { partNumber: 1, etag: 'e1' },
-        { partNumber: 2, etag: 'e2' },
-      ],
-    );
+    expect(mockMinioService.completeMultipartUpload).toHaveBeenCalledWith(mockUploadSessionMultipart.minioKey, 'multipart-upload-id-1', [
+      { partNumber: 1, etag: 'e1' },
+      { partNumber: 2, etag: 'e2' },
+    ]);
   });
 
   it('grace period: 만료지만 객체가 있으면 정상 처리한다', async () => {
@@ -1399,6 +1363,7 @@ git commit -m "feat(api): UploadSessionService complete() 구현 (단일/multipa
 ### Task 14: UploadSessionService — cleanupExpired()
 
 **Files:**
+
 - Modify: `services/api/src/file/upload-session.service.ts`
 - Modify: `services/api/src/file/upload-session.service.spec.ts`
 
@@ -1493,6 +1458,7 @@ git commit -m "feat(api): UploadSessionService.cleanupExpired 구현 (single/mul
 ### Task 15: FileUploadController
 
 **Files:**
+
 - Create: `services/api/src/file/file-upload.controller.ts`
 - Create: `services/api/src/file/file-upload.controller.spec.ts`
 
@@ -1557,9 +1523,14 @@ describe('FileUploadController', () => {
       .send({ name: 't.png', size: 1024, mimeType: 'image/png' })
       .expect(HttpStatus.CREATED);
 
-    expect(mockUploadSessionService.init).toHaveBeenCalledWith(mockAuthUser.userId, expect.objectContaining({
-      name: 't.png', size: 1024, mimeType: 'image/png',
-    }));
+    expect(mockUploadSessionService.init).toHaveBeenCalledWith(
+      mockAuthUser.userId,
+      expect.objectContaining({
+        name: 't.png',
+        size: 1024,
+        mimeType: 'image/png',
+      }),
+    );
     expect(res.body.sessionId).toBe('11111111-1111-1111-1111-111111111111');
   });
 
@@ -1580,11 +1551,7 @@ describe('FileUploadController', () => {
       .send({ parts: [{ partNumber: 1, etag: 'e' }] })
       .expect(HttpStatus.CREATED);
 
-    expect(mockUploadSessionService.complete).toHaveBeenCalledWith(
-      mockAuthUser.userId,
-      sessionId,
-      [{ partNumber: 1, etag: 'e' }],
-    );
+    expect(mockUploadSessionService.complete).toHaveBeenCalledWith(mockAuthUser.userId, sessionId, [{ partNumber: 1, etag: 'e' }]);
     expect(res.body.id).toBe('file-id');
   });
 });
@@ -1640,6 +1607,7 @@ git commit -m "feat(api): FileUploadController 추가 (uploadInit/uploadComplete
 ### Task 16: 기존 upload 핸들러·서비스·스토리지엔진 제거
 
 **Files:**
+
 - Modify: `services/api/src/file/file.controller.ts`
 - Modify: `services/api/src/file/file.controller.spec.ts`
 - Modify: `services/api/src/file/file.service.ts`
@@ -1649,6 +1617,7 @@ git commit -m "feat(api): FileUploadController 추가 (uploadInit/uploadComplete
 - [ ] **Step 1: FileController에서 handleUpload 제거**
 
 `file.controller.ts`에서:
+
 - `import { FileInterceptor } from '@nestjs/platform-express';` 라인 제거
 - `import { UploadedFile, UseInterceptors } from '@nestjs/common'` 부분에서 `UploadedFile, UseInterceptors` 제거 (남는 import만 유지)
 - `handleUpload` 메서드 전체 제거
@@ -1656,6 +1625,7 @@ git commit -m "feat(api): FileUploadController 추가 (uploadInit/uploadComplete
 - [ ] **Step 2: FileService.upload() 제거**
 
 `file.service.ts`에서:
+
 - `upload()` 메서드 제거
 - `extension as mimeExtension`, `extname`, `Readable`, `sanitizeFilename` import는 다른 메서드(`ensureExtension` 등)가 여전히 사용 중이면 유지
 
@@ -1696,6 +1666,7 @@ git commit -m "refactor(api): FileInterceptor 기반 업로드 제거 (MinioStor
 ### Task 17: FileModule 재구성
 
 **Files:**
+
 - Modify: `services/api/src/file/file.module.ts`
 
 - [ ] **Step 1: FileModule 교체**
@@ -1716,18 +1687,9 @@ import { UploadSessionRepository } from './upload-session.repository';
 import { UploadSessionService } from './upload-session.service';
 
 @Module({
-  imports: [
-    forwardRef(() => FolderModule),
-    BullModule.registerQueue({ name: 'upload-session-cleanup' }),
-  ],
+  imports: [forwardRef(() => FolderModule), BullModule.registerQueue({ name: 'upload-session-cleanup' })],
   controllers: [FileController, FileDownloadController, FileUploadController],
-  providers: [
-    FileService,
-    FileRepository,
-    UploadSessionService,
-    UploadSessionRepository,
-    UploadSessionCleanupWorker,
-  ],
+  providers: [FileService, FileRepository, UploadSessionService, UploadSessionRepository, UploadSessionCleanupWorker],
   exports: [FileService],
 })
 export class FileModule {}
@@ -1797,6 +1759,7 @@ git commit -m "refactor(api): FileModule에 UploadSession providers 등록 + 순
 ### Task 18: UploadSessionCleanupWorker
 
 **Files:**
+
 - Create: `services/api/src/file/upload-session.cleanup.worker.ts`
 - Create: `services/api/src/file/upload-session.cleanup.worker.spec.ts`
 
@@ -1950,6 +1913,7 @@ Redis CLI 또는 Bull Board가 있다면 `upload-session-cleanup` 큐의 다음 
 ```sql
 SELECT * FROM upload_sessions WHERE minio_key LIKE '%/expired-test';
 ```
+
 Expected: 0 rows (워커가 청소함). API 로그에 `upload session 회수 결과 {scanned, deleted, errors}` 출력 확인.
 
 - [ ] **Step 5: TICK_INTERVAL_MS를 다시 15분으로 되돌리기 (commit 안 함)**
@@ -1961,6 +1925,7 @@ Expected: 0 rows (워커가 청소함). API 로그에 `upload session 회수 결
 ### Task 20: 클라이언트 헬퍼 — upload-parts
 
 **Files:**
+
 - Create: `services/web/src/features/file-upload/upload-parts.ts`
 - Create: `services/web/src/features/file-upload/upload-parts.test.ts`
 
@@ -1987,11 +1952,7 @@ describe('uploadParts', () => {
     global.fetch = fetchMock as any;
 
     const file = new File([new Uint8Array(1024)], 'a.bin', { type: 'application/octet-stream' });
-    const result = await uploadParts(
-      file,
-      [{ partNumber: 1, uploadUrl: 'https://storage.example/put' }],
-      { 'Content-Type': 'application/octet-stream' },
-    );
+    const result = await uploadParts(file, [{ partNumber: 1, uploadUrl: 'https://storage.example/put' }], { 'Content-Type': 'application/octet-stream' });
 
     expect(fetchMock).toHaveBeenCalledTimes(1);
     expect(result).toEqual([{ partNumber: 1, etag: 'etag-1' }]);
@@ -2003,11 +1964,7 @@ describe('uploadParts', () => {
       headers: new Headers({ ETag: '"abc"' }),
     }) as any;
     const file = new File([new Uint8Array(10)], 'a.bin');
-    const result = await uploadParts(
-      file,
-      [{ partNumber: 1, uploadUrl: 'https://x' }],
-      { 'Content-Type': 'application/octet-stream' },
-    );
+    const result = await uploadParts(file, [{ partNumber: 1, uploadUrl: 'https://x' }], { 'Content-Type': 'application/octet-stream' });
     expect(result[0].etag).toBe('abc');
   });
 
@@ -2015,9 +1972,7 @@ describe('uploadParts', () => {
     const fetchMock = vi.fn().mockResolvedValue({ ok: false, status: 500, headers: new Headers() });
     global.fetch = fetchMock as any;
     const file = new File([new Uint8Array(10)], 'a.bin');
-    await expect(
-      uploadParts(file, [{ partNumber: 1, uploadUrl: 'https://x' }], { 'Content-Type': 'application/octet-stream' }),
-    ).rejects.toThrow();
+    await expect(uploadParts(file, [{ partNumber: 1, uploadUrl: 'https://x' }], { 'Content-Type': 'application/octet-stream' })).rejects.toThrow();
     expect(fetchMock).toHaveBeenCalledTimes(3); // 1 + 2 retries
   });
 });
@@ -2043,11 +1998,7 @@ export interface UploadPartResult {
 const MAX_RETRIES = 2;
 const PART_CONCURRENCY = 4;
 
-export async function uploadParts(
-  file: File,
-  parts: UploadPartInput[],
-  headers: Record<string, string>,
-): Promise<UploadPartResult[]> {
+export async function uploadParts(file: File, parts: UploadPartInput[], headers: Record<string, string>): Promise<UploadPartResult[]> {
   const partSize = Math.ceil(file.size / parts.length);
   const queue = [...parts];
   const results: UploadPartResult[] = new Array(parts.length);
@@ -2106,6 +2057,7 @@ git commit -m "feat(web): upload-parts 유틸 추가 (병렬 PUT + 지수 백오
 ### Task 21: 클라이언트 헬퍼 — uploadFile
 
 **Files:**
+
 - Create: `services/web/src/features/file-upload/upload-file.ts`
 
 - [ ] **Step 1: 구현**
@@ -2170,6 +2122,7 @@ git commit -m "feat(web): uploadFile 헬퍼 추가 (init → PUT → complete 3-
 ### Task 22: Nginx `storage` 서브도메인 설정
 
 **Files:**
+
 - Create: `services/nginx/conf.d/storage.conf` (또는 프로젝트 기존 conf 디렉토리)
 - Modify: 기존 API host의 `client_max_body_size`
 
@@ -2240,6 +2193,7 @@ git commit -m "feat(nginx): storage 서브도메인 + 기존 host client_max_bod
 ### Task 23: MinIO bucket lifecycle + CORS 셋업 스크립트
 
 **Files:**
+
 - Create: `scripts/setup-minio.sh`
 - Modify: `Makefile`
 
@@ -2371,37 +2325,38 @@ A 계정으로 init → 응답의 sessionId를 B 계정으로 complete 호출 �
 
 작업 진행 중 다음 식별자가 모든 파일에서 동일하게 사용되는지 확인:
 
-| 식별자 | 일관성 검증 대상 |
-|---|---|
-| `UploadInitBody`, `UploadInitResponse`, `UploadCompleteBody`, `UploadCompletePart` | `@terab/schema` export + `UploadSessionService` / `FileUploadController` 사용처 |
-| `UploadSessions$Insert`, `UploadSessions$Select` | `@terab/db` re-export (schema/index.ts) |
-| `'single' \| 'multipart'` | DB `upload_kind` 컬럼 값, `init()` insert 시 값, `cleanupExpired()` 분기 |
-| 메서드명: `assertBelongsToUser`, `presignedPutObject`, `createMultipartUpload`, `presignedPutPart`, `completeMultipartUpload`, `abortMultipartUpload`, `cleanupExpired`, `findByIdForUpdate`, `findExpiredForCleanup` | 호출처 vs 정의처 |
-| 에러 코드 키 (대문자 스네이크): `FILE_TOO_LARGE`, `UPLOAD_SESSION_NOT_FOUND`, `UPLOAD_SESSION_EXPIRED`, `UPLOAD_OBJECT_MISSING`, `UPLOAD_SIZE_MISMATCH` | ErrorCode enum vs throw 위치 |
+| 식별자                                                                                                                                                                                                                | 일관성 검증 대상                                                                |
+| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------- |
+| `UploadInitBody`, `UploadInitResponse`, `UploadCompleteBody`, `UploadCompletePart`                                                                                                                                    | `@terab/schema` export + `UploadSessionService` / `FileUploadController` 사용처 |
+| `UploadSessions$Insert`, `UploadSessions$Select`                                                                                                                                                                      | `@terab/db` re-export (schema/index.ts)                                         |
+| `'single' \| 'multipart'`                                                                                                                                                                                             | DB `upload_kind` 컬럼 값, `init()` insert 시 값, `cleanupExpired()` 분기        |
+| 메서드명: `assertBelongsToUser`, `presignedPutObject`, `createMultipartUpload`, `presignedPutPart`, `completeMultipartUpload`, `abortMultipartUpload`, `cleanupExpired`, `findByIdForUpdate`, `findExpiredForCleanup` | 호출처 vs 정의처                                                                |
+| 에러 코드 키 (대문자 스네이크): `FILE_TOO_LARGE`, `UPLOAD_SESSION_NOT_FOUND`, `UPLOAD_SESSION_EXPIRED`, `UPLOAD_OBJECT_MISSING`, `UPLOAD_SIZE_MISMATCH`                                                               | ErrorCode enum vs throw 위치                                                    |
 
 ---
 
 ## Spec Coverage 체크
 
-| Spec 섹션 | 구현 Task |
-|---|---|
-| §1 아키텍처 (전체 흐름) | Task 1-23 통합 |
-| §2 DB 스키마 | Task 4 |
-| §3 Contract & ErrorCode | Task 1, 2, 3 |
-| §4 서비스/레이어 (Repository) | Task 9 |
-| §4 서비스/레이어 (Service) | Task 11, 12, 13, 14 |
-| §4 Worker | Task 18, 19 |
-| §4 Controller | Task 15 |
-| §4 Module 변경 | Task 17 |
-| §4 Cross-domain (FolderService) | Task 10 |
-| §4 MinioService 확장 | Task 6, 7 |
-| §5-A 웹 클라이언트 헬퍼 | Task 20, 21 |
-| §5-C Nginx | Task 22 |
-| §5-D MinIO lifecycle + CORS | Task 23 |
-| §5-E 환경변수 | Task 5 |
-| §6 테스트 전략 | 각 Task의 Step 1·2에 내장 |
-| §7 마이그레이션 순서 | Task 1-24 순서 그대로 |
+| Spec 섹션                       | 구현 Task                 |
+| ------------------------------- | ------------------------- |
+| §1 아키텍처 (전체 흐름)         | Task 1-23 통합            |
+| §2 DB 스키마                    | Task 4                    |
+| §3 Contract & ErrorCode         | Task 1, 2, 3              |
+| §4 서비스/레이어 (Repository)   | Task 9                    |
+| §4 서비스/레이어 (Service)      | Task 11, 12, 13, 14       |
+| §4 Worker                       | Task 18, 19               |
+| §4 Controller                   | Task 15                   |
+| §4 Module 변경                  | Task 17                   |
+| §4 Cross-domain (FolderService) | Task 10                   |
+| §4 MinioService 확장            | Task 6, 7                 |
+| §5-A 웹 클라이언트 헬퍼         | Task 20, 21               |
+| §5-C Nginx                      | Task 22                   |
+| §5-D MinIO lifecycle + CORS     | Task 23                   |
+| §5-E 환경변수                   | Task 5                    |
+| §6 테스트 전략                  | 각 Task의 Step 1·2에 내장 |
+| §7 마이그레이션 순서            | Task 1-24 순서 그대로     |
 
 ---
 
 > 본 plan은 spec의 모든 결정을 task-by-task로 풀어낸 것이다. 한 task는 2-5분 단위 step으로 구성돼 있으며, 각 step은 (작성 → 실패 확인 → 구현 → 통과 확인 → commit) TDD 사이클을 따른다.
+
