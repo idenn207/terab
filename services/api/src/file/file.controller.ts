@@ -1,5 +1,4 @@
-import { Controller, HttpStatus, UploadedFile, UseInterceptors } from '@nestjs/common';
-import { FileInterceptor } from '@nestjs/platform-express';
+import { Controller, HttpStatus } from '@nestjs/common';
 import { CurrentUser } from '@terab/common';
 import { contract } from '@terab/contract';
 import { tsRestHandler, TsRestHandler } from '@ts-rest/nest';
@@ -10,14 +9,14 @@ import { FileService } from './file.service';
 export class FileController {
   constructor(private readonly fileService: FileService) {}
 
-  @TsRestHandler(contract.file.upload)
-  @UseInterceptors(FileInterceptor('file'))
-  handleUpload(@CurrentUser() user: AuthUser, @UploadedFile() file: Express.Multer.File) {
-    return tsRestHandler(contract.file.upload, async ({ body }) => {
-      const result = await this.fileService.upload(user.userId, file, body.folderId);
-      return { status: HttpStatus.CREATED, body: result };
-    });
-  }
+  // @TsRestHandler(contract.file.upload)
+  // @UseInterceptors(FileInterceptor('file'))
+  // handleUpload(@CurrentUser() user: AuthUser, @UploadedFile() file: Express.Multer.File) {
+  //   return tsRestHandler(contract.file.upload, async ({ body }) => {
+  //     const result = await this.fileService.upload(user.userId, file, body.folderId);
+  //     return { status: HttpStatus.CREATED, body: result };
+  //   });
+  // }
 
   @TsRestHandler(contract.file.rename)
   handleRename(@CurrentUser() user: AuthUser) {
