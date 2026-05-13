@@ -99,12 +99,17 @@ export class TrashRepository extends RepositoryCore {
         INNER JOIN subtree s ON f.parent_id = s.id
       ),
       deleted_files AS (
-        DELETE FROM files
-        WHERE folder_id IN (SELECT id FROM subtree) AND user_id = ${userId}
-        RETURNING minio_key
+        DELETE FROM files AS f
+        USING subtree s
+        WHERE f.folder_id = s.id AND f.user_id = ${userId}
+        RETURNING f.minio_key
+      ),
+      deleted_folders AS (
+        DELETE FROM folders 
+        WHERE id IN (SELECT id FROM subtree)
+        RETURNING id
       )
-      DELETE FROM folders WHERE id IN (SELECT id FROM subtree)
-      RETURNING (SELECT array_agg(minio_key) FROM deleted_files) AS minio_key
+      SELECT minio_key FROM deleted_files;
     `);
 
     return fileKeys.rows.map((r) => r.minio_key);
