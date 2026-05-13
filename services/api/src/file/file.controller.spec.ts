@@ -8,7 +8,6 @@ import { FileController } from './file.controller';
 import { FileService } from './file.service';
 
 const mockFileService = {
-  upload: jest.fn(),
   rename: jest.fn(),
   move: jest.fn(),
   copy: jest.fn(),
@@ -47,42 +46,6 @@ describe('FileController', () => {
   it('인스턴스가 생성된다', () => {
     expect(app).toBeDefined();
   });
-
-  // describe('POST /files (업로드)', () => {
-  //   it('루트에 파일을 업로드한다', async () => {
-  //     mockFileService.upload.mockResolvedValue(mockFileItem);
-
-  //     const res = await request(app.getHttpServer())
-  //       .post('/files')
-  //       .attach('file', Buffer.from('test content'), { filename: 'test.txt', contentType: 'text/plain' })
-  //       .expect(HttpStatus.CREATED);
-
-  //     expect(mockFileService.upload).toHaveBeenCalledWith(
-  //       mockAuthUser.userId,
-  //       expect.objectContaining({ originalname: 'test.txt' }),
-  //       undefined,
-  //     );
-  //     expect(res.body.id).toBe(mockFileItem.id);
-  //   });
-
-  //   it('특정 폴더에 파일을 업로드한다', async () => {
-  //     const fileInFolder = { ...mockFileItem, folderId: FOLDER_ID };
-  //     mockFileService.upload.mockResolvedValue(fileInFolder);
-
-  //     const res = await request(app.getHttpServer())
-  //       .post('/files')
-  //       .attach('file', Buffer.from('test content'), { filename: 'test.txt', contentType: 'text/plain' })
-  //       .field('folderId', FOLDER_ID)
-  //       .expect(HttpStatus.CREATED);
-
-  //     expect(mockFileService.upload).toHaveBeenCalledWith(
-  //       mockAuthUser.userId,
-  //       expect.objectContaining({ originalname: 'test.txt' }),
-  //       FOLDER_ID,
-  //     );
-  //     expect(res.body.folderId).toBe(FOLDER_ID);
-  //   });
-  // });
 
   describe('PATCH /files/:id (이름 변경)', () => {
     it('파일 이름을 변경한다', async () => {

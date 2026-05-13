@@ -60,53 +60,23 @@ describe('FileService', () => {
     jest.clearAllMocks();
   });
 
-  it('rename은 파일이 없으면 FILE_NOT_FOUND를 던진다', async () => {
-    mockFileRepository.rename.mockResolvedValue(null);
-    await expect(service.rename('f1', 'u1', 'new.txt')).rejects.toThrow(ApiException);
-  });
-
-  it('move는 대상 폴더가 없으면 FOLDER_NOT_FOUND를 던진다', async () => {
-    mockFileRepository.findByIdAndUser.mockResolvedValue({ id: 'f1', folderId: null });
-    mockFileRepository.folderBelongsToUser.mockResolvedValue(false);
-    await expect(service.move('f1', 'u1', 'folder-1')).rejects.toThrow(ApiException);
-  });
-
-  it('remove는 파일이 없으면 FILE_NOT_FOUND를 던진다', async () => {
-    mockFileRepository.softDelete.mockResolvedValue(false);
-    await expect(service.remove('f1', 'u1')).rejects.toThrow(ApiException);
-  });
-
-  it('upload는 multer 파일 메타데이터를 DB에 저장하고 FileItem을 반환한다', async () => {
-    const multerFile = {
-      originalname: 'test.txt',
-      filename: 'user-1/uuid-key',
-      size: 1024,
-      mimetype: 'text/plain',
-    } as Express.Multer.File;
-    const row = {
-      id: 'f1',
-      name: 'test.txt',
-      folderId: null,
-      userId: 'u1',
-      minioKey: 'user-1/uuid-key',
-      size: 1024,
-      mimeType: 'text/plain',
-      createdAt: new Date(),
-      updatedAt: new Date(),
-      softDeletedAt: null,
-    };
-    mockFileRepository.insert.mockResolvedValue(row);
-
-    const result = await service.upload('u1', multerFile, undefined);
-
-    expect(mockFileRepository.insert).toHaveBeenCalledWith({
-      userId: 'u1',
-      folderId: null,
-      name: 'test.txt',
-      minioKey: 'user-1/uuid-key',
-      size: 1024,
-      mimeType: 'text/plain',
+  describe('rename', () => {
+    it('파일이 없으면 FILE_NOT_FOUND를 던진다', async () => {
+      mockFileRepository.rename.mockResolvedValue(null);
+      await expect(service.rename('f1', 'u1', 'new.txt')).rejects.toThrow(ApiException);
     });
-    expect(result.name).toBe('test.txt');
+  });
+  describe('move', () => {
+    it('대상 폴더가 없으면 FOLDER_NOT_FOUND를 던진다', async () => {
+      mockFileRepository.findByIdAndUser.mockResolvedValue({ id: 'f1', folderId: null });
+      mockFileRepository.folderBelongsToUser.mockResolvedValue(false);
+      await expect(service.move('f1', 'u1', 'folder-1')).rejects.toThrow(ApiException);
+    });
+  });
+  describe('remove', () => {
+    it('remove는 파일이 없으면 FILE_NOT_FOUND를 던진다', async () => {
+      mockFileRepository.softDelete.mockResolvedValue(false);
+      await expect(service.remove('f1', 'u1')).rejects.toThrow(ApiException);
+    });
   });
 });

@@ -3,7 +3,6 @@ import { Test } from '@nestjs/testing';
 import { ApiException } from '@terab/common';
 import { DatabaseService, TransactionContext } from '@terab/db';
 import { mockDatabaseService } from '@terab/test';
-import { FileService } from '../file/file.service';
 import { FolderRepository } from './folder.repository';
 import { FolderService } from './folder.service';
 
@@ -27,11 +26,6 @@ const mockCacheManager = {
   del: jest.fn(),
 };
 
-const mockFileService = {
-  listRootFiles: jest.fn(),
-  listByFolder: jest.fn(),
-};
-
 const mockTransactionContext = {
   current: undefined,
   run: jest.fn((_tx: unknown, fn: () => Promise<unknown>) => fn()),
@@ -47,7 +41,6 @@ describe('FolderService', () => {
         { provide: DatabaseService, useValue: mockDatabaseService },
         { provide: TransactionContext, useValue: mockTransactionContext },
         { provide: FolderRepository, useValue: mockFolderRepository },
-        { provide: FileService, useValue: mockFileService },
         { provide: CACHE_MANAGER, useValue: mockCacheManager },
       ],
     }).compile();
@@ -60,7 +53,6 @@ describe('FolderService', () => {
       mockCacheManager.get.mockResolvedValue(null);
       mockFolderRepository.findRootChildren.mockResolvedValue([]);
       mockFolderRepository.findRootFiles.mockResolvedValue([]);
-      mockFileService.listRootFiles.mockResolvedValue([]);
 
       const result = await service.getRoot('user-1');
 
@@ -93,7 +85,7 @@ describe('FolderService', () => {
       };
       mockFolderRepository.insert.mockResolvedValue(folder);
 
-      const result = await service.create('u1', 'test', undefined);
+      const result = await service.create('u1', 'test', null);
 
       expect(mockFolderRepository.insert).toHaveBeenCalledWith({ userId: 'u1', name: 'test', parentId: null });
       expect(result.name).toBe('test');

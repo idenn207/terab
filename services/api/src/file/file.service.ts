@@ -7,7 +7,6 @@ import { extension as mimeExtension } from 'mime-types';
 import { randomUUID } from 'node:crypto';
 import { extname } from 'node:path';
 import { Readable } from 'node:stream';
-import sanitizeFilename from 'sanitize-filename';
 import { FolderService } from '../folder/folder.service';
 import { MinioService } from '../minio/minio.service';
 import { FileRepository } from './file.repository';
@@ -37,22 +36,6 @@ export class FileService extends ServiceCore {
     if (extname(name)) return name;
     const ext = mimeExtension(mimeType);
     return ext ? `${name}.${ext}` : name;
-  }
-
-  async upload(userId: string, file: Express.Multer.File, folderId?: string): Promise<FileItem> {
-    if (folderId) await this.folderService.assertBelongsToUser(folderId, userId);
-
-    const row = await this.fileRepository.insert({
-      userId,
-      folderId: folderId ?? null,
-      name: sanitizeFilename(file.originalname),
-      minioKey: file.filename,
-      size: file.size,
-      mimeType: file.mimetype,
-    });
-
-    await this.invalidate(userId, folderId ?? null);
-    return this.fileRepository.toFileItem(row);
   }
 
   async getDownloadStream(
