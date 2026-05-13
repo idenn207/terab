@@ -6,7 +6,17 @@ const DEFAULT_CONFIG: Record<string, string> = {
   PASSWORD_PEPPER: 'test-pepper',
 };
 
+const MINIO_CONFIG: Record<string, string> = {
+  MINIO_ENDPOINT: 'localhost:9000',
+  MINIO_PUBLIC_ENDPOINT: 'http://localhost:9000',
+  MINIO_ROOT_USER: 'minioadmin',
+  MINIO_ROOT_PASSWORD: 'minioadmin',
+  MINIO_DEFAULT_BUCKETS: 'drive',
+};
+
+const CONFIG = { ...DEFAULT_CONFIG, ...MINIO_CONFIG };
+
 export const mockConfigService = {
-  getOrThrow: jest.fn((key: string) => DEFAULT_CONFIG[key]),
+  getOrThrow: jest.fn((key: string) => CONFIG[key]),
   get: jest.fn().mockReturnValue(undefined),
 };

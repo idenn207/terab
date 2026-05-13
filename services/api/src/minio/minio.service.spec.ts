@@ -1,5 +1,6 @@
 import { ConfigService } from '@nestjs/config';
 import { Test } from '@nestjs/testing';
+import { createPinoLoggerProvider, mockConfigService } from '@terab/test';
 import { MinioService } from './minio.service';
 
 describe('MinioService', () => {
@@ -9,20 +10,8 @@ describe('MinioService', () => {
     const module = await Test.createTestingModule({
       providers: [
         MinioService,
-        {
-          provide: ConfigService,
-          useValue: {
-            getOrThrow: (key: string) => {
-              const map: Record<string, string> = {
-                MINIO_ENDPOINT: 'localhost:9000',
-                MINIO_ROOT_USER: 'minioadmin',
-                MINIO_ROOT_PASSWORD: 'minioadmin',
-                MINIO_DEFAULT_BUCKETS: 'drive',
-              };
-              return map[key];
-            },
-          },
-        },
+        { provide: ConfigService, useValue: mockConfigService },
+        createPinoLoggerProvider(MinioService.name),
       ],
     }).compile();
 

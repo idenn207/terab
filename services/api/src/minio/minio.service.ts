@@ -7,7 +7,9 @@ import { Readable } from 'node:stream';
 @Injectable()
 export class MinioService {
   private readonly client: Client;
+  private readonly presignClient: Client;
   private readonly endpoint: string;
+  private readonly publicEndpoint: string;
   readonly bucketName: string;
 
   constructor(
@@ -15,6 +17,8 @@ export class MinioService {
     @InjectPinoLogger(MinioService.name) private readonly logger: PinoLogger,
   ) {
     this.endpoint = this.config.getOrThrow<string>('MINIO_ENDPOINT');
+    this.publicEndpoint = this.config.getOrThrow<string>('MINIO_PUBLIC_ENDPOINT');
+
     const [host, portStr] = this.endpoint.split(':');
     const port = portStr ? parseInt(portStr, 10) : 9000;
 
@@ -22,6 +26,15 @@ export class MinioService {
       endPoint: host,
       port,
       useSSL: false,
+      accessKey: this.config.getOrThrow<string>('MINIO_ROOT_USER'),
+      secretKey: this.config.getOrThrow<string>('MINIO_ROOT_PASSWORD'),
+    });
+
+    const publicUrl = new URL(this.publicEndpoint);
+    this.presignClient = new Client({
+      endPoint: publicUrl.hostname,
+      port: publicUrl.port ? parseInt(publicUrl.port, 10) : publicUrl.protocol === 'https:' ? 443 : 80,
+      useSSL: publicUrl.protocol === 'https:',
       accessKey: this.config.getOrThrow<string>('MINIO_ROOT_USER'),
       secretKey: this.config.getOrThrow<string>('MINIO_ROOT_PASSWORD'),
     });
@@ -46,9 +59,10 @@ export class MinioService {
     return this.client.getObject(this.bucketName, key);
   }
 
-  async statObject(key: string): Promise<{ size: number }> {
+  async statObject(key: string): Promise<{ size: number; mimeType: string }> {
     const stat = await this.client.statObject(this.bucketName, key);
-    return { size: stat.size };
+    const mimeType = (stat.metaData?.['content-type'] as string) ?? 'application/octet-stream';
+    return { size: stat.size, mimeType };
   }
 
   async copyObject(sourceKey: string, destKey: string): Promise<void> {
