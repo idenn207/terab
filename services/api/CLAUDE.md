@@ -21,6 +21,42 @@ NestJS 11 기반 REST API 서버. Controller → Service → Repository 3-tier �
 | `src/database/` | DatabaseService, Schema, Seed, Migration |
 | `src/health/` | 헬스체크 엔드포인트 |
 
+### `src/common/` 분류 기준
+
+"공통이냐"가 아니라 **"독자 `@Module()`이 없는 NestJS 1차 빌딩 블록이냐"**가 기준이다. 자체 `*.module.ts`를 가지는 인프라성 코드는 `src/common/`이 아니라 `src/{name}/` 최상위에 둔다.
+
+**`src/common/`에 들어가는 것 (Module 없음):**
+
+| 분류 | 디렉토리 | 예시 |
+|---|---|---|
+| Guard | `src/common/guards/` | `JwtAuthGuard`, `PermissionGuard` |
+| Filter | `src/common/filters/` | `ApiExceptionFilter` |
+| Decorator | `src/common/decorators/` | `@Public()`, `@CurrentUser()`, `@RequirePermission()` |
+| Exception | `src/common/exceptions/` | `ApiException`, `ErrorCode` |
+| Pipe / Interceptor | `src/common/pipes/`, `src/common/interceptors/` | (필요 시 추가) |
+
+- 등록: `AppModule`의 `APP_GUARD` / `APP_FILTER` / `APP_PIPE` provider 또는 핸들러 데코레이터로 직접 사용
+- export: `src/common/index.ts`에 re-export — 외부에서는 `@terab/common`으로 import
+- **금지**: `src/common/` 안에 `*.module.ts` 두지 않는다. Module이 필요하면 `src/{name}/` 최상위로 승격한다
+
+**`src/common/`에 들어가지 않는 것 (자체 Module을 가짐):**
+
+| 디렉토리 | Module | 이유 |
+|---|---|---|
+| `src/database/` | `DatabaseModule` (`@Global`) | DI 진입점, Schema/Seed/Migration까지 묶인 인프라 |
+| `src/security/` | `SecurityModule` (`@Global`) | `TokenService` provider |
+| `src/logger/` | `LoggerModule` (`@Global`) | `nestjs-pino` 설정 wrapper |
+| `src/minio/` | `MinioModule` | MinIO client provider |
+
+- 위 4개는 `@Global()`로 어디서든 inject 가능하므로 "공통처럼 동작"하지만, 폴더는 `common/`이 아니다
+- path alias(`@terab/db`, `@terab/security` 등)로 import한다 — 미래에 독립 패키지로 분리할 여지를 남긴 설계
+
+**새 코드 배치 결정 흐름:**
+
+1. `@Module()` 데코레이터가 붙은 클래스를 만드는가? → `src/{name}/` 최상위 (필요 시 path alias 추가)
+2. NestJS 데코레이터/Guard/Filter/Exception 등 Module 없는 재사용 단위인가? → `src/common/{category}/`
+3. 특정 도메인에서만 쓰이는 유틸인가? → 해당 도메인 디렉토리 내부 (`src/{domain}/utils/` 등)
+
 ### 내부 패키지 (@terab/*)
 
 | 패키지 | 실제 경로 | 역할 |

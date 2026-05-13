@@ -1925,16 +1925,17 @@ Expected: 0 rows (워커가 청소함). API 로그에 `upload session 회수 결
 
 ## Phase 6 — 웹 클라이언트 헬퍼
 
-### Task 20: 클라이언트 헬퍼 — upload-parts
+### Task 20: 클라이언트 헬퍼 — upload-parts (FSD model 세그먼트)
+
+> **FSD 컨벤션**: `features/file-upload/` 슬라이스는 `api/`, `model/`, `ui/` 세그먼트로만 구성한다. 슬라이스 루트에 파일을 두지 않는다.
+> API 호출은 `@/shared/api`의 ts-rest react-query 래퍼(`api.xxx.useMutation()`)를 `api/mutation.ts` 안에서만 호출하고, 외부에서 직접 호출하지 않는다.
 
 **Files:**
 
-- Create: `services/web/src/features/file-upload/upload-parts.ts`
-- Create: `services/web/src/features/file-upload/upload-parts.test.ts`
+- Create: `services/web/src/features/file-upload/model/upload-parts.ts`
+- Create: `services/web/src/features/file-upload/model/upload-parts.test.ts`
 
 - [ ] **Step 1: 테스트 작성**
-
-> 웹 테스트 러너 컨벤션이 vitest이라고 가정한다. 실제 러너에 맞춰 import를 조정하라 (`vitest` → `@testing-library` 등).
 
 ```ts
 import { describe, expect, it, vi, beforeEach } from 'vitest';
@@ -2050,72 +2051,212 @@ Run: `cd services/web && npm test -- upload-parts`
 - [ ] **Step 5: Commit**
 
 ```bash
-git add services/web/src/features/file-upload/upload-parts.ts \
-        services/web/src/features/file-upload/upload-parts.test.ts
+git add services/web/src/features/file-upload/model/upload-parts.ts \
+        services/web/src/features/file-upload/model/upload-parts.test.ts
 git commit -m "feat(web): upload-parts 유틸 추가 (병렬 PUT + 지수 백오프 재시도)"
 ```
 
 ---
 
-### Task 21: 클라이언트 헬퍼 — uploadFile
+### Task 21: 업로드 mutation 래퍼 + umbrella 훅 (`useUploadFile`)
+
+> **패턴**: 두 개의 API 호출(`uploadInit` → PUT → `uploadComplete`)을 하나의 `useMutation`으로 감싸는 **umbrella mutation** 패턴을 사용한다.
+>
+> - `api/mutation.ts`는 react-query 래퍼만 제공 (다른 features와 동일하게 `useXxxMutation` 네이밍)
+> - `model/useUploadFile.ts`는 `useMutation({ mutationFn })` 안에서 내부 mutation들의 `mutateAsync`를 await — 콜백 중첩 없이 평탄한 시퀀스
+> - 호출부는 `mutate({...}, { onSuccess: sync })` 또는 `await mutateAsync(...)` 자유롭게 선택 가능
+> - 단일 `isPending` / `error` / `data`로 UI 표시가 단순
 
 **Files:**
 
-- Create: `services/web/src/features/file-upload/upload-file.ts`
+- Create/Modify: `services/web/src/features/file-upload/api/mutation.ts`
+- Create: `services/web/src/features/file-upload/model/useUploadFile.ts`
+- Create: `services/web/src/features/file-upload/model/useUploadFile.test.ts`
+- Modify: `services/web/src/features/file-upload/index.ts`
 
-- [ ] **Step 1: 구현**
+- [ ] **Step 1: `api/mutation.ts` 작성**
 
 ```ts
-import { contract } from '@terab/contract';
-import { initClient } from '@ts-rest/core';
-import { uploadParts } from './upload-parts';
+import { api } from '@/shared/api';
 
-// 프로젝트 내 기존 ts-rest 클라이언트 인스턴스를 import. 경로는 web의 실제 위치에 맞춰 조정한다.
-// 예: import { api } from '@/lib/api-client';
-import { api } from '@/lib/api-client';
+export function useUploadInitMutation() {
+  return api.file.uploadInit.useMutation();
+}
 
-export async function uploadFile(file: File, folderId?: string) {
-  const initRes = await api.file.uploadInit({
-    body: {
-      folderId,
-      name: file.name,
-      size: file.size,
-      mimeType: file.type || 'application/octet-stream',
-    },
-  });
-  if (initRes.status !== 201) {
-    throw new Error(`upload-init failed: ${initRes.status}`);
-  }
-  const init = initRes.body;
-
-  const partResults = await uploadParts(file, init.parts, init.uploadHeaders);
-
-  const completeRes = await api.file.uploadComplete({
-    params: { sessionId: init.sessionId },
-    body: { parts: partResults },
-  });
-  if (completeRes.status !== 201) {
-    throw new Error(`upload-complete failed: ${completeRes.status}`);
-  }
-  return completeRes.body;
+export function useUploadCompleteMutation() {
+  return api.file.uploadComplete.useMutation();
 }
 ```
 
-- [ ] **Step 2: api-client 경로 확인**
+- [ ] **Step 2: `model/useUploadFile.ts` 작성 (umbrella useMutation)**
 
-Run: `find services/web/src -name 'api-client*' -o -name '*api.ts' | head`
-실제 ts-rest 클라이언트 위치를 찾아 import 경로를 위 코드의 `@/lib/api-client` 부분에 맞게 수정한다. (web 컨벤션에 따름)
+```ts
+import { useMutation } from '@tanstack/react-query';
+import { useUploadCompleteMutation, useUploadInitMutation } from '../api/mutation';
+import { uploadParts } from './upload-parts';
 
-- [ ] **Step 3: 빌드 확인**
+export interface UploadFileInput {
+  file: File;
+  folderId?: string;
+}
+
+export function useUploadFile() {
+  const initMutation = useUploadInitMutation();
+  const completeMutation = useUploadCompleteMutation();
+
+  return useMutation({
+    mutationFn: async ({ file, folderId }: UploadFileInput) => {
+      const initRes = await initMutation.mutateAsync({
+        body: {
+          folderId,
+          name: file.name,
+          size: file.size,
+          mimeType: file.type || 'application/octet-stream',
+        },
+      });
+      if (initRes.status !== 201) {
+        throw new Error(`upload-init failed: ${initRes.status}`);
+      }
+      const init = initRes.body;
+
+      const partResults = await uploadParts(file, init.parts, init.uploadHeaders);
+
+      const completeRes = await completeMutation.mutateAsync({
+        params: { sessionId: init.sessionId },
+        body: { parts: partResults },
+      });
+      if (completeRes.status !== 201) {
+        throw new Error(`upload-complete failed: ${completeRes.status}`);
+      }
+      return completeRes.body;
+    },
+  });
+}
+```
+
+> **에러 처리 정책**: 중간 실패 시 throw만 한다. 서버의 `UploadSessionCleanupWorker`가 만료된 세션을 회수하므로 클라이언트에서 별도 abort 호출은 하지 않는다.
+
+- [ ] **Step 3: `index.ts` 갱신**
+
+```ts
+export { useUploadFile } from './model/useUploadFile';
+```
+
+> `api/mutation.ts`는 슬라이스 내부용이므로 export하지 않는다 (FSD 세그먼트 규칙).
+
+- [ ] **Step 4: 훅 테스트 작성 (`model/useUploadFile.test.ts`)**
+
+```ts
+import { renderHook, waitFor } from '@testing-library/react';
+import { describe, expect, it, vi, beforeEach } from 'vitest';
+import { makeQueryWrapper } from '@/__tests__/wrappers';
+import { useUploadFile } from './useUploadFile';
+
+const { mockInitMutate, mockCompleteMutate, mockUploadParts } = vi.hoisted(() => ({
+  mockInitMutate: vi.fn(),
+  mockCompleteMutate: vi.fn(),
+  mockUploadParts: vi.fn(),
+}));
+
+vi.mock('../api/mutation', () => ({
+  useUploadInitMutation: () => ({ mutateAsync: mockInitMutate }),
+  useUploadCompleteMutation: () => ({ mutateAsync: mockCompleteMutate }),
+}));
+
+vi.mock('./upload-parts', () => ({
+  uploadParts: mockUploadParts,
+}));
+
+beforeEach(() => vi.clearAllMocks());
+
+describe('useUploadFile', () => {
+  it('init → uploadParts → complete 순서로 호출하고 결과 body를 반환한다', async () => {
+    mockInitMutate.mockResolvedValue({
+      status: 201,
+      body: {
+        sessionId: 'sess-1',
+        parts: [{ partNumber: 1, uploadUrl: 'https://x' }],
+        uploadHeaders: { 'Content-Type': 'application/octet-stream' },
+      },
+    });
+    mockUploadParts.mockResolvedValue([{ partNumber: 1, etag: 'e1' }]);
+    mockCompleteMutate.mockResolvedValue({ status: 201, body: { id: 'file-1', name: 'a.bin' } });
+
+    const { result } = renderHook(() => useUploadFile(), { wrapper: makeQueryWrapper() });
+    const file = new File([new Uint8Array(10)], 'a.bin');
+
+    const data = await result.current.mutateAsync({ file, folderId: 'folder-1' });
+
+    expect(mockInitMutate).toHaveBeenCalledWith({
+      body: { folderId: 'folder-1', name: 'a.bin', size: 10, mimeType: 'application/octet-stream' },
+    });
+    expect(mockUploadParts).toHaveBeenCalledWith(file, [{ partNumber: 1, uploadUrl: 'https://x' }], { 'Content-Type': 'application/octet-stream' });
+    expect(mockCompleteMutate).toHaveBeenCalledWith({
+      params: { sessionId: 'sess-1' },
+      body: { parts: [{ partNumber: 1, etag: 'e1' }] },
+    });
+    expect(data).toEqual({ id: 'file-1', name: 'a.bin' });
+  });
+
+  it('init이 실패하면 uploadParts/complete을 호출하지 않고 throw한다', async () => {
+    mockInitMutate.mockRejectedValue(new Error('boom'));
+
+    const { result } = renderHook(() => useUploadFile(), { wrapper: makeQueryWrapper() });
+    const file = new File([new Uint8Array(10)], 'a.bin');
+
+    await expect(result.current.mutateAsync({ file })).rejects.toThrow('boom');
+    expect(mockUploadParts).not.toHaveBeenCalled();
+    expect(mockCompleteMutate).not.toHaveBeenCalled();
+  });
+
+  it('uploadParts가 실패하면 complete을 호출하지 않는다 (서버 cleanup-worker가 회수)', async () => {
+    mockInitMutate.mockResolvedValue({
+      status: 201,
+      body: { sessionId: 's', parts: [{ partNumber: 1, uploadUrl: 'x' }], uploadHeaders: {} },
+    });
+    mockUploadParts.mockRejectedValue(new Error('PUT failed'));
+
+    const { result } = renderHook(() => useUploadFile(), { wrapper: makeQueryWrapper() });
+    const file = new File([new Uint8Array(10)], 'a.bin');
+
+    await expect(result.current.mutateAsync({ file })).rejects.toThrow('PUT failed');
+    expect(mockCompleteMutate).not.toHaveBeenCalled();
+  });
+});
+```
+
+- [ ] **Step 5: 테스트 실행 → PASS**
+
+Run: `cd services/web && npm test -- file-upload`
+
+- [ ] **Step 6: 빌드 확인**
 
 Run: `cd services/web && npm run build`
-Expected: 빌드 성공
 
-- [ ] **Step 4: Commit**
+- [ ] **Step 7: Commit**
 
 ```bash
-git add services/web/src/features/file-upload/upload-file.ts
-git commit -m "feat(web): uploadFile 헬퍼 추가 (init → PUT → complete 3-step)"
+git add services/web/src/features/file-upload/api/mutation.ts \
+        services/web/src/features/file-upload/model/useUploadFile.ts \
+        services/web/src/features/file-upload/model/useUploadFile.test.ts \
+        services/web/src/features/file-upload/index.ts
+git commit -m "feat(web): useUploadFile 훅 추가 (umbrella useMutation 패턴)"
+```
+
+#### 호출부 예시 (참고용 — 별도 task에서 widget/page 구현 시 사용)
+
+```ts
+// 옵션 A: 단발 업로드 — onSuccess는 동기 콜백만
+const upload = useUploadFile();
+upload.mutate(
+  { file, folderId },
+  { onSuccess: (uploaded) => toast.success(`${uploaded.name} 업로드 완료`) },
+);
+
+// 옵션 B: 순차 다중 업로드 — await로 평탄하게
+for (const f of files) {
+  await upload.mutateAsync({ file: f, folderId });
+}
 ```
 
 ---

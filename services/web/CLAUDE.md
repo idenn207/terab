@@ -6,16 +6,53 @@
 
 **Feature-Sliced Design(FSD)** 레이어 구조를 따른다.
 
-| 레이어   | 경로            | 역할                                         |
-| -------- | --------------- | -------------------------------------------- |
-| app      | `src/app/`      | 진입점, Provider, 라우터 설정                |
-| pages    | `src/pages/`    | 라우트 단위 페이지 컴포넌트                  |
-| widgets  | `src/widgets/`  | 여러 features/entities를 조합한 독립 UI 블록 |
-| features | `src/features/` | 사용자 행위 단위 기능 (로그인, 업로드 등)    |
-| entities | `src/entities/` | 비즈니스 도메인 모델 + Zustand 스토어        |
-| shared   | `src/shared/`   | 재사용 UI, API 인스턴스, 유틸                |
+| 레이어   | 경로            | 역할                                         | 사용 시점                                     |
+| -------- | --------------- | -------------------------------------------- | --------------------------------------------- |
+| app      | `src/app/`      | 전역 설정·스타일·프로바이더                  | 전체 앱에 영향을 주는 설정이 필요할 때        |
+| pages    | `src/pages/`    | 라우트 단위 페이지 구성                      | 특정 URL에 대응하는 화면을 구성할 때          |
+| widgets  | `src/widgets/`  | 페이지의 독립된 구역(Header·Sidebar·툴바 등) | 여러 features를 조합해 하나의 구역을 만들 때  |
+| features | `src/features/` | 사용자 행위 단위 기능(행위 + 노출 UI)        | 비즈니스 로직(API·Hook)과 UI가 결합될 때      |
+| entities | `src/entities/` | 비즈니스 도메인 모델(User·File 등)           | 데이터 구조·단순 목록·도메인 상태를 정의할 때 |
+| shared   | `src/shared/`   | 프로젝트 전역 재사용 도구                    | UI Kit·공통 유틸·API 클라이언트 설정 등       |
 
 > `pages/share/`는 공유(Share) 도메인 페이지로 FSD `shared/` 레이어와 무관하다.
+
+### Widgets vs Features 구분
+
+가장 자주 혼동되는 두 레이어다. 판단 기준은 **"하나의 사용자 행위(action)인가, 여러 행위의 조합(section)인가"**.
+
+- **features** — 하나의 사용자 행위(action) 단위. 행위를 트리거하는 UI 컴포넌트(버튼, 폼 등)는 해당 feature의 `ui/`에 둔다.
+  - 예: `features/file-upload/ui/UploadButton.tsx`, `features/file-delete/ui/DeleteButton.tsx`, `features/login-by-credentials/ui/LoginForm.tsx`
+  - 행위가 단일 버튼이라도 비즈니스 로직(API 호출, mutation, 상태 변경)이 붙으면 feature이다.
+- **widgets** — features와 entities를 **조합**하여 페이지의 독립된 구역(section)을 구성하는 단위. 자체 비즈니스 로직은 가지지 않고 배치/레이아웃만 담당한다.
+  - 예: `widgets/sidebar/`(Logo + 네비게이션 + UserMenu 조합), `widgets/navbar/`, `widgets/file-toolbar/`(UploadButton + NewFolderButton + ViewSwitcher 조합)
+  - "어떤 features를 어디에 배치할지"가 widget의 역할이다.
+
+| 상황                                             | 올바른 위치                                      |
+| ------------------------------------------------ | ------------------------------------------------ |
+| 파일 업로드 버튼 1개 (mutation 호출)             | `features/file-upload/ui/UploadButton.tsx`       |
+| 파일 삭제 버튼 1개 (mutation 호출)               | `features/file-delete/ui/DeleteButton.tsx`       |
+| 업로드 + 새 폴더 + 정렬 토글이 한 줄에 모인 툴바 | `widgets/file-toolbar/`                          |
+| 로그인 폼(이메일/비밀번호 입력 + 제출)           | `features/login-by-credentials/ui/LoginForm.tsx` |
+| 로그인 페이지의 좌측 일러스트 + 우측 폼 레이아웃 | `widgets/auth-layout/`                           |
+
+> 핵심: feature의 `ui/`가 비어 있다면 그 feature는 미완성이거나 widget으로 잘못 분류된 것이다. **행위는 feature, 배치는 widget**.
+
+### 세그먼트 사용 시점
+
+각 슬라이스 내부의 세그먼트(`api/`, `model/`, `ui/`)는 아래 기준으로 분리한다.
+
+| 세그먼트 | 역할                                                           | 사용 시점                                                                                  |
+| -------- | -------------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
+| `api/`   | 서버 통신 어댑터(ts-rest mutation/query 래퍼, axios 호출 함수) | 슬라이스가 외부 API를 호출할 때. 슬라이스 외부에는 비공개 — `index.ts`에서 export 금지     |
+| `model/` | 비즈니스 로직(훅, 스토어, 도메인 유틸)                         | `api/` 호출을 조합하거나 상태를 관리하는 훅·스토어가 필요할 때                             |
+| `ui/`    | 슬라이스 전용 React 컴포넌트                                   | 이 슬라이스의 행위·도메인을 화면에 노출할 때. 외부 슬라이스의 컴포넌트를 import하지 않는다 |
+
+세그먼트는 필요한 것만 만든다. 예:
+
+- `features/file-upload/` — `api/`(mutation 래퍼) + `model/`(useUploadFile 훅) + `ui/`(UploadButton)
+- `entities/user/` — `model/`(useUserStore) + `types.ts` (api·ui 불필요)
+- `widgets/sidebar/` — `ui/`만 (자체 model·api 없이 features를 조합)
 
 ### 주요 명령어
 
@@ -95,20 +132,20 @@ import { useAuth } from '@/features/login-by-2fa/model/useAuth';
 api → model → ui
 ```
 
-| import 방향          | 허용 여부 |
-| -------------------- | --------- |
-| `model` → `api`      | ✅        |
-| `ui` → `model`       | ✅        |
-| `ui` → `api`         | ❌        |
-| `api` → `model`      | ❌        |
-| `model` → `ui`       | ❌        |
+| import 방향     | 허용 여부 |
+| --------------- | --------- |
+| `model` → `api` | ✅        |
+| `ui` → `model`  | ✅        |
+| `ui` → `api`    | ❌        |
+| `api` → `model` | ❌        |
+| `model` → `ui`  | ❌        |
 
 `api` 세그먼트는 `index.ts`에서 export하지 않는다. 외부 슬라이스에는 `model`과 `ui`만 노출한다.
 
 ```ts
 // features/upload/index.ts
-export { useUpload } from './model/useUpload';     // ✅ model export
-export { UploadButton } from './ui/UploadButton';  // ✅ ui export
+export { useUpload } from './model/useUpload'; // ✅ model export
+export { UploadButton } from './ui/UploadButton'; // ✅ ui export
 // export { uploadApi } from './api/uploadApi';    // ❌ api는 슬라이스 내부용
 ```
 
