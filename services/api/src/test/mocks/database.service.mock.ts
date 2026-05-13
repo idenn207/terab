@@ -1,15 +1,18 @@
+export const mockDbFor = jest.fn();
 export const mockDbLimit = jest.fn();
 export const mockDbWhere = jest.fn();
 export const mockDbFrom = jest.fn();
 export const mockDbSelect = jest.fn();
 export const mockDbInsert = jest.fn();
 export const mockDbUpdate = jest.fn();
+export const mockDbDelete = jest.fn();
 
 export const mockDatabaseService = {
   db: {
     select: mockDbSelect,
     insert: mockDbInsert,
     update: mockDbUpdate,
+    delete: mockDbDelete,
   },
 };
 
@@ -18,4 +21,5 @@ export const setupMockDbSelectChain = () => {
   mockDbSelect.mockReturnValue({ from: mockDbFrom });
   mockDbFrom.mockReturnValue({ where: mockDbWhere });
   mockDbWhere.mockReturnValue({ limit: mockDbLimit });
+  mockDbLimit.mockReturnValue({ for: mockDbFor });
 };

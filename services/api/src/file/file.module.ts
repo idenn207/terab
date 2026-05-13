@@ -6,6 +6,7 @@ import { FileDownloadController } from './file-download.controller';
 import { FileController } from './file.controller';
 import { FileRepository } from './file.repository';
 import { FileService } from './file.service';
+import { UploadSessionRepository } from './upload-session.repository';
 
 @Module({
   imports: [
@@ -17,7 +18,7 @@ import { FileService } from './file.service';
     }),
   ],
   controllers: [FileController, FileDownloadController],
-  providers: [FileService, FileRepository],
+  providers: [FileService, FileRepository, UploadSessionRepository],
   exports: [FileService],
 })
 export class FileModule {}
