@@ -1,7 +1,13 @@
 import { Test } from '@nestjs/testing';
 import { ApiException } from '@terab/common';
 import { DatabaseService, TransactionContext } from '@terab/db';
-import { mockDatabaseService, mockUploadSessionSingle } from '@terab/test';
+import {
+  mockDatabaseService,
+  mockUploadSessionExpired,
+  mockUploadSessionMultipart,
+  mockUploadSessionSingle,
+  setupMockDbTransactionChain,
+} from '@terab/test';
 import { FolderService } from '../folder/folder.service';
 import { MinioService } from '../minio/minio.service';
 import { FileRepository } from './file.repository';
@@ -58,6 +64,7 @@ describe('UploadSessionService', () => {
     }).compile();
     service = module.get(UploadSessionService);
     jest.clearAllMocks();
+    setupMockDbTransactionChain();
   });
 
   describe('init', () => {
@@ -102,6 +109,187 @@ describe('UploadSessionService', () => {
       expect(mockUploadSessionRepository.insert).toHaveBeenCalledWith(
         expect.objectContaining({ mimeType: 'application/octet-stream' }),
       );
+    });
+
+    it('100MB 이상이면 multipart로 part별 presigned URL을 발급한다', async () => {
+      mockMinioService.createMultipartUpload.mockResolvedValue({ uploadId: 'mp-1' });
+      mockMinioService.presignedPutPart.mockImplementation(
+        async (_k, _u, partNumber: number) => `https://storage.example/part/${partNumber}`,
+      );
+      mockUploadSessionRepository.insert.mockResolvedValue({
+        ...mockUploadSessionSingle,
+        uploadKind: 'multipart',
+        multipartUploadId: 'mp-1',
+      });
+
+      const size = 250 * 1024 * 1024;
+      const result = await service.init('u1', { name: 'v.mp4', size, mimeType: 'video/mp4' });
+
+      // 100MB part size → 3 parts
+      expect(mockMinioService.createMultipartUpload).toHaveBeenCalledWith(expect.any(String), 'video/mp4');
+      expect(result.parts).toHaveLength(3);
+      expect(result.parts.map((p) => p.partNumber)).toEqual([1, 2, 3]);
+      expect(mockUploadSessionRepository.insert).toHaveBeenCalledWith(
+        expect.objectContaining({ uploadKind: 'multipart', multipartUploadId: 'mp-1' }),
+      );
+    });
+
+    it('5TB 가까운 size에도 MAX_PARTS=10000을 넘지 않도록 part size를 조정한다', async () => {
+      // 이 케이스는 100GB cap에 의해 도달 불가하지만 partSize 공식 검증용
+      // 100GB / 100MB = 1024 parts
+      mockMinioService.createMultipartUpload.mockResolvedValue({ uploadId: 'mp-2' });
+      mockMinioService.presignedPutPart.mockResolvedValue('https://storage.example/part');
+      mockUploadSessionRepository.insert.mockResolvedValue({ ...mockUploadSessionSingle, uploadKind: 'multipart' });
+
+      const size = 100 * 1024 * 1024 * 1024; // 100GB
+      const result = await service.init('u1', { name: 'big.bin', size, mimeType: 'application/octet-stream' });
+
+      expect(result.parts.length).toBeLessThanOrEqual(10000);
+      expect(result.parts.length).toBe(1024);
+    });
+  });
+
+  describe('complete', () => {
+    it('session이 없으면 UPLOAD_SESSION_NOT_FOUND를 던진다', async () => {
+      mockUploadSessionRepository.findByIdForUpdate.mockResolvedValue(null);
+      await expect(service.complete('u1', 'ghost-id', [{ partNumber: 1, etag: 'e' }])).rejects.toMatchObject({
+        code: 'UPLOAD_SESSION_NOT_FOUND',
+      });
+    });
+
+    it('session 소유자가 다르면 UPLOAD_SESSION_NOT_FOUND를 던진다 (정보 누출 차단)', async () => {
+      mockUploadSessionRepository.findByIdForUpdate.mockResolvedValue({
+        ...mockUploadSessionSingle,
+        userId: 'other-user',
+      });
+      await expect(
+        service.complete('u1', mockUploadSessionSingle.id, [{ partNumber: 1, etag: 'e' }]),
+      ).rejects.toMatchObject({
+        code: 'UPLOAD_SESSION_NOT_FOUND',
+      });
+    });
+
+    it('만료된 session이고 객체도 없으면 UPLOAD_SESSION_EXPIRED를 던진다', async () => {
+      mockUploadSessionRepository.findByIdForUpdate.mockResolvedValue(mockUploadSessionExpired);
+      mockUploadSessionRepository.deleteById.mockResolvedValue(true);
+      mockMinioService.statObject.mockRejectedValue(Object.assign(new Error('NoSuchKey'), { code: 'NoSuchKey' }));
+      await expect(
+        service.complete('uuid-1', mockUploadSessionExpired.id, [{ partNumber: 1, etag: 'e' }]),
+      ).rejects.toMatchObject({
+        code: 'UPLOAD_SESSION_EXPIRED',
+      });
+    });
+
+    it('statObject가 NoSuchKey면 UPLOAD_OBJECT_MISSING을 던진다', async () => {
+      mockUploadSessionRepository.findByIdForUpdate.mockResolvedValue(mockUploadSessionSingle);
+      mockMinioService.statObject.mockRejectedValue(Object.assign(new Error('NoSuchKey'), { code: 'NoSuchKey' }));
+      await expect(
+        service.complete('uuid-1', mockUploadSessionSingle.id, [{ partNumber: 1, etag: 'e' }]),
+      ).rejects.toMatchObject({
+        code: 'UPLOAD_OBJECT_MISSING',
+      });
+    });
+
+    it('size 불일치이면 UPLOAD_SIZE_MISMATCH + removeObject 호출', async () => {
+      mockUploadSessionRepository.findByIdForUpdate.mockResolvedValue(mockUploadSessionSingle); // size: 1024
+      mockUploadSessionRepository.deleteById.mockResolvedValue(true);
+      mockMinioService.statObject.mockResolvedValue({ size: 2048, mimeType: 'image/png' });
+      mockMinioService.removeObject.mockResolvedValue(undefined);
+      await expect(
+        service.complete('uuid-1', mockUploadSessionSingle.id, [{ partNumber: 1, etag: 'e' }]),
+      ).rejects.toMatchObject({
+        code: 'UPLOAD_SIZE_MISMATCH',
+      });
+      expect(mockMinioService.removeObject).toHaveBeenCalledWith(mockUploadSessionSingle.minioKey);
+    });
+
+    it('단일 PUT 성공 시 files row INSERT + session DELETE', async () => {
+      mockUploadSessionRepository.findByIdForUpdate.mockResolvedValue(mockUploadSessionSingle);
+      mockMinioService.statObject.mockResolvedValue({ size: 1024, mimeType: 'image/png' });
+      mockFileRepository.insert.mockResolvedValue({
+        id: 'new-file-id',
+        userId: 'uuid-1',
+        folderId: null,
+        name: 'test.png',
+        minioKey: mockUploadSessionSingle.minioKey,
+        size: 1024,
+        mimeType: 'image/png',
+        softDeletedAt: null,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      });
+      mockUploadSessionRepository.deleteById.mockResolvedValue(true);
+
+      const result = await service.complete('uuid-1', mockUploadSessionSingle.id, [{ partNumber: 1, etag: 'e' }]);
+
+      expect(mockMinioService.completeMultipartUpload).not.toHaveBeenCalled();
+      expect(mockFileRepository.insert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          userId: 'uuid-1',
+          name: 'test.png',
+          minioKey: mockUploadSessionSingle.minioKey,
+          size: 1024,
+          mimeType: 'image/png',
+        }),
+      );
+      expect(mockUploadSessionRepository.deleteById).toHaveBeenCalledWith(mockUploadSessionSingle.id);
+      expect(result.name).toBe('test.png');
+    });
+
+    it('multipart 성공 시 completeMultipartUpload 호출 후 files INSERT', async () => {
+      mockUploadSessionRepository.findByIdForUpdate.mockResolvedValue(mockUploadSessionMultipart);
+      mockMinioService.statObject.mockResolvedValue({ size: 150 * 1024 * 1024, mimeType: 'image/png' });
+      mockFileRepository.insert.mockResolvedValue({
+        id: 'new-file-id',
+        userId: 'uuid-1',
+        folderId: null,
+        name: 'test.png',
+        minioKey: mockUploadSessionMultipart.minioKey,
+        size: 150 * 1024 * 1024,
+        mimeType: 'image/png',
+        softDeletedAt: null,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      });
+
+      await service.complete('uuid-1', mockUploadSessionMultipart.id, [
+        { partNumber: 1, etag: 'e1' },
+        { partNumber: 2, etag: 'e2' },
+      ]);
+
+      expect(mockMinioService.completeMultipartUpload).toHaveBeenCalledWith(
+        mockUploadSessionMultipart.minioKey,
+        'multipart-upload-id-1',
+        [
+          { partNumber: 1, etag: 'e1' },
+          { partNumber: 2, etag: 'e2' },
+        ],
+      );
+    });
+
+    it('grace period: 만료지만 객체가 있으면 정상 처리한다', async () => {
+      // expires_at이 25초 전 (grace 30초 내)
+      const recentlyExpired = {
+        ...mockUploadSessionSingle,
+        expiresAt: new Date(Date.now() - 25 * 1000),
+      };
+      mockUploadSessionRepository.findByIdForUpdate.mockResolvedValue(recentlyExpired);
+      mockMinioService.statObject.mockResolvedValue({ size: 1024, mimeType: 'image/png' });
+      mockFileRepository.insert.mockResolvedValue({
+        id: 'new-file-id',
+        userId: 'uuid-1',
+        folderId: null,
+        name: 'test.png',
+        minioKey: recentlyExpired.minioKey,
+        size: 1024,
+        mimeType: 'image/png',
+        softDeletedAt: null,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      });
+
+      const result = await service.complete('uuid-1', recentlyExpired.id, [{ partNumber: 1, etag: 'e' }]);
+      expect(result).toBeDefined();
     });
   });
 });

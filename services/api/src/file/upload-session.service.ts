@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { ApiException } from '@terab/common';
-import { UploadInitBody, UploadInitResponse } from '@terab/contract';
+import { FileItem, UploadCompletePart, UploadInitBody, UploadInitResponse } from '@terab/contract';
 import { DatabaseService, ServiceCore, TransactionContext } from '@terab/db';
 import { randomUUID } from 'node:crypto';
 import { FolderService } from '../folder/folder.service';
@@ -10,13 +10,13 @@ import { UploadSessionRepository } from './upload-session.repository';
 
 @Injectable()
 export class UploadSessionService extends ServiceCore {
-  private readonly TTL_MS = 60 * 60 * 1000;
-  private readonly GRACE_MS = 30 * 1000;
-  private readonly MULTIPART_THRESHOLD = 100 * 1024 * 1024;
-  private readonly DEFAULT_PART_SIZE = 100 * 1024 * 1024;
+  /** 3600s */ private readonly TTL_MS = 60 * 60 * 1000;
+  /** 30s */ private readonly GRACE_MS = 30 * 1000;
+  /** 100MB */ private readonly MULTIPART_THRESHOLD = 100 * 1024 * 1024;
+  /** 100MB */ private readonly DEFAULT_PART_SIZE = 100 * 1024 * 1024;
   private readonly MAX_PARTS = 10000;
   private readonly URL_EXPIRY_SEC = 3600;
-  private readonly MAX_FILE_SIZE = 100 * 1024 * 1024 * 1024;
+  /** 100GB */ private readonly MAX_FILE_SIZE = 100 * 1024 * 1024 * 1024;
 
   private readonly DANGEROUS_MIME_PREFIXES = [
     'text/html',
@@ -51,6 +51,7 @@ export class UploadSessionService extends ServiceCore {
     const minioKey = `${userId}/${randomUUID()}`;
     const expiresAt = new Date(Date.now() + this.TTL_MS);
 
+    // Direct Put
     if (body.size < this.MULTIPART_THRESHOLD) {
       const uploadUrl = await this.minioService.presignedPutObject(minioKey, this.URL_EXPIRY_SEC);
       const session = await this.uploadSessionRepository.insert({
@@ -72,7 +73,88 @@ export class UploadSessionService extends ServiceCore {
       };
     }
 
-    // multipart 경로는 Task 12에서 구현
-    throw new Error('multipart not implemented');
+    // Multipart 경로
+    const partSize = Math.max(this.DEFAULT_PART_SIZE, Math.ceil(body.size / 9000));
+    const partCount = Math.ceil(body.size / partSize);
+    if (partCount > this.MAX_PARTS) throw new ApiException('FILE_TOO_LARGE');
+
+    const { uploadId } = await this.minioService.createMultipartUpload(minioKey, safeMime);
+    const parts = await Promise.all(
+      Array.from({ length: partCount }, async (_, i) => {
+        const partNumber = i + 1;
+        const uploadUrl = await this.minioService.presignedPutPart(minioKey, uploadId, partNumber, this.URL_EXPIRY_SEC);
+        return { partNumber, uploadUrl };
+      }),
+    );
+
+    const session = await this.uploadSessionRepository.insert({
+      userId,
+      folderId: body.folderId ?? null,
+      name: body.name,
+      size: body.size,
+      mimeType: safeMime,
+      minioKey,
+      uploadKind: 'multipart',
+      multipartUploadId: uploadId,
+      expiresAt,
+    });
+
+    return {
+      sessionId: session.id,
+      parts,
+      uploadHeaders: { 'Content-Type': safeMime },
+      expiresAt,
+    };
+  }
+
+  async complete(userId: string, sessionId: string, parts: UploadCompletePart[]): Promise<FileItem> {
+    return this.runInTx(async () => {
+      const session = await this.uploadSessionRepository.findByIdForUpdate(sessionId);
+      if (!session || session.userId !== userId) throw new ApiException('UPLOAD_SESSION_NOT_FOUND');
+
+      const now = Date.now();
+      const expired = session.expiresAt.getTime() + this.GRACE_MS < now;
+
+      if (expired) {
+        // grace 안에서도 객체가 있으면 진행, 없으면 만료 처리
+        const exist = await this.minioService.statObject(session.minioKey).catch(() => null);
+        if (!exist) {
+          await this.uploadSessionRepository.deleteById(session.id).catch(() => undefined);
+          throw new ApiException('UPLOAD_SESSION_EXPIRED');
+        }
+      }
+
+      if (session.uploadKind === 'multipart') {
+        if (!session.multipartUploadId) throw new ApiException('UPLOAD_OBJECT_MISSING');
+        await this.minioService.completeMultipartUpload(session.minioKey, session.multipartUploadId, parts);
+      }
+
+      const stat = await this.minioService.statObject(session.minioKey).catch((err: unknown) => {
+        // minio-js의 에러 코드 노출: err.code === 'NoSuchKey' 또는 message
+        const code = (err as { code?: string } | null)?.code;
+        if (code === 'NoSuchKey' || (err instanceof Error && err.message.includes('NoSuchKey'))) {
+          return null;
+        }
+        throw err;
+      });
+      if (!stat) throw new ApiException('UPLOAD_OBJECT_MISSING');
+
+      if (stat.size !== session.size) {
+        await this.minioService.removeObject(session.minioKey).catch(() => undefined);
+        await this.uploadSessionRepository.deleteById(session.id).catch(() => undefined);
+        throw new ApiException('UPLOAD_SIZE_MISMATCH');
+      }
+
+      const row = await this.fileRepository.insert({
+        userId,
+        folderId: session.folderId,
+        name: session.name,
+        minioKey: session.minioKey,
+        size: session.size,
+        mimeType: session.mimeType,
+      });
+      await this.uploadSessionRepository.deleteById(session.id);
+      return this.fileRepository.toFileItem(row);
+    });
   }
 }

@@ -18,7 +18,7 @@ export const uploadSessions = table(
     mimeType: t.varchar('mime_type', { length: 127 }).notNull(),
     minioKey: t.varchar('minio_key', { length: 512 }).notNull().unique(),
 
-    uploadKind: t.varchar('upload_kind', { length: 16 }).notNull(),
+    uploadKind: t.varchar('upload_kind', { length: 16, enum: ['single', 'multipart'] }).notNull(),
     multipartUploadId: t.varchar('multipart_upload_id', { length: 128 }),
 
     expiresAt: t.timestamp('expires_at', { withTimezone: true }).notNull(),
