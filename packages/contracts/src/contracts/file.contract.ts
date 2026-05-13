@@ -6,21 +6,34 @@ import {
   FileSearchResponseSchema,
   MoveFileBodySchema,
   RenameFileBodySchema,
+  UploadCompleteBodySchema,
+  UploadInitBodySchema,
+  UploadInitResponseSchema,
 } from '@terab/schema';
 import { initContract } from '@ts-rest/core';
 import z from 'zod';
 
 const c = initContract();
 
-const upload = c.mutation({
-  summary: '파일 업로드',
+const uploadInit = c.mutation({
+  summary: '파일 업로드 세션 생성 (presigned URL 발급)',
   method: 'POST',
-  path: '/files',
-  contentType: 'multipart/form-data',
-  body: z.object({
-    file: z.any(),
-    folderId: z.string().uuid().optional(),
-  }),
+  path: '/files/upload-init',
+  contentType: 'application/json',
+  body: UploadInitBodySchema,
+  responses: {
+    [HttpStatus.CREATED]: UploadInitResponseSchema,
+  },
+  strictStatusCodes: true,
+});
+
+const uploadComplete = c.mutation({
+  summary: '파일 업로드 완료 (DB 반영)',
+  method: 'POST',
+  path: '/files/:sessionId/upload-complete',
+  pathParams: z.object({ sessionId: z.string().uuid() }),
+  contentType: 'application/json',
+  body: UploadCompleteBodySchema,
   responses: {
     [HttpStatus.CREATED]: FileItemSchema,
   },
@@ -88,4 +101,4 @@ const search = c.query({
   strictStatusCodes: true,
 });
 
-export const fileContract = c.router({ upload, rename, move, copy, remove, search });
+export const fileContract = c.router({ uploadInit, uploadComplete, rename, move, copy, remove, search });
