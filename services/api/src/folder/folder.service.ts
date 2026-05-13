@@ -68,7 +68,7 @@ export class FolderService extends ServiceCore {
     return result;
   }
 
-  async create(userId: string, name: string, parentId?: string): Promise<FolderItem> {
+  async create(userId: string, name: string, parentId: string | null): Promise<FolderItem> {
     if (parentId) {
       const parent = await this.folderRepository.findByIdAndUser(parentId, userId);
       if (!parent) throw new ApiException('FOLDER_NOT_FOUND');

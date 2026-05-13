@@ -1,9 +1,8 @@
 import { Body, Controller, Get, Param, Post, Res, StreamableFile } from '@nestjs/common';
-import { ApiException, CurrentUser } from '@terab/common';
+import { ApiException, CurrentUser, type AuthUser } from '@terab/common';
 import archiver from 'archiver';
 import type { Response } from 'express';
 import { Readable } from 'node:stream';
-import type { AuthUser } from '../auth/types/auth-user.type';
 import { FileService } from './file.service';
 
 @Controller()

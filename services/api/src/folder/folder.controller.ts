@@ -1,8 +1,7 @@
 import { Controller, HttpStatus } from '@nestjs/common';
-import { CurrentUser } from '@terab/common';
+import { CurrentUser, type AuthUser } from '@terab/common';
 import { contract } from '@terab/contract';
 import { tsRestHandler, TsRestHandler } from '@ts-rest/nest';
-import { type AuthUser } from '../auth/types/auth-user.type';
 import { FolderService } from './folder.service';
 
 @Controller()

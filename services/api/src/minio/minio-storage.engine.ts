@@ -1,6 +1,6 @@
+import { RequestWithAuthUser } from '@terab/common';
 import { StorageEngine } from 'multer';
 import { randomUUID } from 'node:crypto';
-import { RequestWithAuthUser } from '../auth/types/auth-user.type';
 import { MinioService } from './minio.service';
 
 export class MinioStorageEngine implements StorageEngine {
