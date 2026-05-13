@@ -157,4 +157,27 @@ export class UploadSessionService extends ServiceCore {
       return this.fileRepository.toFileItem(row);
     });
   }
+
+  async cleanupExpired(batchSize: number): Promise<{ scanned: number; deleted: number; errors: number }> {
+    const sessions = await this.uploadSessionRepository.findExpiredForCleanup(this.GRACE_MS, batchSize);
+    let deleted = 0;
+    let errors = 0;
+    for (const session of sessions) {
+      try {
+        if (session.uploadKind === 'multipart' && session.multipartUploadId) {
+          await this.minioService.abortMultipartUpload(session.minioKey, session.multipartUploadId).catch(() => {
+            errors += 1;
+          });
+        }
+        await this.minioService.removeObject(session.minioKey).catch(() => {
+          errors += 1;
+        });
+      } catch {
+        errors += 1;
+      }
+      await this.uploadSessionRepository.deleteById(session.id);
+      deleted += 1;
+    }
+    return { scanned: sessions.length, deleted, errors };
+  }
 }

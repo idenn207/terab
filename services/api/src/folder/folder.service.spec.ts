@@ -10,6 +10,8 @@ import { FolderService } from './folder.service';
 const mockFolderRepository = {
   findRootChildren: jest.fn(),
   findChildren: jest.fn(),
+  findRootFiles: jest.fn(),
+  findFilesByFolder: jest.fn(),
   findByIdAndUser: jest.fn(),
   insert: jest.fn(),
   rename: jest.fn(),
@@ -57,6 +59,7 @@ describe('FolderService', () => {
     it('캐시 미스 시 DB를 조회하고 캐시를 저장한다', async () => {
       mockCacheManager.get.mockResolvedValue(null);
       mockFolderRepository.findRootChildren.mockResolvedValue([]);
+      mockFolderRepository.findRootFiles.mockResolvedValue([]);
       mockFileService.listRootFiles.mockResolvedValue([]);
 
       const result = await service.getRoot('user-1');

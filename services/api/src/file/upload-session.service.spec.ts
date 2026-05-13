@@ -292,4 +292,48 @@ describe('UploadSessionService', () => {
       expect(result).toBeDefined();
     });
   });
+
+  describe('cleanupExpired', () => {
+    it('만료 single session은 removeObject + deleteById를 호출한다', async () => {
+      mockUploadSessionRepository.findExpiredForCleanup.mockResolvedValue([mockUploadSessionExpired]);
+      mockUploadSessionRepository.deleteById.mockResolvedValue(true);
+
+      const stats = await service.cleanupExpired(500);
+
+      expect(mockMinioService.removeObject).toHaveBeenCalledWith(mockUploadSessionExpired.minioKey);
+      expect(mockMinioService.abortMultipartUpload).not.toHaveBeenCalled();
+      expect(mockUploadSessionRepository.deleteById).toHaveBeenCalledWith(mockUploadSessionExpired.id);
+      expect(stats.deleted).toBe(1);
+      expect(stats.errors).toBe(0);
+    });
+
+    it('만료 multipart session은 abortMultipartUpload + removeObject + deleteById를 호출한다', async () => {
+      const expiredMp = { ...mockUploadSessionMultipart, expiresAt: new Date('2020-01-01') };
+      mockUploadSessionRepository.findExpiredForCleanup.mockResolvedValue([expiredMp]);
+      mockUploadSessionRepository.deleteById.mockResolvedValue(true);
+      mockMinioService.abortMultipartUpload.mockResolvedValue(undefined);
+      mockMinioService.removeObject.mockResolvedValue(undefined);
+
+      const stats = await service.cleanupExpired(500);
+
+      expect(mockMinioService.abortMultipartUpload).toHaveBeenCalledWith(
+        expiredMp.minioKey,
+        expiredMp.multipartUploadId,
+      );
+      expect(mockMinioService.removeObject).toHaveBeenCalledWith(expiredMp.minioKey);
+      expect(stats.deleted).toBe(1);
+    });
+
+    it('MinIO 에러가 나도 deleteById는 진행하고 errors 카운트만 증가', async () => {
+      mockUploadSessionRepository.findExpiredForCleanup.mockResolvedValue([mockUploadSessionExpired]);
+      mockMinioService.removeObject.mockRejectedValue(new Error('boom'));
+      mockUploadSessionRepository.deleteById.mockResolvedValue(true);
+
+      const stats = await service.cleanupExpired(500);
+
+      expect(mockUploadSessionRepository.deleteById).toHaveBeenCalled();
+      expect(stats.errors).toBe(1);
+      expect(stats.deleted).toBe(1);
+    });
+  });
 });

@@ -96,6 +96,7 @@ async createWithRelations(data: CreateData) {
 
 ## 핵심 규칙
 
+- **Repository는 비즈니스 로직을 위한 DB 연결점**이다 — 단일 테이블 래퍼가 아니며, 해당 feature에 필요하다면 여러 테이블을 JOIN하거나 직접 접근하는 것이 허용된다
 - `RepositoryCore` extends 필수 — `import { RepositoryCore } from '@terab/db'`
 - `TransactionContext` import: `import { TransactionContext } from '@terab/db'`
 - `DatabaseService` import: `import { DatabaseService } from '@terab/db'`

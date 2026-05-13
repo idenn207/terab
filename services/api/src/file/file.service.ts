@@ -8,6 +8,7 @@ import { randomUUID } from 'node:crypto';
 import { extname } from 'node:path';
 import { Readable } from 'node:stream';
 import sanitizeFilename from 'sanitize-filename';
+import { FolderService } from '../folder/folder.service';
 import { MinioService } from '../minio/minio.service';
 import { FileRepository } from './file.repository';
 
@@ -17,6 +18,7 @@ export class FileService extends ServiceCore {
     database: DatabaseService,
     txContext: TransactionContext,
     private readonly fileRepository: FileRepository,
+    private readonly folderService: FolderService,
     private readonly minioService: MinioService,
     @Inject(CACHE_MANAGER) private readonly cache: Cache,
   ) {
@@ -37,21 +39,8 @@ export class FileService extends ServiceCore {
     return ext ? `${name}.${ext}` : name;
   }
 
-  async listRootFiles(userId: string): Promise<FileItem[]> {
-    const rows = await this.fileRepository.findRootFiles(userId);
-    return rows.map((r) => this.fileRepository.toFileItem(r));
-  }
-
-  async listByFolder(folderId: string, userId: string): Promise<FileItem[]> {
-    const rows = await this.fileRepository.findByFolder(folderId, userId);
-    return rows.map((r) => this.fileRepository.toFileItem(r));
-  }
-
   async upload(userId: string, file: Express.Multer.File, folderId?: string): Promise<FileItem> {
-    if (folderId) {
-      const exists = await this.fileRepository.folderBelongsToUser(folderId, userId);
-      if (!exists) throw new ApiException('FOLDER_NOT_FOUND');
-    }
+    if (folderId) await this.folderService.assertBelongsToUser(folderId, userId);
 
     const row = await this.fileRepository.insert({
       userId,
@@ -98,11 +87,7 @@ export class FileService extends ServiceCore {
   async move(id: string, userId: string, folderId: string | null): Promise<FileItem> {
     const file = await this.fileRepository.findByIdAndUser(id, userId);
     if (!file) throw new ApiException('FILE_NOT_FOUND');
-
-    if (folderId !== null) {
-      const exists = await this.fileRepository.folderBelongsToUser(folderId, userId);
-      if (!exists) throw new ApiException('FOLDER_NOT_FOUND');
-    }
+    if (folderId) await this.folderService.assertBelongsToUser(folderId, userId);
 
     const row = await this.fileRepository.move(id, userId, folderId);
     if (!row) throw new ApiException('FILE_NOT_FOUND');
@@ -114,11 +99,7 @@ export class FileService extends ServiceCore {
   async copy(id: string, userId: string, folderId: string | null): Promise<FileItem> {
     const file = await this.fileRepository.findByIdAndUser(id, userId);
     if (!file) throw new ApiException('FILE_NOT_FOUND');
-
-    if (folderId !== null) {
-      const exists = await this.fileRepository.folderBelongsToUser(folderId, userId);
-      if (!exists) throw new ApiException('FOLDER_NOT_FOUND');
-    }
+    if (folderId) await this.folderService.assertBelongsToUser(folderId, userId);
 
     const newKey = `${userId}/${randomUUID()}`;
     await this.minioService.copyObject(file.minioKey, newKey);

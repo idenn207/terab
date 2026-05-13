@@ -1,7 +1,8 @@
 import { Injectable } from '@nestjs/common';
-import { FolderItem } from '@terab/contract';
+import { FileItem, FolderItem } from '@terab/contract';
 import {
   DatabaseService,
+  files,
   folders,
   Folders$Insert,
   Folders$Select,
@@ -26,6 +27,7 @@ export class FolderRepository extends RepositoryCore {
     };
   }
 
+  // ───── CRUD ──────────────────────────────
   async findRootChildren(userId: string) {
     return this.conn
       .select()
@@ -70,6 +72,23 @@ export class FolderRepository extends RepositoryCore {
       .where(and(eq(folders.id, id), eq(folders.userId, userId), isNull(folders.softDeletedAt)))
       .returning();
     return row;
+  }
+
+  // ───── Business ──────────────────────────────
+  async findRootFiles(userId: string): Promise<FileItem[]> {
+    const rows = await this.conn
+      .select()
+      .from(files)
+      .where(and(eq(files.userId, userId), isNull(files.folderId), isNull(files.softDeletedAt)));
+    return rows.map((r) => ({ ...r, folderId: r.folderId ?? null }));
+  }
+
+  async findFilesByFolder(folderId: string, userId: string): Promise<FileItem[]> {
+    const rows = await this.conn
+      .select()
+      .from(files)
+      .where(and(eq(files.userId, userId), eq(files.folderId, folderId), isNull(files.softDeletedAt)));
+    return rows.map((r) => ({ ...r, folderId: r.folderId ?? null }));
   }
 
   async getDepth(folderId: string): Promise<number> {

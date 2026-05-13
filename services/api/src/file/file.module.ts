@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { MulterModule } from '@nestjs/platform-express';
+import { FolderModule } from '../folder/folder.module';
 import { MinioStorageEngine } from '../minio/minio-storage.engine';
 import { MinioService } from '../minio/minio.service';
 import { FileDownloadController } from './file-download.controller';
@@ -11,6 +12,7 @@ import { UploadSessionService } from './upload-session.service';
 
 @Module({
   imports: [
+    FolderModule,
     MulterModule.registerAsync({
       inject: [MinioService],
       useFactory: (minioService: MinioService) => ({
@@ -20,6 +22,6 @@ import { UploadSessionService } from './upload-session.service';
   ],
   controllers: [FileController, FileDownloadController],
   providers: [FileService, FileRepository, UploadSessionRepository, UploadSessionService],
-  exports: [FileService],
+  exports: [FileService, UploadSessionRepository],
 })
 export class FileModule {}

@@ -170,6 +170,37 @@ it('권한이 없으면 false를 반환한다', async () => {
 3. **권한·상태 불일치** — 권한 없음, 만료, 비활성 등
 4. **성공** — 정상 경로 (위 케이스를 모두 다룬 뒤 마지막에 작성)
 
+## 주의사항
+
+### jest.clearAllMocks()는 구현을 초기화하지 않는다
+
+`jest.clearAllMocks()`는 mock 호출 기록(`calls`, `instances`, `results`)만 초기화한다. `mockResolvedValue`·`mockRejectedValue`·`mockReturnValue` 등으로 설정한 **구현(implementation)은 그대로 남는다.**
+
+이 때문에 이전 테스트에서 설정한 mock 반환값이 다음 테스트로 의도치 않게 전달(누출)될 수 있다.
+
+```ts
+// ❌ 위험 — 이전 테스트의 구현이 남아 있으면 통과하고, 없으면 실패
+it('abortMultipartUpload + removeObject를 호출한다', async () => {
+  // abortMultipartUpload에 구현을 설정하지 않음
+  // → jest.fn() 기본 반환값 undefined
+  // → undefined.catch(...) → TypeError 발생
+  // → 외부 try/catch에서 잡혀 removeObject가 호출되지 않음
+  const stats = await service.cleanupExpired(500);
+  expect(mockMinioService.removeObject).toHaveBeenCalled(); // 실패
+});
+
+// ✅ 각 테스트에서 사용할 mock을 명시적으로 선언
+it('abortMultipartUpload + removeObject를 호출한다', async () => {
+  mockMinioService.abortMultipartUpload.mockResolvedValue(undefined);
+  mockMinioService.removeObject.mockResolvedValue(undefined);
+
+  const stats = await service.cleanupExpired(500);
+  expect(mockMinioService.removeObject).toHaveBeenCalled(); // 통과
+});
+```
+
+**규칙**: 테스트에서 호출될 외부 의존성(MinIO, 외부 서비스 등)의 mock은 **해당 테스트 안에서 반드시 명시적으로 선언**한다. 이전 테스트에서 설정된 구현에 의존하지 않는다.
+
 ## 핵심 규칙
 
 - 테스트 설명(`describe`/`it`)은 한글로 작성

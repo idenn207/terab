@@ -3,6 +3,7 @@ import { Test } from '@nestjs/testing';
 import { ApiException } from '@terab/common';
 import { DatabaseService, TransactionContext } from '@terab/db';
 import { mockDatabaseService } from '@terab/test';
+import { FolderService } from '../folder/folder.service';
 import { MinioService } from '../minio/minio.service';
 import { FileRepository } from './file.repository';
 import { FileService } from './file.service';
@@ -18,6 +19,10 @@ const mockFileRepository = {
   folderBelongsToUser: jest.fn(),
   search: jest.fn(),
   toFileItem: jest.fn((row) => ({ ...row, folderId: row.folderId ?? null })),
+};
+
+const mockFolderService = {
+  assertBelongsToUser: jest.fn(),
 };
 
 const mockMinioService = {
@@ -46,26 +51,13 @@ describe('FileService', () => {
         { provide: DatabaseService, useValue: mockDatabaseService },
         { provide: TransactionContext, useValue: mockTransactionContext },
         { provide: FileRepository, useValue: mockFileRepository },
+        { provide: FolderService, useValue: mockFolderService },
         { provide: MinioService, useValue: mockMinioService },
         { provide: CACHE_MANAGER, useValue: mockCacheManager },
       ],
     }).compile();
     service = module.get<FileService>(FileService);
     jest.clearAllMocks();
-  });
-
-  it('listRootFiles는 루트 파일 목록을 FileItem 배열로 반환한다', async () => {
-    mockFileRepository.findRootFiles.mockResolvedValue([]);
-    const result = await service.listRootFiles('u1');
-    expect(mockFileRepository.findRootFiles).toHaveBeenCalledWith('u1');
-    expect(result).toEqual([]);
-  });
-
-  it('listByFolder는 폴더 내 파일 목록을 FileItem 배열로 반환한다', async () => {
-    mockFileRepository.findByFolder.mockResolvedValue([]);
-    const result = await service.listByFolder('folder-1', 'u1');
-    expect(mockFileRepository.findByFolder).toHaveBeenCalledWith('folder-1', 'u1');
-    expect(result).toEqual([]);
   });
 
   it('rename은 파일이 없으면 FILE_NOT_FOUND를 던진다', async () => {

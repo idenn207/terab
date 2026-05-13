@@ -3,7 +3,6 @@ import { Inject, Injectable } from '@nestjs/common';
 import { ApiException } from '@terab/common';
 import { FolderChildrenResponse, FolderItem } from '@terab/contract';
 import { DatabaseService, ServiceCore, TransactionContext } from '@terab/db';
-import { FileService } from '../file/file.service';
 import { FolderRepository } from './folder.repository';
 
 @Injectable()
@@ -13,7 +12,6 @@ export class FolderService extends ServiceCore {
   constructor(
     database: DatabaseService,
     txContext: TransactionContext,
-    private readonly fileService: FileService,
     private readonly folderRepository: FolderRepository,
     @Inject(CACHE_MANAGER) private readonly cache: Cache,
   ) {
@@ -40,7 +38,7 @@ export class FolderService extends ServiceCore {
 
     const [folderRows, files] = await Promise.all([
       this.folderRepository.findRootChildren(userId),
-      this.fileService.listRootFiles(userId),
+      this.folderRepository.findRootFiles(userId),
     ]);
     const result: FolderChildrenResponse = {
       folders: folderRows.map((f) => this.folderRepository.toFolderItem(f)),
@@ -60,7 +58,7 @@ export class FolderService extends ServiceCore {
 
     const [folderRows, files] = await Promise.all([
       this.folderRepository.findChildren(folderId, userId),
-      this.fileService.listByFolder(folderId, userId),
+      this.folderRepository.findFilesByFolder(folderId, userId),
     ]);
     const result: FolderChildrenResponse = {
       folders: folderRows.map((f) => this.folderRepository.toFolderItem(f)),

@@ -38,20 +38,6 @@ export class FileRepository extends RepositoryCore {
     return row;
   }
 
-  async findRootFiles(userId: string) {
-    return this.conn
-      .select()
-      .from(files)
-      .where(and(eq(files.userId, userId), isNull(files.folderId), isNull(files.softDeletedAt)));
-  }
-
-  async findByFolder(folderId: string, userId: string) {
-    return this.conn
-      .select()
-      .from(files)
-      .where(and(eq(files.userId, userId), eq(files.folderId, folderId), isNull(files.softDeletedAt)));
-  }
-
   async insert(data: Pick<Files$Insert, 'userId' | 'folderId' | 'name' | 'minioKey' | 'size' | 'mimeType'>) {
     const [row] = await this.conn.insert(files).values(data).returning();
     return row;
