@@ -1766,8 +1766,9 @@ git commit -m "refactor(api): FileModule에 UploadSession providers 등록 + 순
 - [ ] **Step 1: worker spec 작성**
 
 ```ts
-import { Test } from '@nestjs/testing';
 import { getQueueToken } from '@nestjs/bullmq';
+import { Test } from '@nestjs/testing';
+import { createPinoLoggerProvider } from '@terab/test';
 import { UploadSessionCleanupWorker } from './upload-session.cleanup.worker';
 import { UploadSessionService } from './upload-session.service';
 
@@ -1776,7 +1777,7 @@ const mockUploadSessionService = {
 };
 
 const mockQueue = {
-  removeRepeatable: jest.fn(),
+  removeJobScheduler: jest.fn(),
   add: jest.fn(),
 };
 
@@ -1789,6 +1790,7 @@ describe('UploadSessionCleanupWorker', () => {
         UploadSessionCleanupWorker,
         { provide: UploadSessionService, useValue: mockUploadSessionService },
         { provide: getQueueToken('upload-session-cleanup'), useValue: mockQueue },
+        createPinoLoggerProvider(UploadSessionCleanupWorker.name),
       ],
     }).compile();
     worker = module.get(UploadSessionCleanupWorker);
@@ -1807,7 +1809,7 @@ describe('UploadSessionCleanupWorker', () => {
 
   it('onApplicationBootstrap는 이전 repeatable 제거 후 새로 등록한다', async () => {
     await worker.onApplicationBootstrap();
-    expect(mockQueue.removeRepeatable).toHaveBeenCalled();
+      expect(mockQueue.removeJobScheduler).toHaveBeenCalledWith('upload-session-cleanup-tick');
     expect(mockQueue.add).toHaveBeenCalledWith(
       'upload-session-cleanup-tick',
       {},
@@ -1826,13 +1828,13 @@ describe('UploadSessionCleanupWorker', () => {
 
 ```ts
 import { InjectQueue, Processor, WorkerHost } from '@nestjs/bullmq';
-import { Logger, OnApplicationBootstrap } from '@nestjs/common';
+import { OnApplicationBootstrap } from '@nestjs/common';
 import { Job, Queue } from 'bullmq';
+import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
 import { UploadSessionService } from './upload-session.service';
 
 @Processor('upload-session-cleanup')
 export class UploadSessionCleanupWorker extends WorkerHost implements OnApplicationBootstrap {
-  private readonly logger = new Logger(UploadSessionCleanupWorker.name);
   private readonly TICK_JOB_ID = 'upload-session-cleanup-tick';
   private readonly TICK_INTERVAL_MS = 15 * 60 * 1000;
   private readonly BATCH_SIZE = 500;
@@ -1840,13 +1842,14 @@ export class UploadSessionCleanupWorker extends WorkerHost implements OnApplicat
   constructor(
     @InjectQueue('upload-session-cleanup') private readonly queue: Queue,
     private readonly uploadSessionService: UploadSessionService,
+    @InjectPinoLogger(UploadSessionCleanupWorker.name) private readonly logger: PinoLogger,
   ) {
     super();
   }
 
   async onApplicationBootstrap(): Promise<void> {
     // 이전 등록을 정리 후 새로 등록 — 옵션 변경 시 누적 방지
-    await this.queue.removeRepeatable(this.TICK_JOB_ID, { every: this.TICK_INTERVAL_MS }).catch(() => undefined);
+    await this.queue.removeJobScheduler(this.TICK_JOB_ID).catch(() => undefined);
     await this.queue.add(
       this.TICK_JOB_ID,
       {},
@@ -1861,7 +1864,7 @@ export class UploadSessionCleanupWorker extends WorkerHost implements OnApplicat
 
   async process(job: Job): Promise<void> {
     const stats = await this.uploadSessionService.cleanupExpired(this.BATCH_SIZE);
-    this.logger.log({ jobId: job.id, ...stats }, 'upload session 회수 결과');
+    this.logger.info({ jobId: job.id, ...stats }, 'upload session 회수 결과');
   }
 }
 ```

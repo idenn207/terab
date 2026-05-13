@@ -126,3 +126,9 @@ npm run db:push       # 마이그레이션 적용 (개발 환경)
 
 1. `src/common/exceptions/error-code.enum.ts`의 `ErrorCode` 객체에 항목 추가 (`{ message: '한글 오류 메시지', status: HttpStatus.XXX }` 구조 필수)
 2. 서비스 코드에서 `throw new ApiException('NEW_ERROR_KEY')`로 사용
+
+### 로거 사용
+
+- 로거가 필요한 클래스는 `@InjectPinoLogger(ClassName.name)`으로 주입한다
+- `LoggerModule`은 `@Global()` 선언이므로 도메인 모듈에서 별도 import 없이 주입 가능
+- 호출 형식·레벨 기준은 `.claude/rules/logging.md` 참조

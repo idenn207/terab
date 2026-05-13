@@ -4,7 +4,7 @@
     "ENABLE_TOOL_SEARCH": "auto:3",
     "CLAUDE_CODE_MAX_OUTPUT_TOKENS": "64000"
   },
-  "model": "opusplan",
+  "model": "opus",
   "enabledPlugins": {},
   "outputStyle": "Learning",
   "effortLevel": "high",

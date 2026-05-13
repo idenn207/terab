@@ -259,6 +259,29 @@ describe('UploadSessionService', () => {
 
 **규칙**: 테스트에서 호출될 외부 의존성(MinIO, 외부 서비스 등)의 mock은 **해당 테스트 안에서 반드시 명시적으로 선언**한다. 이전 테스트에서 설정된 구현에 의존하지 않는다.
 
+## Pino 로거 Mock
+
+로거를 주입받는 클래스를 테스트할 때 `createPinoLoggerProvider`를 사용한다.
+
+```ts
+import { createPinoLoggerProvider } from '@terab/test';
+
+describe('ExampleService', () => {
+  beforeEach(async () => {
+    const module = await Test.createTestingModule({
+      providers: [
+        ExampleService,
+        createPinoLoggerProvider(ExampleService.name),
+      ],
+    }).compile();
+  });
+});
+```
+
+- `createPinoLoggerProvider(ClassName.name)` — `@InjectPinoLogger` 토큰에 `mockPinoLogger` 바인딩
+- `mockPinoLogger`는 `debug`/`info`/`warn`/`error` 모두 `jest.fn()`으로 구성
+- 로거 호출 여부는 일반적으로 assert 대상이 아니다 — 로거는 부수 효과이므로 비즈니스 결과를 검증하는 데 집중한다
+
 ## 핵심 규칙
 
 - **`describe > it` 구조 필수** — 최상위에 단독 `it` 사용 금지. 모든 `it`은 `describe` 블록 안에 위치해야 한다
