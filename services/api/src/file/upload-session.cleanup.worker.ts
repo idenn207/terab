@@ -1,10 +1,11 @@
 import { InjectQueue, Processor, WorkerHost } from '@nestjs/bullmq';
 import { OnApplicationBootstrap } from '@nestjs/common';
+import { AutoTrace } from '@terab/logger';
 import { Job, Queue } from 'bullmq';
-import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
 import { UploadSessionService } from './upload-session.service';
 
 @Processor('upload-session-cleanup')
+@AutoTrace()
 export class UploadSessionCleanupWorker extends WorkerHost implements OnApplicationBootstrap {
   private readonly TICK_JOB_ID = 'upload-session-cleanup-tick';
   private readonly TICK_INTERVAL_MS = 15 * 60 * 1000;
@@ -13,7 +14,6 @@ export class UploadSessionCleanupWorker extends WorkerHost implements OnApplicat
   constructor(
     @InjectQueue('upload-session-cleanup') private readonly queue: Queue,
     private readonly uploadSessionService: UploadSessionService,
-    @InjectPinoLogger(UploadSessionCleanupWorker.name) private readonly logger: PinoLogger,
   ) {
     super();
   }
@@ -33,8 +33,7 @@ export class UploadSessionCleanupWorker extends WorkerHost implements OnApplicat
     );
   }
 
-  async process(job: Job): Promise<void> {
-    const stats = await this.uploadSessionService.cleanupExpired(this.BATCH_SIZE);
-    this.logger.info({ jobId: job.id, ...stats }, 'upload session 회수 결과');
+  async process(_job: Job): Promise<void> {
+    await this.uploadSessionService.cleanupExpired(this.BATCH_SIZE);
   }
 }

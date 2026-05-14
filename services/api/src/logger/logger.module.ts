@@ -23,6 +23,6 @@ import { TraceFlusher } from './trace.flusher';
     }),
   ],
   providers: [PiiMasker, ServiceMethodWrapper, TraceFlusher, TraceInterceptor, DrizzleQueryLogger],
-  exports: [PinoLoggerModule, DrizzleQueryLogger, TraceInterceptor],
+  exports: [PinoLoggerModule, DrizzleQueryLogger, TraceInterceptor, TraceFlusher],
 })
 export class LoggerModule {}

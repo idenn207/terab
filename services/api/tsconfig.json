@@ -24,6 +24,7 @@
       "@terab/common": ["./src/common/index.ts"],
       "@terab/security": ["./src/security/index.ts"],
       "@terab/db": ["./src/database/index.ts"],
+      "@terab/logger": ["./src/logger/index.ts"],
       "@terab/test": ["./src/test/index.ts"]
     },
 

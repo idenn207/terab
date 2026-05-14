@@ -1,10 +1,11 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { AutoTrace, LogReplay } from '@terab/logger';
 import { Client } from 'minio';
-import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
 import { Readable } from 'node:stream';
 
 @Injectable()
+@AutoTrace()
 export class MinioService {
   private readonly client: Client;
   private readonly presignClient: Client;
@@ -12,10 +13,7 @@ export class MinioService {
   private readonly publicEndpoint: string;
   readonly bucketName: string;
 
-  constructor(
-    private readonly config: ConfigService,
-    @InjectPinoLogger(MinioService.name) private readonly logger: PinoLogger,
-  ) {
+  constructor(private readonly config: ConfigService) {
     this.endpoint = this.config.getOrThrow<string>('MINIO_ENDPOINT');
     this.publicEndpoint = this.config.getOrThrow<string>('MINIO_PUBLIC_ENDPOINT');
 
@@ -40,19 +38,13 @@ export class MinioService {
     });
 
     this.bucketName = this.config.getOrThrow<string>('MINIO_DEFAULT_BUCKETS');
-    this.logger.debug({ endpoint: this.endpoint, bucket: this.bucketName }, 'MinioService 초기화');
   }
 
+  @LogReplay()
   async putObject(key: string, stream: Readable, mimeType: string): Promise<void> {
-    this.logger.debug({ bucket: this.bucketName, key, mimeType }, 'putObject 시작');
-    try {
-      await this.client.putObject(this.bucketName, key, stream, undefined, {
-        'Content-Type': mimeType,
-      });
-    } catch (err) {
-      this.logger.error({ err, bucket: this.bucketName, key, endpoint: this.endpoint }, 'putObject 실패');
-      throw err;
-    }
+    await this.client.putObject(this.bucketName, key, stream, undefined, {
+      'Content-Type': mimeType,
+    });
   }
 
   async getObject(key: string): Promise<Readable> {

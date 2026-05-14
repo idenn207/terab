@@ -1,7 +1,7 @@
 import { ConfigService } from '@nestjs/config';
 import { Test } from '@nestjs/testing';
+import { DrizzleQueryLogger } from '@terab/logger';
 import { mockConfigService } from '@terab/test';
-import { DrizzleQueryLogger } from '../logger/drizzle-query-logger';
 import { DatabaseService } from './database.service';
 
 const mockDrizzleQueryLogger = {

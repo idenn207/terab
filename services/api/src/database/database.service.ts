@@ -1,10 +1,10 @@
 import { Injectable, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { DrizzleQueryLogger } from '@terab/logger';
 import { drizzle, NodePgDatabase } from 'drizzle-orm/node-postgres';
 import { migrate } from 'drizzle-orm/node-postgres/migrator';
 import { join } from 'path';
 import { Pool } from 'pg';
-import { DrizzleQueryLogger } from '../logger/drizzle-query-logger';
 import * as schema from './schema';
 import { seedRbac } from './seed';
 
