@@ -14,6 +14,22 @@ export function buildLoggerParams(env: string, logMaxFiles: number): Params {
         if (typeof existing === 'string' && existing) return existing;
         return randomUUID();
       },
+      redact: {
+        paths: [
+          '*.password',
+          '*.token',
+          '*.refreshToken',
+          '*.accessToken',
+          '*.secret',
+          '*.apiKey',
+          '*.authorization',
+          'spans[*].args.password',
+          'spans[*].args.token',
+          'spans[*].args.accessToken',
+          'spans[*].args.refreshToken',
+        ],
+        censor: '***',
+      },
       transport: isDev
         ? {
             target: 'pino-pretty',
@@ -22,7 +38,7 @@ export function buildLoggerParams(env: string, logMaxFiles: number): Params {
         : {
             target: 'pino-roll',
             options: {
-              files: '/app/logs/app.log',
+              file: '/app/logs/app.log',
               frequency: 'daily',
               mkdir: true,
               limit: { count: logMaxFiles },
