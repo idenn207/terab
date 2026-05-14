@@ -45,3 +45,14 @@ this.logger.debug('MinioService 초기화');
 
 - `err` 키로 Error 객체를 전달하면 pino가 스택 트레이스를 자동 직렬화
 - 개인정보(이메일, 비밀번호 등)는 로그 객체에 포함하지 않는다
+
+## 자동 Trace (service 메서드)
+
+`ServiceCore`를 extends한 service의 public 메서드는 부팅 시 자동 wrap되어, 호출/완료/예외가 `RequestTraceContext`에 span으로 누적된다. 별도 로그 호출이 필요 없다.
+
+- `this.logger.debug('메서드 진입/완료')` 같은 수동 로그는 작성하지 않는다. 자동 trace가 대체한다.
+- 비즈니스 이벤트(파일 업로드 완료, 회원 가입 완료 등)는 여전히 `this.logger.info`로 명시적으로 남긴다.
+- 입력 페이로드까지 운영 재현 자료로 남기려면 메서드에 `@LogReplay()` 부착.
+- 특정 메서드를 자동 wrap에서 빼려면 `@SkipTrace()`.
+- `ServiceCore`를 extends하지 않는 service는 클래스에 `@AutoTrace()` 부착.
+- 민감 키 추가는 `PiiMasker.MASK_KEYS`에서만 관리한다.

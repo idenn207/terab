@@ -165,6 +165,7 @@ npm run db:push       # 마이그레이션 적용 (개발 환경)
 
 ### 로거 사용
 
-- 로거가 필요한 클래스는 `@InjectPinoLogger(ClassName.name)`으로 주입한다
+- `ServiceCore` 자손 service의 public 메서드는 자동 trace된다. 별도 로그 호출 불필요
+- 비즈니스 이벤트는 `@InjectPinoLogger(ClassName.name)` 주입 후 `this.logger.info`로 명시 기록
 - `LoggerModule`은 `@Global()` 선언이므로 도메인 모듈에서 별도 import 없이 주입 가능
-- 호출 형식·레벨 기준은 `.claude/rules/logging.md` 참조
+- 호출 형식·레벨 기준, 자동 trace 정책은 `.claude/rules/logging.md` 참조
