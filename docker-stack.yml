@@ -51,7 +51,11 @@ services:
         condition: on-failure
         window: 60s
 
-  # ─── MinIO 버킷 초기화 + lifecycle ────────────────────────────
+  # ─── MinIO 버킷 초기화 (bucket only, mc) ──────────────────────
+  # 모든 로직은 entrypoint 인라인 — Swarm config 의존 없음.
+  # overlay DNS (minio:9000) 로 접근, public endpoint 는 overlay 내부에서 해석 불가.
+  # CORS 는 MinIO 서버의 MINIO_API_CORS_ALLOW_ORIGIN 환경변수가 전역 처리 (per-bucket API 미지원).
+  # MPU 잔재 정리는 API 의 upload-session.cleanup.worker 가 담당 (lifecycle 불필요).
   minio-init:
     image: minio/mc:latest
     env_file:
@@ -60,9 +64,21 @@ services:
       - /bin/sh
       - -c
       - |
-        mc alias set local http://minio:9000 $$MINIO_ROOT_USER $$MINIO_ROOT_PASSWORD &&
-        mc mb --ignore-existing local/$$MINIO_DEFAULT_BUCKETS &&
-        echo '{"Rules":[{"ID":"AbortIncompleteMPU","Status":"Enabled","Filter":{"Prefix":""},"AbortIncompleteMultipartUpload":{"DaysAfterInitiation":1}}]}' | mc ilm import local/$$MINIO_DEFAULT_BUCKETS
+        set -eu
+
+        ENDPOINT=http://minio:9000
+
+        # 0) MinIO 준비 대기 — alias set 이 endpoint 검증을 겸함
+        echo "Waiting for MinIO..."
+        until mc alias set local "$${ENDPOINT}" "$${MINIO_ROOT_USER}" "$${MINIO_ROOT_PASSWORD}" >/dev/null 2>&1; do
+          sleep 2
+        done
+        mc ready local
+
+        # 1) 버킷 (멱등)
+        mc mb --ignore-existing "local/$${MINIO_DEFAULT_BUCKETS}"
+
+        echo "MinIO 셋업 완료: bucket=$${MINIO_DEFAULT_BUCKETS}"
     networks:
       - terab-net
     deploy:
@@ -77,9 +93,11 @@ services:
   redis:
     image: redis:8
     command: redis-server /usr/local/etc/redis/redis.conf
+    configs:
+      - source: redis_config
+        target: /usr/local/etc/redis/redis.conf
     volumes:
       - redis_data:/data
-      - /volume3/docker/terab/redis.prod.conf:/usr/local/etc/redis/redis.conf:ro
     ports:
       - '6379:6379'
     networks:
@@ -197,8 +215,10 @@ services:
     image: nginx:mainline
     ports:
       - '8080:80'
+    configs:
+      - source: nginx_config
+        target: /etc/nginx/nginx.conf
     volumes:
-      - /volume3/docker/terab/services/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
       - /volume3/docker/terab/services/nginx/conf.d:/etc/nginx/conf.d:ro
     networks:
       - terab-net
@@ -259,6 +279,12 @@ networks:
     driver: overlay
     attachable: true
 
+configs:
+  redis_config:
+    file: './redis.prod.conf'
+  nginx_config:
+    file: './services/nginx/nginx.conf'
+
 secrets:
   firebase_credential.json:
-    external: true
+    file: './secrets/firebase_credential.json'
