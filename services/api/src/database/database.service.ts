@@ -4,6 +4,7 @@ import { drizzle, NodePgDatabase } from 'drizzle-orm/node-postgres';
 import { migrate } from 'drizzle-orm/node-postgres/migrator';
 import { join } from 'path';
 import { Pool } from 'pg';
+import { DrizzleQueryLogger } from '../logger/drizzle-query-logger';
 import * as schema from './schema';
 import { seedRbac } from './seed';
 
@@ -12,13 +13,16 @@ export class DatabaseService implements OnModuleInit, OnModuleDestroy {
   readonly db: NodePgDatabase<typeof schema>;
   private readonly pool: Pool;
 
-  constructor(private readonly configService: ConfigService) {
+  constructor(
+    private readonly configService: ConfigService,
+    private readonly queryLogger: DrizzleQueryLogger,
+  ) {
     this.pool = new Pool({
       connectionString: this.configService.getOrThrow<string>('DATABASE_URL'),
       max: 5,
       idleTimeoutMillis: 60000,
     });
-    this.db = drizzle(this.pool, { schema, casing: 'snake_case' });
+    this.db = drizzle(this.pool, { schema, casing: 'snake_case', logger: this.queryLogger });
   }
 
   async onModuleInit(): Promise<void> {
