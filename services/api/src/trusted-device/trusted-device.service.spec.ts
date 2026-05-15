@@ -1,6 +1,8 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { ApiException } from '@terab/common';
+import { DatabaseService, TransactionContext } from '@terab/db';
 import { TokenService } from '@terab/security';
+import { mockDatabaseService, mockTransactionContext } from '@terab/test';
 import { TrustedDeviceRepository } from './trusted-device.repository';
 import { TrustedDeviceService } from './trusted-device.service';
 
@@ -23,6 +25,8 @@ describe('TrustedDeviceService', () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         TrustedDeviceService,
+        { provide: DatabaseService, useValue: mockDatabaseService },
+        { provide: TransactionContext, useValue: mockTransactionContext },
         { provide: TrustedDeviceRepository, useValue: mockTrustedDeviceRepository },
         { provide: TokenService, useValue: mockTokenService },
       ],
