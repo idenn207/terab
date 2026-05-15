@@ -1,8 +1,9 @@
 import { ConfigService } from '@nestjs/config';
 import { Test } from '@nestjs/testing';
 import { ApiException } from '@terab/common';
+import { DatabaseService, TransactionContext } from '@terab/db';
 import { TokenService } from '@terab/security';
-import { mockConfigService, mockUser } from '@terab/test';
+import { mockConfigService, mockDatabaseService, mockDbTransaction, mockTransactionContext, mockUser, setupMockDbTransactionChain } from '@terab/test';
 import bcrypt from 'bcryptjs';
 import { DeviceService } from '../device/device.service';
 import { InvitationService } from '../invitation/invitation.service';
@@ -70,6 +71,8 @@ describe('AuthService', () => {
     const module = await Test.createTestingModule({
       providers: [
         AuthService,
+        { provide: DatabaseService, useValue: mockDatabaseService },
+        { provide: TransactionContext, useValue: mockTransactionContext },
         { provide: AuthRepository, useValue: mockAuthRepository },
         { provide: ConfigService, useValue: mockConfigService },
         { provide: TokenService, useValue: mockTokenService },
@@ -83,6 +86,7 @@ describe('AuthService', () => {
 
     service = module.get(AuthService);
     jest.clearAllMocks();
+    setupMockDbTransactionChain();
     mockAuthRepository.insertRefreshToken.mockResolvedValue(undefined);
     mockDeviceService.findPushTokensByUserId.mockResolvedValue([]);
     mockInvitationService.validateOrThrow.mockResolvedValue({ token: 'valid-token' });
@@ -187,6 +191,21 @@ describe('AuthService', () => {
       expect(result.accessToken).toBe('mock.access.token');
       expect(result.backupCodes).toHaveLength(8);
       expect(result.user.username).toBe('newuser');
+    });
+
+    it('성공 시 user 생성 + invitation consume이 트랜잭션 안에서 수행된다', async () => {
+      mockAuthRepository.findRoleByName.mockResolvedValue({ id: 'role-id' });
+      mockTokenService.pepperPassword.mockReturnValue('peppered');
+      mockAuthRepository.insertUser.mockResolvedValue({ id: 'new-user-1' });
+      mockAuthRepository.insertUserRole.mockResolvedValue(undefined);
+      mockAuthRepository.insertBackupCodes.mockResolvedValue(undefined);
+      mockInvitationService.consume.mockResolvedValue(undefined);
+      mockAuthRepository.findUserWithPermissionsById.mockResolvedValue(mockUser);
+      (bcrypt.hash as jest.Mock).mockResolvedValue('hashed');
+
+      await service.register(registerDto);
+
+      expect(mockDbTransaction).toHaveBeenCalled();
     });
   });
 

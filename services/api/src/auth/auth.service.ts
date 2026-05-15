@@ -2,6 +2,7 @@ import { Injectable, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { ApiException } from '@terab/common';
 import { contract } from '@terab/contract';
+import { DatabaseService, ServiceCore, TransactionContext } from '@terab/db';
 import { TokenService } from '@terab/security';
 import { ServerInferRequest, ServerInferResponseBody } from '@ts-rest/core';
 import bcrypt from 'bcryptjs';
@@ -20,10 +21,12 @@ interface AuthTokens {
 }
 
 @Injectable()
-export class AuthService implements OnModuleInit {
+export class AuthService extends ServiceCore implements OnModuleInit {
   protected readonly BCRYPT_ROUNDS = 10;
 
   constructor(
+    database: DatabaseService,
+    txContext: TransactionContext,
     private readonly pushChallengePublisher: PushChallengePublisher,
     private readonly configService: ConfigService,
     private readonly tokenService: TokenService,
@@ -32,7 +35,9 @@ export class AuthService implements OnModuleInit {
     private readonly trustedDeviceService: TrustedDeviceService,
     private readonly invitationService: InvitationService,
     private readonly authRepository: AuthRepository,
-  ) {}
+  ) {
+    super(database, txContext);
+  }
 
   async onModuleInit(): Promise<void> {
     await this.initOwnerAccount();
@@ -56,21 +61,23 @@ export class AuthService implements OnModuleInit {
     const rawCodes = this.generateBackupCodes();
     const codeHashes = await Promise.all(rawCodes.map((code) => bcrypt.hash(code, this.BCRYPT_ROUNDS)));
 
-    // Phase 3에서 this.runInTx로 감싼다.
-    let newUser: { id: string };
-    try {
-      newUser = await this.authRepository.insertUser({
-        username: data.username,
-        nickname: data.nickname,
-        password: hashedPassword,
-      });
-      await this.authRepository.insertUserRole(newUser.id, userRole.id);
-      await this.authRepository.insertBackupCodes(newUser.id, codeHashes);
-      await this.invitationService.consume(data.token, newUser.id);
-    } catch (err) {
-      if ((err as { code?: string }).code === '23505') throw new ApiException('USERNAME_TAKEN');
-      throw err;
-    }
+    const newUser = await this.runInTx(async () => {
+      let inserted: { id: string };
+      try {
+        inserted = await this.authRepository.insertUser({
+          username: data.username,
+          nickname: data.nickname,
+          password: hashedPassword,
+        });
+      } catch (err) {
+        if ((err as { code?: string }).code === '23505') throw new ApiException('USERNAME_TAKEN');
+        throw err;
+      }
+      await this.authRepository.insertUserRole(inserted.id, userRole.id);
+      await this.authRepository.insertBackupCodes(inserted.id, codeHashes);
+      await this.invitationService.consume(data.token, inserted.id);
+      return inserted;
+    });
 
     const userWithPermissions = await this.authRepository.findUserWithPermissionsById(newUser.id);
     if (!userWithPermissions) throw new ApiException('REGISTRATION_FAILED');
