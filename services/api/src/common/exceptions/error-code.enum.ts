@@ -53,6 +53,10 @@ export const ErrorCode = {
     message: '역할 정보를 찾을 수 없습니다. 관리자에게 문의하세요.',
     status: HttpStatus.INTERNAL_SERVER_ERROR,
   },
+  REGISTRATION_FAILED: {
+    message: '회원가입 중 오류가 발생했습니다.',
+    status: HttpStatus.INTERNAL_SERVER_ERROR,
+  },
   // ───── 2FA ──────────────────────────────
   BACKUP_CODE_INVALID: {
     message: '유효하지 않은 백업 코드입니다.',

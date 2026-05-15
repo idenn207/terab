@@ -1,4 +1,4 @@
-import { ConflictException, Injectable, OnModuleInit } from '@nestjs/common';
+import { Injectable, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { ApiException } from '@terab/common';
 import { contract } from '@terab/contract';
@@ -48,7 +48,7 @@ export class AuthService implements OnModuleInit {
     await this.invitationService.validateOrThrow(data.token);
 
     const userRole = await this.authRepository.findRoleByName('USER');
-    if (!userRole) throw new Error('USER 역할 없음 - 마이그레이션 실행 여부를 확인하세요');
+    if (!userRole) throw new ApiException('ROLE_NOT_FOUND');
 
     const pepperedPassword = this.tokenService.pepperPassword(data.password);
     const hashedPassword = await bcrypt.hash(pepperedPassword, this.BCRYPT_ROUNDS);
@@ -56,24 +56,24 @@ export class AuthService implements OnModuleInit {
     const rawCodes = this.generateBackupCodes();
     const codeHashes = await Promise.all(rawCodes.map((code) => bcrypt.hash(code, this.BCRYPT_ROUNDS)));
 
+    // Phase 3에서 this.runInTx로 감싼다.
     let newUser: { id: string };
     try {
-      newUser = await this.authRepository.registerUser({
+      newUser = await this.authRepository.insertUser({
         username: data.username,
         nickname: data.nickname,
         password: hashedPassword,
-        roleId: userRole.id,
-        codeHashes,
-        invitationToken: data.token,
       });
+      await this.authRepository.insertUserRole(newUser.id, userRole.id);
+      await this.authRepository.insertBackupCodes(newUser.id, codeHashes);
+      await this.invitationService.consume(data.token, newUser.id);
     } catch (err) {
-      if (err instanceof ConflictException) throw new ApiException('INVITATION_ALREADY_USED');
       if ((err as { code?: string }).code === '23505') throw new ApiException('USERNAME_TAKEN');
       throw err;
     }
 
     const userWithPermissions = await this.authRepository.findUserWithPermissionsById(newUser.id);
-    if (!userWithPermissions) throw new Error('가입 직후 사용자 조회 실패');
+    if (!userWithPermissions) throw new ApiException('REGISTRATION_FAILED');
 
     const tokens = await this.issueTokenPair(userWithPermissions);
 
