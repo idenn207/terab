@@ -1,5 +1,7 @@
 import { Test } from '@nestjs/testing';
 import { ApiException } from '@terab/common';
+import { DatabaseService, TransactionContext } from '@terab/db';
+import { mockDatabaseService, mockTransactionContext } from '@terab/test';
 import { DeviceRepository } from './device.repository';
 import { DeviceService } from './device.service';
 
@@ -15,7 +17,12 @@ describe('DeviceService', () => {
 
   beforeEach(async () => {
     const module = await Test.createTestingModule({
-      providers: [DeviceService, { provide: DeviceRepository, useValue: mockDeviceRepository }],
+      providers: [
+        DeviceService,
+        { provide: DatabaseService, useValue: mockDatabaseService },
+        { provide: TransactionContext, useValue: mockTransactionContext },
+        { provide: DeviceRepository, useValue: mockDeviceRepository },
+      ],
     }).compile();
     service = module.get(DeviceService);
     jest.clearAllMocks();
