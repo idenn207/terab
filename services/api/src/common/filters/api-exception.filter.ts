@@ -2,6 +2,20 @@ import { ArgumentsHost, Catch, ExceptionFilter, HttpException, HttpStatus } from
 import { ApiException, HttpStatusMessage } from '@terab/common';
 import { Response } from 'express';
 
+// ─────────────────────────────────────────────────────────────────
+// 결정: pino 로거를 의도적으로 주입하지 않는다.
+//
+// 요청 단위 오류 로깅은 TraceFlusher.flushError가 권위적으로 담당한다.
+// TraceInterceptor의 RxJS error path가 filter보다 먼저 호출되며,
+// 4xx ApiException은 trace.meta info로, 5xx와 unhandled는 trace.detail error로
+// stack과 모든 span을 포함해 기록한다.
+//
+// filter에 별도 로깅을 추가하면 동일 예외가 두 record로 분리 기록되어
+// reqId로 손수 묶어야 하는 분석 부담이 생긴다. filter는 응답 직렬화만 담당한다.
+//
+// (과거 4e62b7c에서 logger를 추가했다가 이 중복 문제로 롤백된 이력 있음.)
+// 자세한 근거: docs/superpowers/specs/2026-05-14-api-core-and-logging-consistency-design.md §5
+// ─────────────────────────────────────────────────────────────────
 @Catch()
 export class ApiExceptionFilter implements ExceptionFilter {
   constructor() {}
