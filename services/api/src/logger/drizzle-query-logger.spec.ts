@@ -1,3 +1,5 @@
+import { mockPinoLogger } from '@terab/test';
+import { PinoLogger } from 'nestjs-pino';
 import { DrizzleQueryLogger } from './drizzle-query-logger';
 import { PiiMasker } from './pii-masker';
 import { RequestTraceContext } from './request-trace-context';
@@ -7,11 +9,31 @@ describe('DrizzleQueryLogger', () => {
   let logger: DrizzleQueryLogger;
 
   beforeEach(() => {
-    logger = new DrizzleQueryLogger(new PiiMasker());
+    jest.clearAllMocks();
+    logger = new DrizzleQueryLogger(new PiiMasker(), mockPinoLogger as unknown as PinoLogger);
   });
 
   it('컨테이너 밖에서 호출하면 예외 없이 무시한다', () => {
     expect(() => logger.logQuery('select 1', [])).not.toThrow();
+  });
+
+  describe('debug 로그', () => {
+    it('params가 비어있으면 query만 msg로 debug를 호출한다', () => {
+      logger.logQuery('select 1', []);
+      expect(mockPinoLogger.debug).toHaveBeenCalledTimes(1);
+      expect(mockPinoLogger.debug).toHaveBeenCalledWith('select 1');
+    });
+
+    it('params가 있으면 마스킹된 params와 함께 debug를 호출한다', () => {
+      logger.logQuery('select $1', ['v']);
+      expect(mockPinoLogger.debug).toHaveBeenCalledTimes(1);
+      expect(mockPinoLogger.debug).toHaveBeenCalledWith({ params: ['v'] }, 'select $1');
+    });
+
+    it('request context가 없어도 debug 로그는 emit된다', () => {
+      logger.logQuery('select 1', []);
+      expect(mockPinoLogger.debug).toHaveBeenCalledTimes(1);
+    });
   });
 
   it('컨테이너 안에서 호출하면 sql span을 push한다', async () => {
