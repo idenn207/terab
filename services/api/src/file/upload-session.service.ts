@@ -158,26 +158,21 @@ export class UploadSessionService extends ServiceCore {
     });
   }
 
-  async cleanupExpired(batchSize: number): Promise<{ scanned: number; deleted: number; errors: number }> {
+  async cleanupExpired(batchSize: number): Promise<{ scannedCount: number; abortedCount: number; removedCount: number }> {
     const sessions = await this.uploadSessionRepository.findExpiredForCleanup(this.GRACE_MS, batchSize);
-    let deleted = 0;
-    let errors = 0;
+    let abortedCount = 0;
+    let removedCount = 0;
     for (const session of sessions) {
-      try {
-        if (session.uploadKind === 'multipart' && session.multipartUploadId) {
-          await this.minioService.abortMultipartUpload(session.minioKey, session.multipartUploadId).catch(() => {
-            errors += 1;
-          });
-        }
-        await this.minioService.removeObject(session.minioKey).catch(() => {
-          errors += 1;
-        });
-      } catch {
-        errors += 1;
+      if (session.uploadKind === 'multipart' && session.multipartUploadId) {
+        await this.minioService.abortMultipartUpload(session.minioKey, session.multipartUploadId).then(() => {
+          abortedCount += 1;
+        }).catch(() => undefined);
       }
-      await this.uploadSessionRepository.deleteById(session.id);
-      deleted += 1;
+      await this.minioService.removeObject(session.minioKey).then(() => {
+        removedCount += 1;
+      }).catch(() => undefined);
+      await this.uploadSessionRepository.deleteById(session.id).catch(() => undefined);
     }
-    return { scanned: sessions.length, deleted, errors };
+    return { scannedCount: sessions.length, abortedCount, removedCount };
   }
 }
