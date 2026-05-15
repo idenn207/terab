@@ -102,10 +102,10 @@ describe('AuthService', () => {
       password: 'password123',
     };
 
-    it('초대 토큰이 유효하지 않으면 ApiException을 던지고 user 생성을 호출하지 않는다', async () => {
+    it('초대 토큰이 유효하지 않으면 INVITATION_NOT_FOUND 예외를 던지고 user 생성을 호출하지 않는다', async () => {
       mockInvitationService.validateOrThrow.mockRejectedValue(new ApiException('INVITATION_NOT_FOUND'));
 
-      await expect(service.register(registerDto)).rejects.toThrow(ApiException);
+      await expect(service.register(registerDto)).rejects.toMatchObject({ code: 'INVITATION_NOT_FOUND' });
       expect(mockAuthRepository.insertUser).not.toHaveBeenCalled();
     });
 
@@ -118,6 +118,7 @@ describe('AuthService', () => {
 
     it('중복 username이면 USERNAME_TAKEN 예외를 던진다', async () => {
       mockAuthRepository.findRoleByName.mockResolvedValue({ id: 'role-id' });
+      mockTokenService.pepperPassword.mockReturnValue('peppered');
       mockAuthRepository.insertUser.mockRejectedValue({ code: '23505' });
       (bcrypt.hash as jest.Mock).mockResolvedValue('hashed');
 
@@ -126,6 +127,7 @@ describe('AuthService', () => {
 
     it('invitation이 이미 사용되었으면 INVITATION_ALREADY_USED 예외를 던진다', async () => {
       mockAuthRepository.findRoleByName.mockResolvedValue({ id: 'role-id' });
+      mockTokenService.pepperPassword.mockReturnValue('peppered');
       mockAuthRepository.insertUser.mockResolvedValue({ id: 'new-user-1' });
       mockAuthRepository.insertUserRole.mockResolvedValue(undefined);
       mockAuthRepository.insertBackupCodes.mockResolvedValue(undefined);
@@ -137,6 +139,7 @@ describe('AuthService', () => {
 
     it('가입 직후 사용자 조회 실패 시 REGISTRATION_FAILED 예외를 던진다', async () => {
       mockAuthRepository.findRoleByName.mockResolvedValue({ id: 'role-id' });
+      mockTokenService.pepperPassword.mockReturnValue('peppered');
       mockAuthRepository.insertUser.mockResolvedValue({ id: 'new-user-1' });
       mockAuthRepository.insertUserRole.mockResolvedValue(undefined);
       mockAuthRepository.insertBackupCodes.mockResolvedValue(undefined);
@@ -149,6 +152,7 @@ describe('AuthService', () => {
 
     it('성공 시 insertUser → insertUserRole → insertBackupCodes → invitationService.consume 순서로 호출한다', async () => {
       mockAuthRepository.findRoleByName.mockResolvedValue({ id: 'role-id' });
+      mockTokenService.pepperPassword.mockReturnValue('peppered');
       mockAuthRepository.insertUser.mockResolvedValue({ id: 'new-user-1' });
       mockAuthRepository.insertUserRole.mockResolvedValue(undefined);
       mockAuthRepository.insertBackupCodes.mockResolvedValue(undefined);
@@ -170,6 +174,7 @@ describe('AuthService', () => {
 
     it('성공 시 accessToken + user + backupCodes 8개를 반환한다', async () => {
       mockAuthRepository.findRoleByName.mockResolvedValue({ id: 'role-id' });
+      mockTokenService.pepperPassword.mockReturnValue('peppered');
       mockAuthRepository.insertUser.mockResolvedValue({ id: 'new-user-1' });
       mockAuthRepository.insertUserRole.mockResolvedValue(undefined);
       mockAuthRepository.insertBackupCodes.mockResolvedValue(undefined);
