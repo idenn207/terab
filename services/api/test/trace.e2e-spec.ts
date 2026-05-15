@@ -101,14 +101,18 @@ describe('Service Trace Logging (e2e)', () => {
     });
   });
 
-  it('4xx ApiException은 trace.meta만 남기고 detail은 남기지 않는다', async () => {
+  it('4xx ApiException은 meta(info) + detail(debug)을 남긴다 — debug는 prod에서 level 필터링됨', async () => {
     await request(app.getHttpServer()).get('/trace-test/fail4');
     expect(mockPinoLogger.info).toHaveBeenCalledTimes(1);
+    expect(mockPinoLogger.debug).toHaveBeenCalledTimes(1);
     expect(mockPinoLogger.error).not.toHaveBeenCalled();
     expect(mockPinoLogger.info.mock.calls[0][0]).toMatchObject({
       event: 'trace.meta',
       outcome: 'api_exception',
       hasDetail: false,
+    });
+    expect(mockPinoLogger.debug.mock.calls[0][0]).toMatchObject({
+      event: 'trace.detail',
     });
   });
 

@@ -34,6 +34,7 @@ describe('TraceFlusher', () => {
     it('meta 한 줄만 info로 flush한다', () => {
       flusher.flushOk(buildCtx(), 200);
       expect(mockPinoLogger.info).toHaveBeenCalledTimes(1);
+      expect(mockPinoLogger.debug).not.toHaveBeenCalled();
       expect(mockPinoLogger.error).not.toHaveBeenCalled();
       const payload = mockPinoLogger.info.mock.calls[0][0];
       expect(payload).toMatchObject({
@@ -46,20 +47,23 @@ describe('TraceFlusher', () => {
   });
 
   describe('flushError', () => {
-    it('ApiException 4xx면 meta만 flush한다', () => {
+    it('ApiException 4xx면 meta(info) + detail(debug)을 emit한다', () => {
       const err = new ApiException(errorCode4xx);
       flusher.flushError(buildCtx(), err);
       expect(mockPinoLogger.info).toHaveBeenCalledTimes(1);
+      expect(mockPinoLogger.debug).toHaveBeenCalledTimes(1);
       expect(mockPinoLogger.error).not.toHaveBeenCalled();
-      const payload = mockPinoLogger.info.mock.calls[0][0];
-      expect(payload).toMatchObject({
+      expect(mockPinoLogger.info.mock.calls[0][0]).toMatchObject({
         event: 'trace.meta',
         outcome: 'api_exception',
         hasDetail: false,
       });
+      expect(mockPinoLogger.debug.mock.calls[0][0]).toMatchObject({
+        event: 'trace.detail',
+      });
     });
 
-    it('ApiException 5xx면 meta + detail 둘 다 flush한다', () => {
+    it('ApiException 5xx면 meta(info) + detail(error)을 emit한다', () => {
       if (!errorCode5xx) {
         return;
       }
@@ -67,6 +71,7 @@ describe('TraceFlusher', () => {
       flusher.flushError(buildCtx(), err);
       expect(mockPinoLogger.info).toHaveBeenCalledTimes(1);
       expect(mockPinoLogger.error).toHaveBeenCalledTimes(1);
+      expect(mockPinoLogger.debug).not.toHaveBeenCalled();
       expect(mockPinoLogger.info.mock.calls[0][0]).toMatchObject({
         outcome: 'api_exception',
         hasDetail: true,
@@ -76,10 +81,11 @@ describe('TraceFlusher', () => {
       });
     });
 
-    it('알 수 없는 예외면 outcome=unhandled로 meta + detail flush한다', () => {
+    it('알 수 없는 예외면 outcome=unhandled로 meta(info) + detail(error)을 emit한다', () => {
       flusher.flushError(buildCtx(), new Error('boom'));
       expect(mockPinoLogger.info).toHaveBeenCalledTimes(1);
       expect(mockPinoLogger.error).toHaveBeenCalledTimes(1);
+      expect(mockPinoLogger.debug).not.toHaveBeenCalled();
       expect(mockPinoLogger.info.mock.calls[0][0]).toMatchObject({
         outcome: 'unhandled',
         status: 500,

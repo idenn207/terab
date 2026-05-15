@@ -4,11 +4,13 @@ import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
 import { TRACE_LIMITS } from './trace.limits';
 import { Span, TraceContext, TraceDetailRecord, TraceMetaRecord, TraceOutcome } from './trace.type';
 
+type DetailLevel = 'debug' | 'error';
+
 interface ErrorInfo {
   status: number;
   outcome: TraceOutcome;
   errorRecord: TraceDetailRecord['error'];
-  needsDetail: boolean;
+  detailLevel: DetailLevel;
 }
 
 @Injectable()
@@ -22,18 +24,22 @@ export class TraceFlusher {
 
   flushError(ctx: TraceContext, err: unknown): void {
     const info = this.classifyError(err);
-    const meta = this.buildMeta(ctx, info.status, info.outcome, info.needsDetail);
+    // hasDetail = "보장되어 보이는 detail" — debug 라인은 prod에서 필터링되므로 false로 표기
+    const hasDetail = info.detailLevel === 'error';
+    const meta = this.buildMeta(ctx, info.status, info.outcome, hasDetail);
     this.logger.info(meta);
-    if (info.needsDetail) {
-      const detail = this.buildDetail(ctx, info.errorRecord);
+    const detail = this.buildDetail(ctx, info.errorRecord);
+    if (info.detailLevel === 'error') {
       this.logger.error(detail);
+    } else {
+      this.logger.debug(detail);
     }
   }
 
   private classifyError(err: unknown): ErrorInfo {
     if (err instanceof ApiException) {
       const status = err.getStatus();
-      const needsDetail = status >= Number(HttpStatus.INTERNAL_SERVER_ERROR);
+      const detailLevel: DetailLevel = status >= Number(HttpStatus.INTERNAL_SERVER_ERROR) ? 'error' : 'debug';
       return {
         status,
         outcome: 'api_exception',
@@ -43,7 +49,7 @@ export class TraceFlusher {
           message: err.message,
           stack: err.stack,
         },
-        needsDetail,
+        detailLevel,
       };
     }
 
@@ -56,7 +62,7 @@ export class TraceFlusher {
         message: e?.message,
         stack: e?.stack,
       },
-      needsDetail: true,
+      detailLevel: 'error',
     };
   }
 
