@@ -1,6 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import {
   DatabaseService,
+  RepositoryCore,
+  TransactionContext,
   permissions,
   rolePermissions,
   roles,
@@ -12,16 +14,18 @@ import {
 import { eq } from 'drizzle-orm';
 
 @Injectable()
-export class TwoFaRepository {
-  constructor(private readonly database: DatabaseService) {}
+export class TwoFaRepository extends RepositoryCore {
+  constructor(database: DatabaseService, txContext: TransactionContext) {
+    super(database, txContext);
+  }
 
   async insert(data: Pick<TwoFaChallenges$Insert, 'userId' | 'options' | 'correctNum' | 'expiresAt'>) {
-    const [row] = await this.database.db.insert(twoFaChallenges).values(data).returning();
+    const [row] = await this.conn.insert(twoFaChallenges).values(data).returning();
     return row;
   }
 
   async findById(id: string) {
-    const [twoFa] = await this.database.db.select().from(twoFaChallenges).where(eq(twoFaChallenges.id, id));
+    const [twoFa] = await this.conn.select().from(twoFaChallenges).where(eq(twoFaChallenges.id, id));
     return twoFa;
   }
 
@@ -30,11 +34,11 @@ export class TwoFaRepository {
     status: NonNullable<TwoFaChallenges$Insert['status']>,
     respondedAt?: TwoFaChallenges$Insert['respondedAt'],
   ): Promise<void> {
-    await this.database.db.update(twoFaChallenges).set({ status, respondedAt }).where(eq(twoFaChallenges.id, id));
+    await this.conn.update(twoFaChallenges).set({ status, respondedAt }).where(eq(twoFaChallenges.id, id));
   }
 
   async findUserWithPermissionsById(userId: string) {
-    const rows = await this.database.db
+    const rows = await this.conn
       .select({
         id: users.id,
         username: users.username,
