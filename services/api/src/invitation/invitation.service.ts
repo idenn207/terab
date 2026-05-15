@@ -3,6 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { ApiException } from '@terab/common';
 import { contract } from '@terab/contract';
 import { DatabaseService, Invitations$Select, ServiceCore, TransactionContext } from '@terab/db';
+import { LogReplay } from '@terab/logger';
 import { ServerInferResponseBody } from '@ts-rest/core';
 import { InvitationRepository } from './invitation.repository';
 
@@ -20,6 +21,7 @@ export class InvitationService extends ServiceCore {
     super(database, txContext);
   }
 
+  @LogReplay()
   async create(
     createdBy: string,
     expiresInDays: number = this.DEFAULT_EXPIRES_DAYS,
@@ -42,6 +44,7 @@ export class InvitationService extends ServiceCore {
     return row;
   }
 
+  @LogReplay()
   async consume(token: string, usedBy: string): Promise<void> {
     const row = await this.invitationRepository.consume(token, usedBy);
     if (!row) throw new ApiException('INVITATION_ALREADY_USED');
