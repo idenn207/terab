@@ -1,6 +1,8 @@
 import { ConfigService } from '@nestjs/config';
 import { Test } from '@nestjs/testing';
 import { ApiException } from '@terab/common';
+import { DatabaseService, TransactionContext } from '@terab/db';
+import { mockDatabaseService, mockTransactionContext } from '@terab/test';
 import { InvitationRepository } from './invitation.repository';
 import { InvitationService } from './invitation.service';
 
@@ -22,6 +24,8 @@ describe('InvitationService', () => {
     const module = await Test.createTestingModule({
       providers: [
         InvitationService,
+        { provide: DatabaseService, useValue: mockDatabaseService },
+        { provide: TransactionContext, useValue: mockTransactionContext },
         { provide: InvitationRepository, useValue: mockInvitationRepository },
         { provide: ConfigService, useValue: mockConfigService },
       ],

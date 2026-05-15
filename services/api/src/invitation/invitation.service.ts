@@ -2,19 +2,23 @@ import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { ApiException } from '@terab/common';
 import { contract } from '@terab/contract';
-import { Invitations$Select } from '@terab/db';
+import { DatabaseService, Invitations$Select, ServiceCore, TransactionContext } from '@terab/db';
 import { ServerInferResponseBody } from '@ts-rest/core';
 import { InvitationRepository } from './invitation.repository';
 
 @Injectable()
-export class InvitationService {
+export class InvitationService extends ServiceCore {
   protected readonly DEFAULT_EXPIRES_DAYS = 7;
   protected readonly MS_PER_DAY = 24 * 60 * 60 * 1000;
 
   constructor(
+    database: DatabaseService,
+    txContext: TransactionContext,
     private readonly invitationRepository: InvitationRepository,
     private readonly configService: ConfigService,
-  ) {}
+  ) {
+    super(database, txContext);
+  }
 
   async create(
     createdBy: string,
