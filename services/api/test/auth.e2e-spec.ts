@@ -11,7 +11,7 @@ describe('Auth (e2e) — register invitation 롤백', () => {
   let db: DatabaseService;
 
   // 테스트마다 격리된 데이터를 위해 고유 username/token 사용
-  const testUsername = `rollback-${Date.now()}`;
+  const testUsername = `rollback-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
   let testToken: string;
   let ownerUserId: string;
 
@@ -26,7 +26,11 @@ describe('Auth (e2e) — register invitation 롤백', () => {
 
     // owner 계정은 AppModule 초기화 시 자동 생성됨 (initOwnerAccount)
     const [ownerRow] = await db.db.select({ id: users.id }).from(users).where(eq(users.username, 'owner'));
-    if (!ownerRow) throw new Error('owner 계정이 존재하지 않습니다. DB 초기화 상태를 확인하세요.');
+    if (!ownerRow) {
+      throw new Error(
+        'owner 계정이 없습니다. e2e는 OWNER_PASSWORD 환경변수가 설정된 상태에서 AppModule이 부팅되어 owner 계정이 생성되어야 합니다.',
+      );
+    }
     ownerUserId = ownerRow.id;
 
     // 1. 테스트용 invitation 생성 (직접 DB insert)
