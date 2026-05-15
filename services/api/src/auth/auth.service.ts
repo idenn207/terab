@@ -3,6 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { ApiException } from '@terab/common';
 import { contract } from '@terab/contract';
 import { DatabaseService, ServiceCore, TransactionContext } from '@terab/db';
+import { LogReplay } from '@terab/logger';
 import { TokenService } from '@terab/security';
 import { ServerInferRequest, ServerInferResponseBody } from '@ts-rest/core';
 import bcrypt from 'bcryptjs';
@@ -45,6 +46,7 @@ export class AuthService extends ServiceCore implements OnModuleInit {
 
   // ─── Register ────────────────────────────────────────────────────────
 
+  @LogReplay()
   async register(
     data: ServerInferRequest<typeof contract.auth.register>['body'],
   ): Promise<
@@ -98,6 +100,7 @@ export class AuthService extends ServiceCore implements OnModuleInit {
 
   // ─── Login ───────────────────────────────────────────────────────────
 
+  @LogReplay({ captureResult: true })
   async login(
     data: ServerInferRequest<typeof contract.auth.login>['body'],
     trustToken: string | undefined,
@@ -224,6 +227,7 @@ export class AuthService extends ServiceCore implements OnModuleInit {
 
   // ─── Refresh ─────────────────────────────────────────────────────────
 
+  @LogReplay({ captureResult: true })
   async refresh(rawRefreshToken: string | undefined): Promise<
     {
       response: ServerInferResponseBody<typeof contract.auth.login>;
@@ -264,6 +268,7 @@ export class AuthService extends ServiceCore implements OnModuleInit {
 
   // ─── Logout ──────────────────────────────────────────────────────────
 
+  @LogReplay()
   async logout(rawRefreshToken: string | undefined): Promise<void> {
     if (!rawRefreshToken) return;
     const now = new Date();
