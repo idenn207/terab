@@ -57,6 +57,7 @@ export class MinioService {
     return { size: stat.size, mimeType };
   }
 
+  @LogReplay()
   async copyObject(sourceKey: string, destKey: string): Promise<void> {
     const source = new (await import('minio')).CopySourceOptions({
       Bucket: this.bucketName,
@@ -69,10 +70,12 @@ export class MinioService {
     await this.client.copyObject(source, dest);
   }
 
+  @LogReplay()
   async removeObject(key: string): Promise<void> {
     await this.client.removeObject(this.bucketName, key);
   }
 
+  @LogReplay()
   async removeObjects(keys: string[]): Promise<void> {
     if (keys.length === 0) return;
     await this.client.removeObjects(this.bucketName, keys);
@@ -82,6 +85,7 @@ export class MinioService {
     return this.presignClient.presignedPutObject(this.bucketName, key, expirySec);
   }
 
+  @LogReplay()
   async createMultipartUpload(key: string, mimeType: string): Promise<{ uploadId: string }> {
     // minio-js Core API — 공식 클라이언트에는 노출되지 않지만 prototype에 존재
     const uploadId = await this.client.initiateNewMultipartUpload(this.bucketName, key, {
@@ -97,6 +101,7 @@ export class MinioService {
     });
   }
 
+  @LogReplay()
   async completeMultipartUpload(
     key: string,
     uploadId: string,
@@ -106,6 +111,7 @@ export class MinioService {
     await this.client.completeMultipartUpload(this.bucketName, key, uploadId, list);
   }
 
+  @LogReplay()
   async abortMultipartUpload(key: string, uploadId: string): Promise<void> {
     await this.client.abortMultipartUpload(this.bucketName, key, uploadId);
   }
