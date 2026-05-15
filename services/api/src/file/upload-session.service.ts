@@ -171,7 +171,7 @@ export class UploadSessionService extends ServiceCore {
       await this.minioService.removeObject(session.minioKey).then(() => {
         removedCount += 1;
       }).catch(() => undefined);
-      await this.uploadSessionRepository.deleteById(session.id).catch(() => undefined);
+      await this.uploadSessionRepository.deleteById(session.id);
     }
     return { scannedCount: sessions.length, abortedCount, removedCount };
   }
