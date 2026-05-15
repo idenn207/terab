@@ -4,8 +4,8 @@ import { AutoTrace } from '@terab/logger';
 import { Job, Queue } from 'bullmq';
 import { UploadSessionService } from './upload-session.service';
 
-@Processor('upload-session-cleanup')
 @AutoTrace()
+@Processor('upload-session-cleanup')
 export class UploadSessionCleanupWorker extends WorkerHost implements OnApplicationBootstrap {
   private readonly TICK_JOB_ID = 'upload-session-cleanup-tick';
   private readonly TICK_INTERVAL_MS = 15 * 60 * 1000;
