@@ -1,9 +1,11 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
+import { AutoTrace } from '@terab/logger';
 import crypto from 'node:crypto';
 
 @Injectable()
+@AutoTrace()
 export class TokenService {
   readonly accessExpMs: number;
   readonly refreshExpMs: number;
