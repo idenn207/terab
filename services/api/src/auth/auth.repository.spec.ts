@@ -1,6 +1,6 @@
 import { Test } from '@nestjs/testing';
-import { DatabaseService } from '@terab/db';
-import { mockDatabaseService, mockDbLimit, setupMockDbSelectChain } from '@terab/test';
+import { DatabaseService, TransactionContext } from '@terab/db';
+import { mockDatabaseService, mockDbLimit, mockTransactionContext, setupMockDbSelectChain } from '@terab/test';
 import { AuthRepository } from './auth.repository';
 
 describe('AuthRepository', () => {
@@ -8,7 +8,11 @@ describe('AuthRepository', () => {
 
   beforeEach(async () => {
     const module = await Test.createTestingModule({
-      providers: [AuthRepository, { provide: DatabaseService, useValue: mockDatabaseService }],
+      providers: [
+        AuthRepository,
+        { provide: DatabaseService, useValue: mockDatabaseService },
+        { provide: TransactionContext, useValue: mockTransactionContext },
+      ],
     }).compile();
 
     repo = module.get(AuthRepository);

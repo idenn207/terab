@@ -4,6 +4,8 @@ import {
   DatabaseService,
   Permissions$Select,
   RefreshTokens$Insert,
+  RepositoryCore,
+  TransactionContext,
   UserRoles$Insert,
   Users$Insert,
   Users$Select,
@@ -28,11 +30,13 @@ export interface UserWithPermissions {
 }
 
 @Injectable()
-export class AuthRepository {
-  constructor(private readonly database: DatabaseService) {}
+export class AuthRepository extends RepositoryCore {
+  constructor(database: DatabaseService, txContext: TransactionContext) {
+    super(database, txContext);
+  }
 
   async findUserWithPermissionsByUsername(username: string): Promise<UserWithPermissions | null> {
-    const rows = await this.database.db
+    const rows = await this.conn
       .select({
         id: users.id,
         username: users.username,
@@ -54,7 +58,7 @@ export class AuthRepository {
   }
 
   async findUserWithPermissionsById(id: string): Promise<UserWithPermissions | null> {
-    const rows = await this.database.db
+    const rows = await this.conn
       .select({
         id: users.id,
         username: users.username,
@@ -76,7 +80,7 @@ export class AuthRepository {
   }
 
   async findActiveRefreshTokenByHash(tokenHash: string, now: Date) {
-    const [row = null] = await this.database.db
+    const [row = null] = await this.conn
       .select()
       .from(refreshTokens)
       .where(
@@ -87,26 +91,26 @@ export class AuthRepository {
   }
 
   async insertRefreshToken(data: Pick<RefreshTokens$Insert, 'userId' | 'tokenHash' | 'expiresAt'>): Promise<void> {
-    await this.database.db.insert(refreshTokens).values(data);
+    await this.conn.insert(refreshTokens).values(data);
   }
 
   async revokeRefreshTokenById(id: string, revokedAt: RefreshTokens$Insert['revokedAt']): Promise<void> {
-    await this.database.db.update(refreshTokens).set({ revokedAt }).where(eq(refreshTokens.id, id));
+    await this.conn.update(refreshTokens).set({ revokedAt }).where(eq(refreshTokens.id, id));
   }
 
   async findUnusedBackupCodes(userId: string) {
-    return this.database.db
+    return this.conn
       .select({ id: backupCodes.id, codeHash: backupCodes.codeHash })
       .from(backupCodes)
       .where(and(eq(backupCodes.userId, userId), isNull(backupCodes.usedAt)));
   }
 
   async markBackupCodeUsed(id: string, usedAt: BackupCodes$Insert['usedAt']): Promise<void> {
-    await this.database.db.update(backupCodes).set({ usedAt }).where(eq(backupCodes.id, id));
+    await this.conn.update(backupCodes).set({ usedAt }).where(eq(backupCodes.id, id));
   }
 
   async findUserByUsername(username: string) {
-    const [row = null] = await this.database.db
+    const [row = null] = await this.conn
       .select({ id: users.id })
       .from(users)
       .where(eq(users.username, username))
@@ -115,7 +119,7 @@ export class AuthRepository {
   }
 
   async findRoleByName(name: string) {
-    const [row = null] = await this.database.db
+    const [row = null] = await this.conn
       .select({ id: roles.id })
       .from(roles)
       .where(eq(roles.name, name))
@@ -124,13 +128,13 @@ export class AuthRepository {
   }
 
   async insertUser(data: Pick<Users$Insert, 'username' | 'nickname' | 'password'>) {
-    const [row] = await this.database.db.insert(users).values(data).returning({ id: users.id });
+    const [row] = await this.conn.insert(users).values(data).returning({ id: users.id });
     if (!row) throw new InternalServerErrorException('사용자 생성 실패');
     return row;
   }
 
   async insertUserRole(userId: UserRoles$Insert['userId'], roleId: UserRoles$Insert['roleId']): Promise<void> {
-    await this.database.db.insert(userRoles).values({ userId, roleId });
+    await this.conn.insert(userRoles).values({ userId, roleId });
   }
 
   private aggregateUser(
@@ -155,7 +159,7 @@ export class AuthRepository {
     userId: BackupCodes$Insert['userId'],
     codeHashes: BackupCodes$Insert['codeHash'][],
   ): Promise<void> {
-    await this.database.db.insert(backupCodes).values(codeHashes.map((codeHash) => ({ userId, codeHash })));
+    await this.conn.insert(backupCodes).values(codeHashes.map((codeHash) => ({ userId, codeHash })));
   }
 
   // ─── Register ────────────────────────────────────────────────────────
