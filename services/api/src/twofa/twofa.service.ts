@@ -2,17 +2,22 @@ import { Injectable } from '@nestjs/common';
 import { ApiException } from '@terab/common';
 import { contract } from '@terab/contract';
 import { TokenService } from '@terab/security';
+import { DatabaseService, ServiceCore, TransactionContext } from '@terab/db';
 import { ServerInferResponseBody } from '@ts-rest/core';
 import { randomInt } from 'node:crypto';
 import { TwoFaRepository } from './twofa.repository';
 
 @Injectable()
-export class TwoFaService {
+export class TwoFaService extends ServiceCore {
   private CHALLENGE_EXPIRY_MS = 60_000; // 60s
   constructor(
+    database: DatabaseService,
+    txContext: TransactionContext,
     private readonly twoFaRepository: TwoFaRepository,
     private readonly tokenService: TokenService,
-  ) {}
+  ) {
+    super(database, txContext);
+  }
 
   async createChallenge(userId: string) {
     const optionNums = this.generateOptions();

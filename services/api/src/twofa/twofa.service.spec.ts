@@ -1,5 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { ApiException } from '@terab/common';
+import { DatabaseService, TransactionContext } from '@terab/db';
+import { mockDatabaseService, mockTransactionContext } from '@terab/test';
 import { TokenService } from '@terab/security';
 import { TwoFaRepository } from './twofa.repository';
 import { TwoFaService } from './twofa.service';
@@ -22,6 +24,8 @@ describe('TwoFaService', () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         TwoFaService,
+        { provide: DatabaseService, useValue: mockDatabaseService },
+        { provide: TransactionContext, useValue: mockTransactionContext },
         { provide: TwoFaRepository, useValue: mockTwoFaRepository },
         { provide: TokenService, useValue: mockTokenService },
       ],
