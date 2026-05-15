@@ -206,6 +206,11 @@ describe('AuthService', () => {
       await service.register(registerDto);
 
       expect(mockDbTransaction).toHaveBeenCalled();
+      const txOrder = mockDbTransaction.mock.invocationCallOrder[0];
+      expect(mockAuthRepository.insertUser.mock.invocationCallOrder[0]).toBeGreaterThan(txOrder);
+      expect(mockAuthRepository.insertUserRole.mock.invocationCallOrder[0]).toBeGreaterThan(txOrder);
+      expect(mockAuthRepository.insertBackupCodes.mock.invocationCallOrder[0]).toBeGreaterThan(txOrder);
+      expect(mockInvitationService.consume.mock.invocationCallOrder[0]).toBeGreaterThan(txOrder);
     });
   });
 

@@ -62,17 +62,16 @@ export class AuthService extends ServiceCore implements OnModuleInit {
     const codeHashes = await Promise.all(rawCodes.map((code) => bcrypt.hash(code, this.BCRYPT_ROUNDS)));
 
     const newUser = await this.runInTx(async () => {
-      let inserted: { id: string };
-      try {
-        inserted = await this.authRepository.insertUser({
+      const inserted = await this.authRepository
+        .insertUser({
           username: data.username,
           nickname: data.nickname,
           password: hashedPassword,
+        })
+        .catch((err: { code?: string }) => {
+          if (err.code === '23505') throw new ApiException('USERNAME_TAKEN');
+          throw err;
         });
-      } catch (err) {
-        if ((err as { code?: string }).code === '23505') throw new ApiException('USERNAME_TAKEN');
-        throw err;
-      }
       await this.authRepository.insertUserRole(inserted.id, userRole.id);
       await this.authRepository.insertBackupCodes(inserted.id, codeHashes);
       await this.invitationService.consume(data.token, inserted.id);
