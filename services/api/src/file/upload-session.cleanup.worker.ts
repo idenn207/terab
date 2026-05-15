@@ -4,6 +4,8 @@ import { Job, Queue } from 'bullmq';
 import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
 import { UploadSessionService } from './upload-session.service';
 
+// @AutoTrace() 미부착: RequestTraceContext는 HTTP 요청 단위 AsyncLocalStorage 컨텍스트이므로
+// BullMQ worker tick(요청 외부에서 시작됨)에는 적용할 수 없다. 명시적 pino 로그로 trace를 대체한다.
 @Processor('upload-session-cleanup')
 export class UploadSessionCleanupWorker extends WorkerHost implements OnApplicationBootstrap {
   private readonly TICK_JOB_ID = 'upload-session-cleanup-tick';

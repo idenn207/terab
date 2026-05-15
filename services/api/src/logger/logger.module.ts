@@ -16,6 +16,9 @@ import { TraceFlusher } from './trace.flusher';
   exports: [DrizzleQueryLogger, TraceInterceptor, TraceFlusher],
 })
 export class LoggerModule {
+  // PinoLoggerModule을 정적 exports에 두지 않는다 — forRoot() 반환값(DynamicModule)의 exports로만 노출한다.
+  // 정적 @Module 평가 시점에 createProvidersForDecorated()가 호출되어 후행 @InjectPinoLogger 등록이 누락되기 때문.
+  //
   // nestjs-pino@4의 createProvidersForDecorated()는 forRootAsync 호출 시점에 동기 실행되어
   // @InjectPinoLogger의 decorated context Set을 스냅샷한다. 정적 @Module() 내에서 호출하면
   // 이 파일이 로드되는 시점에만 등록된 컨텍스트만 캡처되므로, 후행 모듈(TwoFa/File 등)의
