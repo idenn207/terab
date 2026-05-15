@@ -1,6 +1,6 @@
 import { Test } from '@nestjs/testing';
 import { DatabaseService, TransactionContext } from '@terab/db';
-import { mockDatabaseService, mockDbLimit, mockTransactionContext, setupMockDbSelectChain } from '@terab/test';
+import { mockDatabaseService, mockDbInsert, mockDbLimit, mockTransactionContext, setupMockDbSelectChain } from '@terab/test';
 import { AuthRepository } from './auth.repository';
 
 describe('AuthRepository', () => {
@@ -67,6 +67,19 @@ describe('AuthRepository', () => {
       const result = await repo.findActiveRefreshTokenByHash('valid-hash', now);
 
       expect(result).toBeNull();
+    });
+  });
+
+  describe('insertUser', () => {
+    it('insert가 row를 반환하지 않으면 REGISTRATION_FAILED 예외를 던진다', async () => {
+      const mockReturning = jest.fn().mockResolvedValue([]);
+      mockDbInsert.mockReturnValue({
+        values: jest.fn().mockReturnValue({ returning: mockReturning }),
+      });
+
+      await expect(
+        repo.insertUser({ username: 'x', nickname: 'y', password: 'z' }),
+      ).rejects.toMatchObject({ code: 'REGISTRATION_FAILED' });
     });
   });
 });

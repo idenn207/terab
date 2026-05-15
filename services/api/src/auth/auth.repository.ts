@@ -1,4 +1,4 @@
-import { ConflictException, Injectable, InternalServerErrorException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import {
   BackupCodes$Insert,
   DatabaseService,
@@ -10,7 +10,6 @@ import {
   Users$Insert,
   Users$Select,
   backupCodes,
-  invitations,
   permissions,
   refreshTokens,
   rolePermissions,
@@ -18,6 +17,7 @@ import {
   userRoles,
   users,
 } from '@terab/db';
+import { ApiException } from '@terab/common';
 import { and, eq, gt, isNull } from 'drizzle-orm';
 
 export interface UserWithPermissions {
@@ -129,7 +129,7 @@ export class AuthRepository extends RepositoryCore {
 
   async insertUser(data: Pick<Users$Insert, 'username' | 'nickname' | 'password'>) {
     const [row] = await this.conn.insert(users).values(data).returning({ id: users.id });
-    if (!row) throw new InternalServerErrorException('사용자 생성 실패');
+    if (!row) throw new ApiException('REGISTRATION_FAILED');
     return row;
   }
 
@@ -161,36 +161,4 @@ export class AuthRepository extends RepositoryCore {
   ): Promise<void> {
     await this.conn.insert(backupCodes).values(codeHashes.map((codeHash) => ({ userId, codeHash })));
   }
-
-  // ─── Register ────────────────────────────────────────────────────────
-
-  async registerUser(data: {
-    username: string;
-    nickname: string;
-    password: string;
-    roleId: string;
-    codeHashes: string[];
-    invitationToken: string;
-  }): Promise<{ id: string }> {
-    return this.database.db.transaction(async (tx) => {
-      const [newUser] = await tx
-        .insert(users)
-        .values({ username: data.username, nickname: data.nickname, password: data.password })
-        .returning({ id: users.id });
-      if (!newUser) throw new InternalServerErrorException('사용자 생성 실패');
-
-      await tx.insert(userRoles).values({ userId: newUser.id, roleId: data.roleId });
-      await tx.insert(backupCodes).values(data.codeHashes.map((codeHash) => ({ userId: newUser.id, codeHash })));
-      const updated = await tx
-        .update(invitations)
-        .set({ usedAt: new Date(), usedBy: newUser.id })
-        .where(and(eq(invitations.token, data.invitationToken), isNull(invitations.usedAt)))
-        .returning({ id: invitations.id });
-
-      if (updated.length === 0) throw new ConflictException('INVITATION_ALREADY_USED');
-      return newUser;
-    });
-  }
-
-  // ─── Login ───────────────────────────────────────────────────────────
 }
