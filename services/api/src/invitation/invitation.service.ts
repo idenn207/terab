@@ -38,6 +38,11 @@ export class InvitationService {
     return row;
   }
 
+  async consume(token: string, usedBy: string): Promise<void> {
+    const row = await this.invitationRepository.consume(token, usedBy);
+    if (!row) throw new ApiException('INVITATION_ALREADY_USED');
+  }
+
   async deactivate(token: string): Promise<void> {
     const found = await this.invitationRepository.deactivate(token);
     if (!found) throw new ApiException('INVITATION_NOT_FOUND');
