@@ -43,10 +43,6 @@ export class InvitationService {
     if (!found) throw new ApiException('INVITATION_NOT_FOUND');
   }
 
-  async markUsed(token: string, usedBy: string) {
-    await this.invitationRepository.markUsed(token, usedBy);
-  }
-
   private getException(
     row: Pick<Invitations$Select, 'deactivatedAt' | 'usedAt' | 'expiresAt'> | null,
   ): ApiException | null {

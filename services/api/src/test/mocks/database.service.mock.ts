@@ -7,6 +7,7 @@ export const mockDbInsert = jest.fn();
 export const mockDbUpdate = jest.fn();
 export const mockDbDelete = jest.fn();
 export const mockDbTransaction = jest.fn();
+export const mockDbReturning = jest.fn();
 
 export const mockDatabaseService = {
   db: {

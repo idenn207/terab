@@ -8,7 +8,6 @@ const mockInvitationRepository = {
   insert: jest.fn(),
   findByToken: jest.fn(),
   deactivate: jest.fn(),
-  markUsed: jest.fn(),
 };
 
 const mockConfigService = {
