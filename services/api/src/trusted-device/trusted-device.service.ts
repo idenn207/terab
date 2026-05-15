@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { ApiException } from '@terab/common';
 import { DatabaseService, ServiceCore, TransactionContext } from '@terab/db';
+import { LogReplay } from '@terab/logger';
 import { TokenService } from '@terab/security';
 import { randomUUID } from 'node:crypto';
 import { TrustedDeviceResponseDto } from './dto/trusted-device-response.dto';
@@ -18,6 +19,7 @@ export class TrustedDeviceService extends ServiceCore {
     super(database, txContext);
   }
 
+  @LogReplay()
   async register(userId: string, userAgent: string | undefined): Promise<string> {
     const rawToken = `${randomUUID()}-${randomUUID()}`;
     const tokenHash = this.tokenService.hashToken(rawToken);
