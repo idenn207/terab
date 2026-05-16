@@ -1,13 +1,22 @@
 import { Injectable } from '@nestjs/common';
 import { ApiException } from '@terab/common';
 import { contract } from '@terab/contract';
+import { DatabaseService, ServiceCore, TransactionContext } from '@terab/db';
+import { LogReplay } from '@terab/logger';
 import { ServerInferResponseBody } from '@ts-rest/core';
 import { DeviceRepository } from './device.repository';
 
 @Injectable()
-export class DeviceService {
-  constructor(private readonly deviceRepository: DeviceRepository) {}
+export class DeviceService extends ServiceCore {
+  constructor(
+    database: DatabaseService,
+    txContext: TransactionContext,
+    private readonly deviceRepository: DeviceRepository,
+  ) {
+    super(database, txContext);
+  }
 
+  @LogReplay()
   async register(userId: string, pushToken: string, userAgent: string | undefined): Promise<void> {
     await this.deviceRepository.upsert(userId, pushToken, userAgent);
   }

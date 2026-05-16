@@ -1,12 +1,12 @@
 import { HttpStatus } from '@terab/common';
-import { EmptySchema } from '@terab/schema';
-import { initContract } from '@ts-rest/core';
-import z from 'zod';
 import {
   ChallengeStatusResponseSchema,
+  EmptySchema,
   ResendChallengeResponseSchema,
   RespondChallengeBodySchema,
-} from '../schemas/twofa.schema';
+} from '@terab/schema';
+import { initContract } from '@ts-rest/core';
+import z from 'zod';
 
 const c = initContract();
 

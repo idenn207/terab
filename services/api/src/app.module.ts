@@ -1,24 +1,40 @@
+import { createKeyv } from '@keyv/redis';
 import { BullModule } from '@nestjs/bullmq';
+import { CacheModule } from '@nestjs/cache-manager';
 import { Module, ValidationPipe } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
-import { APP_FILTER, APP_GUARD, APP_PIPE } from '@nestjs/core';
+import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR, APP_PIPE } from '@nestjs/core';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { ApiExceptionFilter, JwtAuthGuard, PermissionGuard } from '@terab/common';
-import { CoreModule } from '@terab/core';
 import { DatabaseModule } from '@terab/db';
+import { LoggerModule, TraceInterceptor } from '@terab/logger';
+import { SecurityModule } from '@terab/security';
 import { AuthModule } from './auth/auth.module';
 import { DeviceModule } from './device/device.module';
+import { FileModule } from './file/file.module';
+import { FolderModule } from './folder/folder.module';
 import { HealthModule } from './health/health.module';
 import { InvitationModule } from './invitation/invitation.module';
+import { MinioModule } from './minio/minio.module';
+import { TrashModule } from './trash/trash.module';
 import { TrustedDeviceModule } from './trusted-device/trusted-device.module';
 import { TwoFaModule } from './twofa/twofa.module';
 
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
+    LoggerModule.forRoot(),
     ThrottlerModule.forRoot([{ ttl: 60000, limit: 60 }]),
+    CacheModule.registerAsync({
+      isGlobal: true,
+      inject: [ConfigService],
+      useFactory: (config: ConfigService) => {
+        const store = createKeyv(config.getOrThrow<string>('REDIS_URL'));
+        store.namespace = 'cache';
+        return { stores: [store], ttl: 60_000 };
+      },
+    }),
     BullModule.forRootAsync({
-      imports: [ConfigModule],
       inject: [ConfigService],
       useFactory: (config: ConfigService) => ({
         connection: {
@@ -27,19 +43,25 @@ import { TwoFaModule } from './twofa/twofa.module';
       }),
     }),
     DatabaseModule,
-    CoreModule,
+    MinioModule,
+    SecurityModule,
     HealthModule,
     AuthModule,
     DeviceModule,
     TrustedDeviceModule,
     TwoFaModule,
     InvitationModule,
+    FolderModule,
+    FileModule,
+    TrashModule,
   ],
   providers: [
     // 전역 Guard: ThrottlerGuard → JwtAuthGuard(401) → PermissionGuard(403) 순서 보장
     { provide: APP_GUARD, useClass: ThrottlerGuard },
     { provide: APP_GUARD, useClass: JwtAuthGuard },
     { provide: APP_GUARD, useClass: PermissionGuard },
+    // 전역 Interceptor
+    { provide: APP_INTERCEPTOR, useClass: TraceInterceptor },
     // 전역 Exception Filter
     { provide: APP_FILTER, useClass: ApiExceptionFilter },
     // 전역 Validation Pipe

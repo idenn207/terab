@@ -31,10 +31,22 @@ make mq           # MQ 개발 서버 실행
 
 ```bash
 make setup        # Docker Config/Secret 등록 (configs.env + secrets.env 필요)
-make stack-deploy # Docker Swarm 스택 배포
+make stack        # Docker Swarm 스택 배포
 make stack-update # API/Web 이미지 롤링 업데이트
-make stack-rm     # 스택 제거
+make stack-down   # 스택 제거
 ```
+
+### 환경 설정
+
+각 서비스의 필요 환경변수는 루트의 `*.env.example` 파일을 참조한다.
+
+| 파일 | 대상 서비스 |
+| --- | --- |
+| `api.env.example` | services/api |
+| `mq.env.example` | services/mq |
+| `web.env.example` | services/web |
+| `infra.env.example` | DB / Redis / MinIO |
+| `runner.env.example` | GitHub Actions Self-Hosted Runner |
 
 ## 디렉토리 구조
 
@@ -42,7 +54,7 @@ make stack-rm     # 스택 제거
 packages/
   contracts/    # API·Web 공유 계약 (ts-rest + Zod) — 세부 컨벤션은 packages/contracts/CLAUDE.md 참조
 services/
-  api/          # Spring Boot — 세부 컨벤션은 services/api/CLAUDE.md 참조
+  api/          # NestJS 11 (REST API) — 세부 컨벤션은 services/api/CLAUDE.md 참조
   mq/           # MQ 서비스 (BullMQ Worker + FCM) — 별도 NestJS 서비스
   web/          # React + Vite — 세부 컨벤션은 services/web/CLAUDE.md 참조
   nginx/        # 리버스 프록시 설정
@@ -122,10 +134,14 @@ scripts/        # 빌드/배포 자동화 스크립트
 - 요청 범위를 벗어난 리팩토링, 주석 추가, 기능 확장 금지
 - 기존 파일의 설정값(비밀번호, 포트 등)을 추측이나 예시값으로 덮어쓰기 금지
 - 보안에 민감한 파일(`*.env`, `secrets.*`, `application-*.properties`) 수정 전 반드시 확인
-- 새 파일 생성 시 줄바꿈은 기본 CRLF; 단, 아래 조건 중 하나라도 해당하면 LF로 저장한다
+- **새 파일 생성 시 줄바꿈은 반드시 CRLF(`\r\n`)로 저장한다** — Windows 개발 환경 기본값. Write 도구는 LF를 기본으로 사용하므로, **파일 생성 후 반드시 CRLF 변환을 검증한다.**
+  - 검증: `file {path}` 또는 PowerShell `(Get-Content -Raw {path}) -match "\r\n"` 로 EOL 확인
+  - 변환: LF로 생성된 경우 PowerShell `-replace "(?<!\r)\n","\`r\`n"` 으로 즉시 보정
+- 단, 아래 조건 중 하나라도 해당하면 **LF(`\n`)로 저장한다**
   - Docker 이미지 빌드에 포함되는 파일 (`Dockerfile`, 컨테이너 내 shell script 등)
   - GitHub Actions / CI runner에서 직접 실행되는 파일 (`.github/workflows/*.yml`, `scripts/*.sh` 등)
   - Linux 서버에서 직접 실행되는 shell script
+- `.gitattributes`가 일부 경로를 강제 EOL로 지정하고 있으므로, 위 규칙과 충돌 시 `.gitattributes`를 우선한다
 
 ### 응답
 

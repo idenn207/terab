@@ -1,8 +1,7 @@
 import { Controller, HttpStatus } from '@nestjs/common';
-import { CurrentUser, Public } from '@terab/common';
+import { type AuthUser, CurrentUser, Public } from '@terab/common';
 import { contract } from '@terab/contract';
 import { tsRestHandler, TsRestHandler } from '@ts-rest/nest';
-import type { AuthUser } from '../auth/types/auth-user.type';
 import { TwoFaService } from './twofa.service';
 
 @Controller()

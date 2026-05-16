@@ -1,4 +1,4 @@
-import { AuthUser } from '../../auth/types/auth-user.type';
+import type { AuthUser } from '@terab/common';
 
 export const mockUser = {
   id: 'uuid-1',

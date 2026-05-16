@@ -1,8 +1,7 @@
-import { EmptySchema } from '@terab/schema';
+import { HttpStatus } from '@terab/common';
+import { EmptySchema, TrustedDeviceResponseSchema } from '@terab/schema';
 import { initContract } from '@ts-rest/core';
 import z from 'zod';
-import { HttpStatus } from '../common';
-import { TrustedDeviceResponseSchema } from '../schemas/trusted-device.schema';
 
 const c = initContract();
 

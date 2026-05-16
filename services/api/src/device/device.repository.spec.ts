@@ -1,6 +1,6 @@
 import { Test } from '@nestjs/testing';
-import { DatabaseService } from '@terab/db';
-import { mockDatabaseService, setupMockDbSelectChain } from '@terab/test';
+import { DatabaseService, TransactionContext } from '@terab/db';
+import { mockDatabaseService, mockTransactionContext, setupMockDbSelectChain } from '@terab/test';
 import { DeviceRepository } from './device.repository';
 
 describe('DeviceRepository', () => {
@@ -8,7 +8,11 @@ describe('DeviceRepository', () => {
 
   beforeEach(async () => {
     const module = await Test.createTestingModule({
-      providers: [DeviceRepository, { provide: DatabaseService, useValue: mockDatabaseService }],
+      providers: [
+        DeviceRepository,
+        { provide: DatabaseService, useValue: mockDatabaseService },
+        { provide: TransactionContext, useValue: mockTransactionContext },
+      ],
     }).compile();
 
     repo = module.get(DeviceRepository);

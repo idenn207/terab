@@ -1,19 +1,26 @@
 import { Injectable } from '@nestjs/common';
 import { ApiException } from '@terab/common';
 import { contract } from '@terab/contract';
-import { TokenService } from '@terab/core';
+import { DatabaseService, ServiceCore, TransactionContext } from '@terab/db';
+import { LogReplay } from '@terab/logger';
+import { TokenService } from '@terab/security';
 import { ServerInferResponseBody } from '@ts-rest/core';
 import { randomInt } from 'node:crypto';
 import { TwoFaRepository } from './twofa.repository';
 
 @Injectable()
-export class TwoFaService {
+export class TwoFaService extends ServiceCore {
   private CHALLENGE_EXPIRY_MS = 60_000; // 60s
   constructor(
+    database: DatabaseService,
+    txContext: TransactionContext,
     private readonly twoFaRepository: TwoFaRepository,
     private readonly tokenService: TokenService,
-  ) {}
+  ) {
+    super(database, txContext);
+  }
 
+  @LogReplay()
   async createChallenge(userId: string) {
     const optionNums = this.generateOptions();
     const options = optionNums.join(',');
@@ -59,6 +66,7 @@ export class TwoFaService {
     return { status: 'DENIED' };
   }
 
+  @LogReplay()
   async respond(challengeId: string, userId: string, selectedNumber: string): Promise<void> {
     const challenge = await this.twoFaRepository.findById(challengeId);
     if (!challenge) throw new ApiException('TWO_FA_CHALLENGE_NOT_FOUND');
@@ -74,6 +82,7 @@ export class TwoFaService {
     }
   }
 
+  @LogReplay()
   async claimApprovedChallenge(challengeId: string): Promise<string> {
     const challenge = await this.twoFaRepository.findById(challengeId);
     if (!challenge || challenge.status !== 'APPROVED') throw new ApiException('TWO_FA_CHALLENGE_NOT_FOUND');
@@ -81,6 +90,7 @@ export class TwoFaService {
     return challenge.userId;
   }
 
+  @LogReplay()
   async resend(oldChallengeId: string): Promise<{ id: string; options: string[]; expiresAt: Date }> {
     const old = await this.twoFaRepository.findById(oldChallengeId);
     if (!old) throw new ApiException('TWO_FA_CHALLENGE_NOT_FOUND');

@@ -1,6 +1,6 @@
 import { ExecutionContext, ForbiddenException } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
-import { AuthUser } from '../../auth/types/auth-user.type';
+import type { AuthUser } from '@terab/common';
 import { PermissionGuard } from './permission.guard';
 
 function mockContext(user: AuthUser | undefined, handler: object = {}): ExecutionContext {

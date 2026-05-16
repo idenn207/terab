@@ -1,14 +1,16 @@
 import { ConfigService } from '@nestjs/config';
 import { Test } from '@nestjs/testing';
 import { ApiException } from '@terab/common';
+import { DatabaseService, TransactionContext } from '@terab/db';
+import { mockDatabaseService, mockTransactionContext } from '@terab/test';
 import { InvitationRepository } from './invitation.repository';
 import { InvitationService } from './invitation.service';
 
 const mockInvitationRepository = {
   insert: jest.fn(),
   findByToken: jest.fn(),
+  consume: jest.fn(),
   deactivate: jest.fn(),
-  markUsed: jest.fn(),
 };
 
 const mockConfigService = {
@@ -22,6 +24,8 @@ describe('InvitationService', () => {
     const module = await Test.createTestingModule({
       providers: [
         InvitationService,
+        { provide: DatabaseService, useValue: mockDatabaseService },
+        { provide: TransactionContext, useValue: mockTransactionContext },
         { provide: InvitationRepository, useValue: mockInvitationRepository },
         { provide: ConfigService, useValue: mockConfigService },
       ],
@@ -139,6 +143,24 @@ describe('InvitationService', () => {
         code = (e as ApiException).code;
       }
       expect(code).toBe('INVITATION_EXPIRED');
+    });
+  });
+
+  describe('consume', () => {
+    it('repository가 row를 반환하면 정상 종료한다', async () => {
+      mockInvitationRepository.consume.mockResolvedValue({ id: 'invitation-1' });
+
+      await expect(service.consume('valid-token', 'user-1')).resolves.toBeUndefined();
+      expect(mockInvitationRepository.consume).toHaveBeenCalledWith('valid-token', 'user-1');
+    });
+
+    it('repository가 null을 반환하면 INVITATION_ALREADY_USED 예외를 던진다', async () => {
+      mockInvitationRepository.consume.mockResolvedValue(null);
+
+      await expect(service.consume('used-token', 'user-1')).rejects.toThrow(ApiException);
+      await expect(service.consume('used-token', 'user-1')).rejects.toMatchObject({
+        code: 'INVITATION_ALREADY_USED',
+      });
     });
   });
 });

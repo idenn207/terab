@@ -1,8 +1,10 @@
-import { ConflictException, Injectable, OnModuleInit } from '@nestjs/common';
+import { Injectable, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { ApiException } from '@terab/common';
 import { contract } from '@terab/contract';
-import { TokenService } from '@terab/core';
+import { DatabaseService, ServiceCore, TransactionContext } from '@terab/db';
+import { LogReplay } from '@terab/logger';
+import { TokenService } from '@terab/security';
 import { ServerInferRequest, ServerInferResponseBody } from '@ts-rest/core';
 import bcrypt from 'bcryptjs';
 import { randomBytes } from 'node:crypto';
@@ -20,10 +22,12 @@ interface AuthTokens {
 }
 
 @Injectable()
-export class AuthService implements OnModuleInit {
+export class AuthService extends ServiceCore implements OnModuleInit {
   protected readonly BCRYPT_ROUNDS = 10;
 
   constructor(
+    database: DatabaseService,
+    txContext: TransactionContext,
     private readonly pushChallengePublisher: PushChallengePublisher,
     private readonly configService: ConfigService,
     private readonly tokenService: TokenService,
@@ -32,7 +36,9 @@ export class AuthService implements OnModuleInit {
     private readonly trustedDeviceService: TrustedDeviceService,
     private readonly invitationService: InvitationService,
     private readonly authRepository: AuthRepository,
-  ) {}
+  ) {
+    super(database, txContext);
+  }
 
   async onModuleInit(): Promise<void> {
     await this.initOwnerAccount();
@@ -40,6 +46,7 @@ export class AuthService implements OnModuleInit {
 
   // ─── Register ────────────────────────────────────────────────────────
 
+  @LogReplay()
   async register(
     data: ServerInferRequest<typeof contract.auth.register>['body'],
   ): Promise<
@@ -48,7 +55,7 @@ export class AuthService implements OnModuleInit {
     await this.invitationService.validateOrThrow(data.token);
 
     const userRole = await this.authRepository.findRoleByName('USER');
-    if (!userRole) throw new Error('USER 역할 없음 - 마이그레이션 실행 여부를 확인하세요');
+    if (!userRole) throw new ApiException('ROLE_NOT_FOUND');
 
     const pepperedPassword = this.tokenService.pepperPassword(data.password);
     const hashedPassword = await bcrypt.hash(pepperedPassword, this.BCRYPT_ROUNDS);
@@ -56,24 +63,25 @@ export class AuthService implements OnModuleInit {
     const rawCodes = this.generateBackupCodes();
     const codeHashes = await Promise.all(rawCodes.map((code) => bcrypt.hash(code, this.BCRYPT_ROUNDS)));
 
-    let newUser: { id: string };
-    try {
-      newUser = await this.authRepository.registerUser({
-        username: data.username,
-        nickname: data.nickname,
-        password: hashedPassword,
-        roleId: userRole.id,
-        codeHashes,
-        invitationToken: data.token,
-      });
-    } catch (err) {
-      if (err instanceof ConflictException) throw new ApiException('INVITATION_ALREADY_USED');
-      if ((err as { code?: string }).code === '23505') throw new ApiException('USERNAME_TAKEN');
-      throw err;
-    }
+    const newUser = await this.runInTx(async () => {
+      const inserted = await this.authRepository
+        .insertUser({
+          username: data.username,
+          nickname: data.nickname,
+          password: hashedPassword,
+        })
+        .catch((err: { code?: string }) => {
+          if (err.code === '23505') throw new ApiException('USERNAME_TAKEN');
+          throw err;
+        });
+      await this.authRepository.insertUserRole(inserted.id, userRole.id);
+      await this.authRepository.insertBackupCodes(inserted.id, codeHashes);
+      await this.invitationService.consume(data.token, inserted.id);
+      return inserted;
+    });
 
     const userWithPermissions = await this.authRepository.findUserWithPermissionsById(newUser.id);
-    if (!userWithPermissions) throw new Error('가입 직후 사용자 조회 실패');
+    if (!userWithPermissions) throw new ApiException('REGISTRATION_FAILED');
 
     const tokens = await this.issueTokenPair(userWithPermissions);
 
@@ -92,10 +100,11 @@ export class AuthService implements OnModuleInit {
 
   // ─── Login ───────────────────────────────────────────────────────────
 
+  @LogReplay({ captureResult: true })
   async login(
     data: ServerInferRequest<typeof contract.auth.login>['body'],
     trustToken: string | undefined,
-    userAgent: string | undefined,
+    _userAgent: string | undefined,
   ): Promise<
     {
       response: ServerInferResponseBody<typeof contract.auth.login>;
@@ -218,6 +227,7 @@ export class AuthService implements OnModuleInit {
 
   // ─── Refresh ─────────────────────────────────────────────────────────
 
+  @LogReplay({ captureResult: true })
   async refresh(rawRefreshToken: string | undefined): Promise<
     {
       response: ServerInferResponseBody<typeof contract.auth.login>;
@@ -258,6 +268,7 @@ export class AuthService implements OnModuleInit {
 
   // ─── Logout ──────────────────────────────────────────────────────────
 
+  @LogReplay()
   async logout(rawRefreshToken: string | undefined): Promise<void> {
     if (!rawRefreshToken) return;
     const now = new Date();

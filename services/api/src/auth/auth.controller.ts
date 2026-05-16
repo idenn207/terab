@@ -1,18 +1,15 @@
 import { Controller, Headers, HttpStatus, Req, Res } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
-import { Cookies } from '@terab/common';
+import { Cookies, CurrentUser, Public, type AuthUser } from '@terab/common';
 import { contract } from '@terab/contract';
 import { tsRestHandler, TsRestHandler } from '@ts-rest/nest';
 import type { Request, Response } from 'express';
-import { CurrentUser } from '../common/decorators/current-user.decorator';
-import { Public } from '../common/decorators/public.decorator';
 import { AuthService } from './auth.service';
-import type { AuthUser } from './types/auth-user.type';
 
 @Controller()
 export class AuthController {
   protected REFRESH_TOKEN_COOKIE = 'refreshToken';
-  protected COOKIE_PATH = '/api/auth';
+  protected COOKIE_PATH = '/';
   constructor(private readonly authService: AuthService) {}
 
   @Public()

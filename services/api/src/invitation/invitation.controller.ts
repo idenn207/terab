@@ -1,9 +1,8 @@
 import { Controller, HttpStatus } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
-import { CurrentUser, Public, RequirePermission } from '@terab/common';
+import { type AuthUser, CurrentUser, Public, RequirePermission } from '@terab/common';
 import { contract } from '@terab/contract';
 import { tsRestHandler, TsRestHandler } from '@ts-rest/nest';
-import type { AuthUser } from '../auth/types/auth-user.type';
 import { InvitationService } from './invitation.service';
 
 @Controller()

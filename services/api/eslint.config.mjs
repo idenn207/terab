@@ -7,7 +7,7 @@ import tseslint from 'typescript-eslint';
 
 export default defineConfig(
   {
-    ignores: ['eslint.config.mjs', 'jest.config.cjs', '**/*.spec.ts'],
+    ignores: ['eslint.config.mjs', 'jest*.config.cjs', '**/*.spec.ts', '**/*.e2e-spec.ts'],
   },
   eslint.configs.recommended,
   ...tseslint.configs.recommendedTypeChecked,
@@ -30,6 +30,7 @@ export default defineConfig(
       '@typescript-eslint/no-explicit-any': 'off',
       '@typescript-eslint/no-floating-promises': 'warn',
       '@typescript-eslint/no-unsafe-argument': 'warn',
+      '@typescript-eslint/no-unsafe-member-argument': 'off',
       'prettier/prettier': ['error', { endOfLine: 'auto' }],
     },
   },

@@ -1,18 +1,25 @@
 import { Injectable } from '@nestjs/common';
 import { ApiException } from '@terab/common';
-import { TokenService } from '@terab/core';
+import { DatabaseService, ServiceCore, TransactionContext } from '@terab/db';
+import { LogReplay } from '@terab/logger';
+import { TokenService } from '@terab/security';
 import { randomUUID } from 'node:crypto';
 import { TrustedDeviceResponseDto } from './dto/trusted-device-response.dto';
 import { TrustedDeviceRepository } from './trusted-device.repository';
 
 @Injectable()
-export class TrustedDeviceService {
+export class TrustedDeviceService extends ServiceCore {
   private TRUST_DURATION_MS = 30 * 24 * 60 * 60 * 1000; // 30일
   constructor(
+    database: DatabaseService,
+    txContext: TransactionContext,
     private readonly trustedDeviceRepository: TrustedDeviceRepository,
     private readonly tokenService: TokenService,
-  ) {}
+  ) {
+    super(database, txContext);
+  }
 
+  @LogReplay()
   async register(userId: string, userAgent: string | undefined): Promise<string> {
     const rawToken = `${randomUUID()}-${randomUUID()}`;
     const tokenHash = this.tokenService.hashToken(rawToken);

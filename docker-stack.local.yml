@@ -27,11 +27,14 @@ services:
       - '9000:9000'
       - '9001:9001'
 
+  minio-init:
+    env_file:
+      - infra.dev.env
+
   redis:
     image: redis:8-alpine
     volumes:
       - ./volumes/redis:/data
-      - ./redis.conf:/usr/local/etc/redis/redis.conf:ro
     deploy:
       placement:
         constraints: []
@@ -63,7 +66,7 @@ services:
   nginx:
     image: nginx:alpine
     volumes:
-      - ./services/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./services/nginx/conf.d:/etc/nginx/conf.d:ro
 
   # ─── 로컬 불필요 서비스 제거 ─────────────────────────────────────
   portainer:
@@ -75,3 +78,9 @@ services:
     deploy:
       mode: replicated
       replicas: 0
+
+configs:
+  nginx_config:
+    file: './services/nginx/nginx.local.conf'
+  redis_config:
+    file: './redis.conf'

@@ -1,5 +1,7 @@
 export * from './backup-codes.schema';
 export * from './devices.schema';
+export * from './files.schema';
+export * from './folders.schema';
 export * from './invitations.schema';
 export * from './permissions.schema';
 export * from './refresh-tokens.schema';
@@ -7,5 +9,6 @@ export * from './role-permissions.schema';
 export * from './roles.schema';
 export * from './trusted-devices.schema';
 export * from './two-fa-challenges.schema';
+export * from './upload-sessions.schema';
 export * from './user-roles.schema';
 export * from './users.schema';

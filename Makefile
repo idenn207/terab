@@ -34,11 +34,14 @@ infra-reset:
 
 # ─── 개발 환경 (전체 서비스, 로컬 빌드) ──────────────────────────
 .PHONY: dev
-dev: infra-down
+dev: image infra-down dev-only
+	
+.PHONY: dev-only
+dev-only:
 	docker stack deploy -c docker-stack.yml -c docker-stack.local.yml --resolve-image=never terab-dev
 
 .PHONY: dev-down
-dev-down:
+dev-down: infra-down
 	docker stack rm terab-dev
 
 .PHONY: dev-update
@@ -98,8 +101,8 @@ stack-update:
 		terab_web \
 
 # ─── docker 이미지 빌드 ─────────────────────────────────────────────
-.PHONY: build-local
-build-local:
+.PHONY: image
+image: build
 	docker build -t terab-api:local -f services/api/Dockerfile .
 	docker build -t terab-mq:local ./services/mq
 	docker build -t terab-web:local -f services/web/Dockerfile .

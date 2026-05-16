@@ -1,15 +1,14 @@
 import { Controller, Headers, HttpStatus, Res } from '@nestjs/common';
-import { CurrentUser } from '@terab/common';
+import { type AuthUser, CurrentUser } from '@terab/common';
 import { contract } from '@terab/contract';
 import { tsRestHandler, TsRestHandler } from '@ts-rest/nest';
 import type { Response } from 'express';
-import type { AuthUser } from '../auth/types/auth-user.type';
 import { TrustedDeviceService } from './trusted-device.service';
 
 @Controller()
 export class TrustedDeviceController {
   private readonly TRUST_TOKEN_COOKIE = 'trustToken';
-  private readonly COOKIE_PATH = '/api/auth';
+  private readonly COOKIE_PATH = '/';
 
   constructor(private readonly trustedDeviceService: TrustedDeviceService) {}
 
