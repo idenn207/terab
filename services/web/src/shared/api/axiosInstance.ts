@@ -1,19 +1,16 @@
 import { useUserStore } from '@/entities';
 import axios, { AxiosError, type InternalAxiosRequestConfig } from 'axios';
+import { PUBLIC_PATHS } from './generated/public-paths.gen';
 
-/** accessToken 없이 일반 요청 */
-const axiosBasic = axios.create({
+export const axiosInstance = axios.create({
   baseURL: '/api',
   withCredentials: true,
 });
 
-/** accessToken 으로 요청 + refreshToken 검증 */
-const axiosAuth = axios.create({
-  baseURL: '/api',
-  withCredentials: true,
-});
-
-axiosAuth.interceptors.request.use((config) => {
+axiosInstance.interceptors.request.use((config) => {
+  if (config.url && PUBLIC_PATHS.has(config.url)) {
+    return config;
+  }
   const token = useUserStore.getState().accessToken;
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
@@ -35,49 +32,56 @@ const processQueue = (error: unknown, token: string | null = null) => {
   failedQueue = [];
 };
 
-axiosAuth.interceptors.response.use(
+// Phase 0 호환: 기존 ts-rest consumer가 axiosAuth/axiosBasic을 import 중.
+// Phase 6 (auth) 도메인 전환 완료 시 제거 — axiosInstance 단일화.
+export const axiosAuth = axiosInstance;
+export const axiosBasic = axios.create({ baseURL: '/api', withCredentials: true });
+
+axiosInstance.interceptors.response.use(
   (response) => response,
-  async (error: AxiosError | unknown) => {
-    // AxiosError
-    if (error instanceof AxiosError) {
-      const originalRequest = error.config as InternalAxiosRequestConfig & { _retry?: boolean };
+  async (error: unknown) => {
+    if (!(error instanceof AxiosError)) {
+      throw error;
+    }
+    const originalRequest = error.config as InternalAxiosRequestConfig & { _retry?: boolean };
 
-      if (error.response?.status !== 401 || originalRequest._retry) {
-        return Promise.reject(error);
-      }
+    if (error.response?.status !== 401 || originalRequest._retry) {
+      throw error;
+    }
 
-      if (isRefreshing) {
-        return new Promise<string>((resolve, reject) => {
-          failedQueue.push({ resolve, reject });
-        }).then((token) => {
-          originalRequest.headers.Authorization = `Bearer ${token}`;
-          return axiosAuth(originalRequest);
-        });
-      }
+    if (originalRequest.url && PUBLIC_PATHS.has(originalRequest.url)) {
+      throw error;
+    }
 
-      originalRequest._retry = true;
-      isRefreshing = true;
+    if (isRefreshing) {
+      return new Promise<string>((resolve, reject) => {
+        failedQueue.push({ resolve, reject });
+      }).then((token) => {
+        originalRequest.headers.Authorization = `Bearer ${token}`;
+        return axiosInstance(originalRequest);
+      });
+    }
 
-      try {
-        const { data } = await axiosBasic.post<{ accessToken: string; user: unknown }>('/auth/refresh', {}, { withCredentials: true });
-        useUserStore.getState().setAccessToken(data.accessToken);
-        processQueue(null, data.accessToken);
-        originalRequest.headers.Authorization = `Bearer ${data.accessToken}`;
-        return axiosAuth(originalRequest);
-      } catch (refreshError) {
-        processQueue(refreshError, null);
-        useUserStore.getState().clearAuth();
-        window.location.href = '/login';
-        return Promise.reject(refreshError);
-      } finally {
-        isRefreshing = false;
-      }
+    originalRequest._retry = true;
+    isRefreshing = true;
 
-      // no AxiosError
-    } else {
-      // nothing else...
+    try {
+      const { data } = await axios.post<{ accessToken: string; user: unknown }>(
+        '/api/auth/refresh',
+        {},
+        { withCredentials: true },
+      );
+      useUserStore.getState().setAccessToken(data.accessToken);
+      processQueue(null, data.accessToken);
+      originalRequest.headers.Authorization = `Bearer ${data.accessToken}`;
+      return axiosInstance(originalRequest);
+    } catch (refreshError) {
+      processQueue(refreshError, null);
+      useUserStore.getState().clearAuth();
+      window.location.href = '/login';
+      throw refreshError;
+    } finally {
+      isRefreshing = false;
     }
   },
 );
-
-export { axiosAuth, axiosBasic };

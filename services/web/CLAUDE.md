@@ -54,6 +54,31 @@
 - `entities/user/` — `model/`(useUserStore) + `types.ts` (api·ui 불필요)
 - `widgets/sidebar/` — `ui/`만 (자체 model·api 없이 features를 조합)
 
+### codegen 도입 후 api/ 세그먼트 규칙
+
+`@hey-api/openapi-ts` codegen 함수를 호출하는 슬라이스는 **정책 유무와 무관하게 `api/` 세그먼트를 항상 생성**한다. 단순 wrapper도 작성한다.
+
+- 파일 분리: GET → `api/query.ts`, POST/PATCH/PUT/DELETE → `api/mutation.ts`
+- model은 항상 `../api/...`를 경유한다. **codegen 함수(`@shared/api`의 `xxxMutation`, `xxxOptions`)를 model에서 직접 import 금지** (타입 import는 허용)
+- `api/`는 슬라이스 `index.ts`에서 export 안 함 (외부에는 model/ui만 노출)
+- codegen 산출물 직접 경로(`@/shared/api/generated/...`) 사용 금지 — 항상 `@shared/api` 통일
+
+```ts
+// features/login-by-credentials/api/mutation.ts
+import { useMutation } from '@tanstack/react-query';
+import { loginMutation } from '@shared/api';
+
+export function useLoginMutation() {
+  return useMutation({ ...loginMutation() });
+}
+```
+
+```ts
+// features/login-by-credentials/model/useLogin.ts
+import { useLoginMutation } from '../api/mutation';     // ✅ api 경유
+// ❌ import { loginMutation } from '@shared/api';      // model에서 codegen 함수 직접 import 금지
+```
+
 ### 주요 명령어
 
 ```bash
