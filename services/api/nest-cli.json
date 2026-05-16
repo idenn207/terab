@@ -10,6 +10,7 @@
       }
     },
     "typeCheck": true,
-    "deleteOutDir": true
+    "deleteOutDir": true,
+    "plugins": ["@nestjs/swagger/plugin"]
   }
 }

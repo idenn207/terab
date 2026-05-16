@@ -1,3 +1,4 @@
+import { ValidationPipe } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { NestFactory } from '@nestjs/core';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
@@ -5,6 +6,7 @@ import cookieParser from 'cookie-parser';
 import helmet from 'helmet';
 import { Logger as PinoLogger } from 'nestjs-pino';
 import { AppModule } from './app.module';
+import metadata from './metadata';
 
 async function bootstrap(): Promise<void> {
   const app = await NestFactory.create(AppModule, { bufferLogs: true });
@@ -18,6 +20,14 @@ async function bootstrap(): Promise<void> {
   // ───── Settings ──────────────────────────────
   app.use(helmet());
   app.use(cookieParser());
+
+  app.useGlobalPipes(
+    new ValidationPipe({
+      transform: true,
+      whitelist: true,
+      forbidNonWhitelisted: true,
+    }),
+  );
 
   const allowedOrigins = configService
     .getOrThrow<string>('CORS_ALLOWED_ORIGINS')
@@ -33,9 +43,10 @@ async function bootstrap(): Promise<void> {
   // ───── Swagger ─────────────────────────
   // 모든 Route 주소 확인용 (개발용)
   if (configService.get<string>('NODE_ENV') === 'dev') {
-    const config = new DocumentBuilder().setTitle('API Docs').build();
+    await SwaggerModule.loadPluginMetadata(metadata);
+    const config = new DocumentBuilder().setTitle('API Docs').addBearerAuth().build();
     const document = SwaggerModule.createDocument(app, config);
-    SwaggerModule.setup('swagger', app, document, {}); // http://localhost:3000/swagger 로 접속
+    SwaggerModule.setup('swagger', app, document, { jsonDocumentUrl: '/json' }); // http://localhost:3000/swagger 로 접속
   }
 
   // ───── Listen ─────────────────────────
