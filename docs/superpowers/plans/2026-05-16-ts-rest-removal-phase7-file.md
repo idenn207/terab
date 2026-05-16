@@ -250,7 +250,7 @@ export * from './upload-init-response.dto';
 export * from './upload-complete-body.dto';
 ```
 
-Run: `cd services/api && npm run build`
+Run: `npm --prefix services/api run build`
 Expected: 빌드 성공.
 
 ---
@@ -354,7 +354,7 @@ Run: `grep -n "ApiException" services/api/src/file/file.service.ts`
 
 - [ ] **Step 4: 빌드**
 
-Run: `cd services/api && npm run build`
+Run: `npm --prefix services/api run build`
 Expected: 빌드 성공.
 
 ---
@@ -413,7 +413,7 @@ Run: `grep -n "ApiException" services/api/src/file/upload-session.service.ts`
 
 - [ ] **Step 3: 빌드**
 
-Run: `cd services/api && npm run build`
+Run: `npm --prefix services/api run build`
 Expected: 빌드 성공.
 
 ---
@@ -534,7 +534,7 @@ export class FileDownloadController {
 
 - [ ] **Step 2: 빌드**
 
-Run: `cd services/api && npm run build`
+Run: `npm --prefix services/api run build`
 Expected: 빌드 성공.
 
 ---
@@ -573,7 +573,7 @@ Expected: 빌드 성공.
 
 - [ ] **Step 3: 빌드 + 테스트**
 
-Run: `cd services/api && npm run build && npm test -- file`
+Run: `npm --prefix services/api run build && npm test -- file`
 Expected: 통과.
 
 ---
@@ -597,14 +597,14 @@ Expected: 통과.
 
 - [ ] **Step 2: 테스트 실행**
 
-Run: `cd services/api && npm test -- file`
+Run: `npm --prefix services/api test -- file`
 Expected: 전체 통과.
 
 ---
 
 ## Task 9: API Phase 7 검증
 
-Run: `cd services/api && npm run build && npm test`
+Run: `npm --prefix services/api run build && npm test`
 Expected: 통과.
 
 `make api` 후 `/json`에서 file 관련 경로 확인:
@@ -634,7 +634,7 @@ Expected: 통과.
 - [ ] **Step 1: API 기동 + codegen**
 
 Run (별도): `make api`
-Run: `cd services/web && npm run openapi:codegen`
+Run: `npm --prefix services/web run openapi:codegen`
 
 - [ ] **Step 2: file 사용처 식별**
 
@@ -694,7 +694,7 @@ export function useUploadCompleteMutation() {
 
 - [ ] **Step 6: 빌드 + 테스트**
 
-Run: `cd services/web && npm run build && npm test`
+Run: `npm --prefix services/web run build && npm test`
 Expected: 통과.
 
 ---

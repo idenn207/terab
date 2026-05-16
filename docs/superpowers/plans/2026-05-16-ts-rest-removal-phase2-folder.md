@@ -185,7 +185,7 @@ export * from './move-folder-body.dto';
 
 - [ ] **Step 5: 빌드 검증 + EOL**
 
-Run: `cd services/api && npm run build`
+Run: `npm --prefix services/api run build`
 Expected: 빌드 성공
 
 EOL: Phase 1 Task 1 Step 6과 동일 방식으로 모든 신규 파일 검증.
@@ -303,7 +303,7 @@ Expected: 각 메서드의 `throw new ApiException('XXX')` 위치와 키 확인.
 
 - [ ] **Step 4: 빌드 검증**
 
-Run: `cd services/api && npm run build`
+Run: `npm --prefix services/api run build`
 Expected: 빌드 성공
 
 ---
@@ -337,8 +337,8 @@ DTO import 추가: `import { FolderItemDto, FolderChildrenResponseDto, CreateFol
 
 - [ ] **Step 3: 빌드 + 테스트**
 
-Run: `cd services/api && npm run build`
-Run: `cd services/api && npm test -- folder`
+Run: `npm --prefix services/api run build`
+Run: `npm --prefix services/api test -- folder`
 Expected: 모두 통과
 
 ---
@@ -371,7 +371,7 @@ Expected: 모두 통과
 
 - [ ] **Step 3: 테스트 실행**
 
-Run: `cd services/api && npm test -- folder.controller.spec`
+Run: `npm --prefix services/api test -- folder.controller.spec`
 Expected: 전체 통과
 
 ---
@@ -383,7 +383,7 @@ Expected: 전체 통과
 
 - [ ] **Step 1: 빌드 + 전체 테스트**
 
-Run: `cd services/api && npm run build && npm test`
+Run: `npm --prefix services/api run build && npm test`
 Expected: 모두 통과
 
 - [ ] **Step 2: dev 서버 기동 후 folder 라우트 OpenAPI 등재 확인**
@@ -411,7 +411,7 @@ Expected:
 - [ ] **Step 1: API 기동 + codegen**
 
 Run (별도): `make api`
-Run: `cd services/web && npm run openapi:codegen`
+Run: `npm --prefix services/web run openapi:codegen`
 
 Expected: types/sdk/@tanstack/react-query.gen.ts에 folder 관련 항목 추가.
 
@@ -493,7 +493,7 @@ Phase 1 Task 8 패턴. 각 model 파일에서 `data.body.X` → `data.X`로 변�
 
 - [ ] **Step 5: EOL + 빌드**
 
-Run: `cd services/web && npm run build`
+Run: `npm --prefix services/web run build`
 Expected: 빌드 성공
 
 ---
@@ -512,7 +512,7 @@ Run: `grep -rn "/folders\|folderContract" services/web/src/ services/web/src/__t
 
 - [ ] **Step 1: 빌드 + 단위 테스트**
 
-Run: `cd services/web && npm run build && npm test`
+Run: `npm --prefix services/web run build && npm test`
 Expected: 통과
 
 - [ ] **Step 2: e2e 흐름 수동 검증**

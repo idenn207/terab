@@ -70,7 +70,7 @@ export class UserDto {
 
 - [ ] **Step 2: 빌드 검증**
 
-Run: `cd services/api && npm run build`
+Run: `npm --prefix services/api run build`
 Expected: 빌드 성공. Phase 5에서 `ChallengeStatusApprovedDto`가 이미 `UserDto`를 참조하고 있으면 그 참조도 정상 동작.
 
 ---
@@ -142,7 +142,7 @@ export class RegisterBodyDto {
 
 - [ ] **Step 4: 빌드**
 
-Run: `cd services/api && npm run build`
+Run: `npm --prefix services/api run build`
 Expected: 빌드 성공.
 
 ---
@@ -229,7 +229,7 @@ export * from './register-response.dto';
 ```
 
 빌드 검증:
-Run: `cd services/api && npm run build`
+Run: `npm --prefix services/api run build`
 Expected: 빌드 성공.
 
 ---
@@ -472,7 +472,7 @@ Expected: register/login/loginWithBackup/completeTwoFa/refresh/me별로 어떤 E
 
 - [ ] **Step 3: 빌드**
 
-Run: `cd services/api && npm run build`
+Run: `npm --prefix services/api run build`
 Expected: 빌드 성공.
 
 ---
@@ -502,7 +502,7 @@ Expected: 빌드 성공.
 
 - [ ] **Step 3: 빌드 + 테스트**
 
-Run: `cd services/api && npm run build && npm test -- auth`
+Run: `npm --prefix services/api run build && npm test -- auth`
 Expected: 통과.
 
 ---
@@ -537,7 +537,7 @@ const mockRes = {
 
 - [ ] **Step 2: 테스트 실행**
 
-Run: `cd services/api && npm test -- auth.controller.spec`
+Run: `npm --prefix services/api test -- auth.controller.spec`
 Expected: 통과.
 
 ---
@@ -546,7 +546,7 @@ Expected: 통과.
 
 - [ ] **Step 1: 빌드 + 전체 테스트**
 
-Run: `cd services/api && npm run build && npm test`
+Run: `npm --prefix services/api run build && npm test`
 Expected: 통과.
 
 - [ ] **Step 2: /json에서 4개 LoginResponse oneOf 확인**
@@ -592,7 +592,7 @@ Expected: 4개 path 모두 `oneOf=True discriminator=True` 출력.
 - [ ] **Step 1: API 기동 + codegen**
 
 Run (별도): `make api`
-Run: `cd services/web && npm run openapi:codegen`
+Run: `npm --prefix services/web run openapi:codegen`
 
 - [ ] **Step 2: generated에서 LoginResponse union 출력 확인**
 
@@ -717,7 +717,7 @@ export function useMeQuery() {
 
 - [ ] **Step 10: 빌드 + 테스트**
 
-Run: `cd services/web && npm run build && npm test`
+Run: `npm --prefix services/web run build && npm test`
 Expected: 통과. **컴파일러가 LoginResponse narrowing을 정상 검증** (status 필드 분기 안에서만 status별 필드 접근 가능).
 
 `make api` 종료.
@@ -799,11 +799,11 @@ export { isPublicPath, PUBLIC_PATH_REGEXES } from './generated/public-paths.gen'
 
 위 변경 후:
 Run (별도): `make api`
-Run: `cd services/web && npm run openapi:codegen`
+Run: `npm --prefix services/web run openapi:codegen`
 Run: `cat services/web/src/shared/api/generated/public-paths.gen.ts`
 Expected: `isPublicPath` 함수 export 형태.
 
-Run: `cd services/web && npm run build`
+Run: `npm --prefix services/web run build`
 Expected: 빌드 성공.
 
 `make api` 종료.

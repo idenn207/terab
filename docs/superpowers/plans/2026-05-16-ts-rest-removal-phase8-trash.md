@@ -100,7 +100,7 @@ export * from './trash-action-body.dto';
 
 - [ ] **Step 5: 빌드**
 
-Run: `cd services/api && npm run build`
+Run: `npm --prefix services/api run build`
 Expected: 빌드 성공.
 
 ---
@@ -167,7 +167,7 @@ export class TrashController {
 
 - [ ] **Step 2: 빌드**
 
-Run: `cd services/api && npm run build`
+Run: `npm --prefix services/api run build`
 Expected: 빌드 성공.
 
 ---
@@ -186,7 +186,7 @@ Expected: 빌드 성공.
 
 - [ ] **Step 2: 빌드 + 테스트**
 
-Run: `cd services/api && npm run build && npm test -- trash`
+Run: `npm --prefix services/api run build && npm test -- trash`
 Expected: 통과.
 
 ---
@@ -207,14 +207,14 @@ Expected: 통과.
   - folder 타입 성공
 - `permanentDelete`: restore와 동일 패턴
 
-Run: `cd services/api && npm test -- trash.controller.spec`
+Run: `npm --prefix services/api test -- trash.controller.spec`
 Expected: 통과.
 
 ---
 
 ## Task 5: API Phase 8 검증
 
-Run: `cd services/api && npm run build && npm test`
+Run: `npm --prefix services/api run build && npm test`
 Expected: 통과.
 
 `make api` 후 `/json`에서 `/trash`, `/trash/{id}`, `/trash/{id}/restore` 등재 확인.
@@ -231,7 +231,7 @@ Expected: 통과.
 - [ ] **Step 1: API 기동 + codegen**
 
 Run (별도): `make api`
-Run: `cd services/web && npm run openapi:codegen`
+Run: `npm --prefix services/web run openapi:codegen`
 
 - [ ] **Step 2: trash 사용처 식별**
 
@@ -275,7 +275,7 @@ permanentDelete도 유사 패턴.
 
 - [ ] **Step 5: 빌드 + 테스트**
 
-Run: `cd services/web && npm run build && npm test`
+Run: `npm --prefix services/web run build && npm test`
 Expected: 통과.
 
 `make api` 종료.

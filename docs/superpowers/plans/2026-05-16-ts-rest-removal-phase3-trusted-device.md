@@ -69,7 +69,7 @@ export * from './trusted-device-response.dto';
 
 - [ ] **Step 3: 빌드 + EOL**
 
-Run: `cd services/api && npm run build`
+Run: `npm --prefix services/api run build`
 Expected: 빌드 성공.
 
 ---
@@ -143,7 +143,7 @@ Expected: `TRUSTED_DEVICE_NOT_FOUND` 등 확인 후 `@ApiError(...)` 키 조정.
 
 - [ ] **Step 4: 빌드**
 
-Run: `cd services/api && npm run build`
+Run: `npm --prefix services/api run build`
 Expected: 빌드 성공.
 
 ---
@@ -162,7 +162,7 @@ Expected: 빌드 성공.
 
 - [ ] **Step 2: 빌드 + 테스트**
 
-Run: `cd services/api && npm run build && npm test -- trusted-device`
+Run: `npm --prefix services/api run build && npm test -- trusted-device`
 Expected: 통과.
 
 ---
@@ -179,7 +179,7 @@ Expected: 통과.
 - `register`: service.register 호출 검증 (userAgent 전달 포함)
 - `revoke`: TRUSTED_DEVICE_NOT_FOUND 실패, 성공 케이스
 
-Run: `cd services/api && npm test -- trusted-device.controller.spec`
+Run: `npm --prefix services/api test -- trusted-device.controller.spec`
 Expected: 통과.
 
 ---
@@ -188,7 +188,7 @@ Expected: 통과.
 
 - [ ] **Step 1: 빌드 + 전체 테스트**
 
-Run: `cd services/api && npm run build && npm test`
+Run: `npm --prefix services/api run build && npm test`
 Expected: 통과.
 
 - [ ] **Step 2: dev 서버 + /json 확인**
@@ -211,7 +211,7 @@ Expected: `/trusted-device`, `/trusted-device/{id}` 등재.
 - [ ] **Step 1: API 기동 + codegen**
 
 Run (별도): `make api`
-Run: `cd services/web && npm run openapi:codegen`
+Run: `npm --prefix services/web run openapi:codegen`
 
 - [ ] **Step 2: query.ts 갱신**
 
@@ -282,7 +282,7 @@ Run: `cat services/web/src/features/trusted-device/model/useTrustedDevice.ts`
 
 - [ ] **Step 5: 빌드 + 테스트**
 
-Run: `cd services/web && npm run build && npm test`
+Run: `npm --prefix services/web run build && npm test`
 Expected: 통과.
 
 - [ ] **Step 6: API 종료**

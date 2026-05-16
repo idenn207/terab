@@ -71,7 +71,7 @@ cat services/api/nest-cli.json
 
 - [ ] **Step 3: 빌드로 검증**
 
-Run: `cd services/api && npm run build`
+Run: `npm --prefix services/api run build`
 Expected: 빌드 성공 (swagger plugin이 컴파일 타임에 동작하지만 기존 ts-rest 코드에 영향 없음)
 
 ---
@@ -103,12 +103,12 @@ app.useGlobalPipes(
 
 - [ ] **Step 3: 빌드로 검증**
 
-Run: `cd services/api && npm run build`
+Run: `npm --prefix services/api run build`
 Expected: 빌드 성공
 
 - [ ] **Step 4: 기존 ts-rest 라우트 무영향 검증**
 
-Run: `cd services/api && npm test`
+Run: `npm --prefix services/api test`
 Expected: 기존 테스트 전부 통과 (ts-rest 핸들러는 ValidationPipe를 우회)
 
 ---
@@ -206,12 +206,12 @@ export function Public(): MethodDecorator & ClassDecorator {
 
 - [ ] **Step 2: 빌드로 검증**
 
-Run: `cd services/api && npm run build`
+Run: `npm --prefix services/api run build`
 Expected: 빌드 성공. 기존 가드(`JwtAuthGuard`)는 `IS_PUBLIC_KEY` reflect 메타를 그대로 읽으므로 동작 변화 없음.
 
 - [ ] **Step 3: 기존 테스트 검증**
 
-Run: `cd services/api && npm test`
+Run: `npm --prefix services/api test`
 Expected: 전체 통과 (auth/invitation 등 `@Public()` 사용처 영향 없음)
 
 ---
@@ -265,7 +265,7 @@ export * from './guards';
 
 - [ ] **Step 4: 빌드 검증**
 
-Run: `cd services/api && npm run build`
+Run: `npm --prefix services/api run build`
 Expected: 빌드 성공
 
 ---
@@ -311,7 +311,7 @@ export * from './user.dto';
 
 - [ ] **Step 4: 빌드 검증**
 
-Run: `cd services/api && npm run build`
+Run: `npm --prefix services/api run build`
 Expected: 빌드 성공
 
 > **주의:** UserDto는 Phase 0에서는 정의만 둠. 실제 사용처 교체는 Phase 6 (auth) 에서. 현재 `@terab/contract`의 UserSchema는 그대로 동작.
@@ -363,7 +363,7 @@ export * from './api-error.decorator';
 
 - [ ] **Step 3: 빌드 검증**
 
-Run: `cd services/api && npm run build`
+Run: `npm --prefix services/api run build`
 Expected: 빌드 성공. `ErrorCodeKey` 타입 import가 동작하는지 확인.
 
 ---
@@ -375,12 +375,12 @@ Expected: 빌드 성공. `ErrorCodeKey` 타입 import가 동작하는지 확인.
 
 - [ ] **Step 1: 빌드**
 
-Run: `cd services/api && npm run build`
+Run: `npm --prefix services/api run build`
 Expected: 빌드 성공
 
 - [ ] **Step 2: 테스트**
 
-Run: `cd services/api && npm test`
+Run: `npm --prefix services/api test`
 Expected: 전체 통과
 
 - [ ] **Step 3: dev 서버 기동 + /json 응답 형태 확인**
@@ -455,7 +455,7 @@ Expected: 1 commit 생성. `git log -1 --stat`로 변경 통계 확인.
 
 - [ ] **Step 1: 정확 버전 핀으로 설치**
 
-Run: `cd services/web && npm install --save-exact @hey-api/openapi-ts@latest @hey-api/client-axios@latest`
+Run: `npm --prefix services/web install --save-exact @hey-api/openapi-ts@latest @hey-api/client-axios@latest`
 Expected: `package.json`의 `dependencies` 또는 `devDependencies`에 정확 버전(`-E` 옵션 효과)으로 추가됨. `@hey-api/openapi-ts`는 dev로 분류, `@hey-api/client-axios`는 runtime dep.
 
 - [ ] **Step 2: package.json에서 dependency 분류 확인 및 조정**
@@ -463,12 +463,12 @@ Expected: `package.json`의 `dependencies` 또는 `devDependencies`에 정확 �
 `@hey-api/openapi-ts`는 devDependency, `@hey-api/client-axios`는 dependency. 자동으로 잘못 분류된 경우 직접 이동.
 
 ```bash
-cd services/web && cat package.json | grep -E "@hey-api"
+cat services/web/package.json | grep -E "@hey-api"
 ```
 
 - [ ] **Step 3: package-lock 커밋 준비 — 빌드 검증**
 
-Run: `cd services/web && npm run build`
+Run: `npm --prefix services/web run build`
 Expected: 빌드 성공 (codegen 미사용, 설치만 영향)
 
 ---
@@ -600,7 +600,7 @@ Expected: `True`
 
 - [ ] **Step 2: script 등록 확인**
 
-Run: `cd services/web && npm run | grep openapi:codegen`
+Run: `npm --prefix services/web run | grep openapi:codegen`
 Expected: `openapi:codegen`이 목록에 표시됨
 
 ---
@@ -797,7 +797,7 @@ Expected: `Application is running on: http://[::1]:3000` 로그 표시.
 
 - [ ] **Step 2: codegen 실행**
 
-Run: `cd services/web && npm run openapi:codegen`
+Run: `npm --prefix services/web run openapi:codegen`
 Expected:
 - `openapi-ts` 실행 → `src/shared/api/generated/` 디렉토리에 `client.gen.ts`, `types.gen.ts`, `sdk.gen.ts`, `@tanstack/react-query.gen.ts` 생성
 - `extract-public-paths.mjs` 실행 → `public-paths.gen.ts` 생성
@@ -820,7 +820,7 @@ Expected: `export const PUBLIC_PATHS = new Set<string>([...]);` 형태. 빈 배�
 
 - [ ] **Step 4: 빌드 검증 — generated 의존하는 axiosInstance.ts/index.ts 컴파일 통과**
 
-Run: `cd services/web && npm run build`
+Run: `npm --prefix services/web run build`
 Expected: 빌드 성공. Phase 0 시점에서 generated 산출물이 빈 상태(또는 거의 빈)일 수 있으나 import 자체는 동작.
 
 > **알려진 한계:** Phase 0 시점에 PUBLIC_PATHS가 빈 Set일 수 있어, ts-rest 핸들러의 `/auth/login`·`/auth/refresh`는 여전히 axiosBasic을 통해 호출되어야 한다. **client.ts의 PUBLIC_PATHS Set은 Phase 6 (auth) 완료 전까지 그대로 유지**한다.
@@ -886,12 +886,12 @@ Expected: `True`
 
 - [ ] **Step 1: 빌드**
 
-Run: `cd services/web && npm run build`
+Run: `npm --prefix services/web run build`
 Expected: 빌드 성공
 
 - [ ] **Step 2: 단위 테스트**
 
-Run: `cd services/web && npm test`
+Run: `npm --prefix services/web test`
 Expected: 전체 통과 (Phase 0은 transport 통합만 변경하므로 model 훅·UI 테스트 영향 없음)
 
 - [ ] **Step 3: dev 서버 기동 + 기존 ts-rest 라우트 동작 검증**
@@ -965,7 +965,7 @@ Expected: 1 commit 생성. `git log -1 --stat`로 변경 통계 확인.
 - [ ] Web: `@hey-api/openapi-ts`/`@hey-api/client-axios` 설치, `openapi-ts.config.ts`, `extract-public-paths.mjs`, `runtime-config.ts`, `shared/api/index.ts`, 단일 axiosInstance, 첫 codegen 산출물 commit
 - [ ] CLAUDE.md(web) `api/` 세그먼트 규칙 추가
 - [ ] `make build-api && make build-web` 성공
-- [ ] `cd services/api && npm test`, `cd services/web && npm test` 통과
+- [ ] `npm --prefix services/api test`, `npm --prefix services/web test` 통과
 - [ ] dev 환경에서 기존 ts-rest 라우트 동작 (로그인 등) 정상
 - [ ] 2 commit (`chore(api): Phase 0 ...`, `chore(web): Phase 0 ...`)
 

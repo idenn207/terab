@@ -105,7 +105,7 @@ export * from './validate-invitation-response.dto';
 
 - [ ] **Step 5: 빌드 검증**
 
-Run: `cd services/api && npm run build`
+Run: `npm --prefix services/api run build`
 Expected: 빌드 성공
 
 - [ ] **Step 6: EOL 확인**
@@ -184,7 +184,7 @@ export class InvitationController {
 
 - [ ] **Step 2: 빌드 검증**
 
-Run: `cd services/api && npm run build`
+Run: `npm --prefix services/api run build`
 Expected: 빌드 성공. `invitation.service.ts`의 반환 타입이 `ServerInferResponseBody<typeof contract...>`인 채로 남아 있어도 컴파일은 통과(다음 task에서 정리).
 
 - [ ] **Step 3: dev 서버 기동 + /json에 invitation paths 등장 확인**
@@ -255,12 +255,12 @@ async validate(token: string): Promise<ValidateInvitationResponseDto> {
 
 - [ ] **Step 5: 빌드 검증**
 
-Run: `cd services/api && npm run build`
+Run: `npm --prefix services/api run build`
 Expected: 빌드 성공
 
 - [ ] **Step 6: 테스트 실행**
 
-Run: `cd services/api && npm test -- invitation`
+Run: `npm --prefix services/api test -- invitation`
 Expected: 기존 service 테스트 통과 (시그니처만 변경, 동작 동일)
 
 ---
@@ -378,12 +378,12 @@ describe('InvitationController', () => {
 
 - [ ] **Step 3: 테스트 실행**
 
-Run: `cd services/api && npm test -- invitation.controller.spec`
+Run: `npm --prefix services/api test -- invitation.controller.spec`
 Expected: 전체 통과
 
 - [ ] **Step 4: 전체 테스트 실행 (영향 점검)**
 
-Run: `cd services/api && npm test`
+Run: `npm --prefix services/api test`
 Expected: 전체 통과
 
 ---
@@ -395,7 +395,7 @@ Expected: 전체 통과
 
 - [ ] **Step 1: 빌드**
 
-Run: `cd services/api && npm run build`
+Run: `npm --prefix services/api run build`
 Expected: 빌드 성공
 
 - [ ] **Step 2: dev 서버 기동 + invitation 라우트 직접 호출 검증**
@@ -436,7 +436,7 @@ Run (별도 터미널): `make api`
 
 - [ ] **Step 2: codegen 실행**
 
-Run: `cd services/web && npm run openapi:codegen`
+Run: `npm --prefix services/web run openapi:codegen`
 Expected:
 - `openapi-ts`가 `http://localhost:3000/json` fetch 후 `src/shared/api/generated/` 갱신
 - `extract-public-paths.mjs` 실행 → invitation validate가 Public이므로 `/invitations/{token}`이 PUBLIC_PATHS에 포함될 수 있음 (단, GET이라 axios call URL과 path 형태 차이 주의)
@@ -516,7 +516,7 @@ export function useValidateInvitationQuery(token: string) {
 Run: `(Get-Content -Raw services/web/src/features/register-by-invitation/api/query.ts) -match "\r\n"`
 Expected: `True`
 
-Run: `cd services/web && npm run build`
+Run: `npm --prefix services/web run build`
 Expected: 빌드 성공
 
 ---
@@ -589,10 +589,10 @@ export function useInvitationValidation(token: string) {
 Run: `(Get-Content -Raw services/web/src/features/register-by-invitation/model/useInvitationValidation.ts) -match "\r\n"`
 Expected: `True`
 
-Run: `cd services/web && npm run build`
+Run: `npm --prefix services/web run build`
 Expected: 빌드 성공
 
-Run: `cd services/web && npm test -- useInvitationValidation`
+Run: `npm --prefix services/web test -- useInvitationValidation`
 Expected: 통과 (테스트 파일이 없으면 skip, 있으면 응답 구조 변경 반영 필요)
 
 - [ ] **Step 4: 테스트 파일이 있는 경우 갱신**
@@ -628,12 +628,12 @@ Run: `grep -rn "invitations\|invitationContract\|invitation.validate" services/w
 
 - [ ] **Step 1: 빌드**
 
-Run: `cd services/web && npm run build`
+Run: `npm --prefix services/web run build`
 Expected: 빌드 성공
 
 - [ ] **Step 2: 단위 테스트**
 
-Run: `cd services/web && npm test`
+Run: `npm --prefix services/web test`
 Expected: 전체 통과
 
 - [ ] **Step 3: dev 환경 e2e 흐름 수동 검증**
@@ -706,7 +706,7 @@ Expected: 1 commit 생성. `git log -1 --stat`로 변경 통계 확인.
 - [ ] API: invitation DTO 3개 작성, controller `@TsRestHandler` → 표준 데코레이터, service 반환 타입 DTO로, spec 갱신 완료
 - [ ] Web: codegen 재실행, `features/register-by-invitation/api/query.ts` + `model/useInvitationValidation.ts` 갱신
 - [ ] `make build-api && make build-web` 성공
-- [ ] `cd services/api && npm test`, `cd services/web && npm test` 통과
+- [ ] `npm --prefix services/api test`, `npm --prefix services/web test` 통과
 - [ ] dev 환경에서 invitation 발급/검증 흐름 정상 동작
 - [ ] 1 commit (`refactor: Phase 1 — invitation 도메인을 표준 NestJS로 전환`)
 

@@ -109,8 +109,8 @@ Phase 9 (cleanup) ─ 모든 도메인 전환 후 packages/contracts·인프라�
 Phase 9 종료 후, master 머지 전:
 
 1. `make build-api && make build-web && make build-mq` 모두 통과
-2. `cd services/api && npm test` 통과
-3. `cd services/web && npm test` 통과
+2. `npm --prefix services/api test` 통과
+3. `npm --prefix services/web test` 통과
 4. dev 환경 e2e 흐름 전체 수동 검증 (로그인 → 폴더/파일 생성 → 업로드 → 다운로드 → 삭제 → 휴지통 복원 → 2FA → 신뢰기기 등록 → 초대장 발급/사용 등)
 5. PR description에 Phase별 commit hash 매핑 + 변경 요약 + 위험 요소·완화책 명시
 6. master로 PR 1회 (자동 배포 1회)

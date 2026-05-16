@@ -84,7 +84,7 @@ export * from './register-device-body.dto';
 
 - [ ] **Step 4: 빌드 + EOL**
 
-Run: `cd services/api && npm run build`
+Run: `npm --prefix services/api run build`
 Expected: 빌드 성공.
 
 ---
@@ -160,7 +160,7 @@ Expected: 메서드 시그니처 확인. register 매개변수가 `(userId, push
 
 - [ ] **Step 4: 빌드**
 
-Run: `cd services/api && npm run build`
+Run: `npm --prefix services/api run build`
 Expected: 빌드 성공.
 
 ---
@@ -181,7 +181,7 @@ Expected: 빌드 성공.
 
 - [ ] **Step 2: 빌드 + 테스트**
 
-Run: `cd services/api && npm run build && npm test -- device`
+Run: `npm --prefix services/api run build && npm test -- device`
 Expected: 통과.
 
 ---
@@ -195,14 +195,14 @@ Expected: 통과.
 - `register`: pushToken 빈 문자열 시 ValidationPipe 거부 (인스턴스 테스트로는 검증 어려움 — 통합 테스트 또는 생략), service.register 호출 검증
 - `remove`: DEVICE_NOT_FOUND 실패, 성공
 
-Run: `cd services/api && npm test -- device.controller.spec`
+Run: `npm --prefix services/api test -- device.controller.spec`
 Expected: 통과.
 
 ---
 
 ## Task 5: API Phase 4 검증
 
-Run: `cd services/api && npm run build && npm test`
+Run: `npm --prefix services/api run build && npm test`
 Expected: 통과.
 
 `make api` 후 `/json`에서 `/devices`, `/devices/{id}` 등재 확인.
@@ -218,7 +218,7 @@ Expected: 통과.
 - [ ] **Step 1: API 기동 + codegen**
 
 Run (별도): `make api`
-Run: `cd services/web && npm run openapi:codegen`
+Run: `npm --prefix services/web run openapi:codegen`
 
 - [ ] **Step 2: device 사용처 식별**
 
@@ -232,7 +232,7 @@ Phase 1 Task 7 패턴. ts-rest `api.device.X.useMutation()` → hey-api `useMuta
 
 - [ ] **Step 4: 빌드 + 테스트**
 
-Run: `cd services/web && npm run build && npm test`
+Run: `npm --prefix services/web run build && npm test`
 Expected: 통과.
 
 `make api` 종료.

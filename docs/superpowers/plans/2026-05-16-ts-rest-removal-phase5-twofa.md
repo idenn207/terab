@@ -96,7 +96,7 @@ export type ChallengeStatusResponse =
 
 - [ ] **Step 2: 빌드**
 
-Run: `cd services/api && npm run build`
+Run: `npm --prefix services/api run build`
 Expected: 빌드 성공.
 
 ---
@@ -151,7 +151,7 @@ export * from './resend-challenge-response.dto';
 
 - [ ] **Step 4: 빌드 + EOL**
 
-Run: `cd services/api && npm run build`
+Run: `npm --prefix services/api run build`
 Expected: 빌드 성공.
 
 ---
@@ -275,7 +275,7 @@ Expected: `TWO_FA_CHALLENGE_NOT_FOUND` 등 확인. `@ApiError(...)` 인자 조�
 
 - [ ] **Step 5: 빌드**
 
-Run: `cd services/api && npm run build`
+Run: `npm --prefix services/api run build`
 Expected: 빌드 성공.
 
 ---
@@ -302,7 +302,7 @@ Expected: 4가지 status 분기 모두 status 리터럴 포함 확인.
 
 - [ ] **Step 3: 빌드 + 테스트**
 
-Run: `cd services/api && npm run build && npm test -- twofa`
+Run: `npm --prefix services/api run build && npm test -- twofa`
 Expected: 통과.
 
 ---
@@ -346,7 +346,7 @@ it('APPROVED 상태 반환 시 accessToken과 user 포함', async () => {
 
 - [ ] **Step 2: 테스트 실행**
 
-Run: `cd services/api && npm test -- twofa.controller.spec`
+Run: `npm --prefix services/api test -- twofa.controller.spec`
 Expected: 통과.
 
 ---
@@ -355,7 +355,7 @@ Expected: 통과.
 
 - [ ] **Step 1: 빌드 + 전체 테스트**
 
-Run: `cd services/api && npm run build && npm test`
+Run: `npm --prefix services/api run build && npm test`
 Expected: 통과.
 
 - [ ] **Step 2: /json에서 oneOf 구조 확인 (본 Phase의 핵심 검증)**
@@ -410,7 +410,7 @@ Expected: 응답 schema에 다음 구조가 포함되어 있어야 함:
 - [ ] **Step 1: API 기동 + codegen**
 
 Run (별도): `make api`
-Run: `cd services/web && npm run openapi:codegen`
+Run: `npm --prefix services/web run openapi:codegen`
 
 - [ ] **Step 2: generated types에서 union 출력 확인 (본 Phase의 두 번째 핵심 검증)**
 
@@ -483,7 +483,7 @@ if (data?.status === 'APPROVED') {
 
 - [ ] **Step 6: 빌드 + 테스트**
 
-Run: `cd services/web && npm run build && npm test`
+Run: `npm --prefix services/web run build && npm test`
 Expected: 통과. **TypeScript narrowing이 status 별 필드 접근에서 동작하는지 컴파일 레벨로 검증.**
 
 `make api` 종료.

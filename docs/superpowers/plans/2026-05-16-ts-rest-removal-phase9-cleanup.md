@@ -12,7 +12,7 @@
 
 **Spec 참조:** §1 (제거되는 인프라 자산), §4.5, §6.C (CLAUDE.md 박제 시점).
 
-**전제:** Phase 0~8 완료. 모든 도메인이 새 패턴으로 동작. `make build-api && make build-web` 통과. `cd services/api && npm test`, `cd services/web && npm test` 통과.
+**전제:** Phase 0~8 완료. 모든 도메인이 새 패턴으로 동작. `make build-api && make build-web` 통과. `npm --prefix services/api test`, `npm --prefix services/web test` 통과.
 
 ---
 
@@ -72,8 +72,7 @@ Expected: 0건.
 - [ ] **Step 1: API 의존성 제거**
 
 ```bash
-cd services/api
-npm uninstall @terab/contract @ts-rest/core @ts-rest/nest zod
+npm --prefix services/api uninstall @terab/contract @ts-rest/core @ts-rest/nest zod
 ```
 
 또는 package.json 수동 편집 후 `npm install`.
@@ -92,8 +91,7 @@ npm uninstall @terab/contract @ts-rest/core @ts-rest/nest zod
 - [ ] **Step 2: Web 의존성 제거**
 
 ```bash
-cd services/web
-npm uninstall @terab/contract @ts-rest/core @ts-rest/react-query zod
+npm --prefix services/web uninstall @terab/contract @ts-rest/core @ts-rest/react-query zod
 ```
 
 기대 변경 (`services/web/package.json`):
@@ -120,16 +118,16 @@ optimizeDeps: {
 
 - [ ] **Step 4: 빌드 검증**
 
-Run: `cd services/api && npm run build`
+Run: `npm --prefix services/api run build`
 Expected: 빌드 성공 — ts-rest 사용처가 정말 0개임을 마지막으로 검증.
 
-Run: `cd services/web && npm run build`
+Run: `npm --prefix services/web run build`
 Expected: 빌드 성공.
 
 - [ ] **Step 5: 테스트 검증**
 
-Run: `cd services/api && npm test`
-Run: `cd services/web && npm test`
+Run: `npm --prefix services/api test`
+Run: `npm --prefix services/web test`
 Expected: 모두 통과.
 
 ---
@@ -157,7 +155,7 @@ rmdir packages
 
 - [ ] **Step 3: 빌드 재검증**
 
-Run: `cd services/api && npm run build && cd ../web && npm run build`
+Run: `npm --prefix services/api run build && cd ../web && npm run build`
 Expected: 모두 빌드 성공.
 
 ---
@@ -442,22 +440,22 @@ build: build-api build-mq build-web build-android
 ```makefile
 .PHONY: build-api
 build-api: build-packages
-	cd services/api && npm run build
+	npm --prefix services/api run build
 
 .PHONY: build-web
 build-web: build-packages
-	cd services/web && npm run build
+	npm --prefix services/web run build
 ```
 
 변경:
 ```makefile
 .PHONY: build-api
 build-api:
-	cd services/api && npm run build
+	npm --prefix services/api run build
 
 .PHONY: build-web
 build-web:
-	cd services/web && npm run build
+	npm --prefix services/web run build
 ```
 
 - [ ] **Step 4: `image` target에서 `-f services/api/Dockerfile .` 패턴 변경**
@@ -714,7 +712,7 @@ Run: `grep -n "ts-rest\|initTsrReactQuery\|@terab/contract" services/web/CLAUDE.
 
 1. API DTO/엔드포인트 변경
 2. API dev 서버 reload (켜져 있어야 함)
-3. `cd services/web && npm run openapi:codegen`
+3. `npm --prefix services/web run openapi:codegen`
 4. generated diff 검토 + 사용처 갱신
 5. 동시에 commit (generated + 사용처 분리 금지)
 
@@ -896,7 +894,7 @@ Expected: `terab-api:local`, `terab-mq:local`, `terab-web:local` 이미지 빌�
 
 `NODE_ENV=production`으로 API 기동 시도 (또는 production 빌드 후 실행):
 ```bash
-cd services/api && NODE_ENV=production npm run start:prod &
+NODE_ENV=production npm --prefix services/api run start:prod &
 sleep 5
 curl -i http://localhost:3000/json
 # Expected: 404 (NODE_ENV !== 'dev'이므로 SwaggerModule.setup 호출 안 됨)
