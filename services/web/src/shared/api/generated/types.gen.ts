@@ -4,10 +4,14 @@ export type ClientOptions = {
   baseURL: string;
 };
 
-export type TrustedDeviceResponseDto = {
+export type DeviceResponseDto = {
   id: string;
   userAgent?: string;
   createdAt: string;
+};
+
+export type RegisterDeviceBodyDto = {
+  [key: string]: unknown;
 };
 
 export type ErrorResponseDto = {
@@ -19,6 +23,12 @@ export type ErrorResponseDto = {
    * 사용자 노출 메시지
    */
   message: string;
+};
+
+export type TrustedDeviceResponseDto = {
+  id: string;
+  userAgent?: string;
+  createdAt: string;
 };
 
 export type CreateInvitationBodyDto = {
@@ -159,41 +169,55 @@ export type AuthControllerHandleMeResponses = {
   200: unknown;
 };
 
-export type DeviceControllerHandleListData = {
+export type DeviceControllerListData = {
   body?: never;
   path?: never;
   query?: never;
   url: '/devices';
 };
 
-export type DeviceControllerHandleListResponses = {
-  200: unknown;
+export type DeviceControllerListResponses = {
+  200: Array<DeviceResponseDto>;
 };
 
-export type DeviceControllerHandleRegisterData = {
+export type DeviceControllerListResponse = DeviceControllerListResponses[keyof DeviceControllerListResponses];
+
+export type DeviceControllerRegisterData = {
+  body: RegisterDeviceBodyDto;
+  path?: never;
+  query?: never;
+  url: '/devices';
+};
+
+export type DeviceControllerRegisterResponses = {
+  204: void;
+};
+
+export type DeviceControllerRegisterResponse = DeviceControllerRegisterResponses[keyof DeviceControllerRegisterResponses];
+
+export type DeviceControllerRemoveData = {
   body?: never;
-  headers: {
-    'user-agent': string;
+  path: {
+    id: string;
   };
-  path?: never;
-  query?: never;
-  url: '/devices';
-};
-
-export type DeviceControllerHandleRegisterResponses = {
-  201: unknown;
-};
-
-export type DeviceControllerHandleRemoveData = {
-  body?: never;
-  path?: never;
   query?: never;
   url: '/devices/{id}';
 };
 
-export type DeviceControllerHandleRemoveResponses = {
-  200: unknown;
+export type DeviceControllerRemoveErrors = {
+  /**
+   * `DEVICE_NOT_FOUND` — 등록되지 않은 디바이스입니다.
+   */
+  404: ErrorResponseDto;
 };
+
+export type DeviceControllerRemoveError = DeviceControllerRemoveErrors[keyof DeviceControllerRemoveErrors];
+
+export type DeviceControllerRemoveResponses = {
+  204: void;
+};
+
+export type DeviceControllerRemoveResponse = DeviceControllerRemoveResponses[keyof DeviceControllerRemoveResponses];
 
 export type TwoFaControllerHandleGetStatusData = {
   body?: never;

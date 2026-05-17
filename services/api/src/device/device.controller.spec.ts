@@ -1,77 +1,97 @@
-import { ExecutionContext, INestApplication } from '@nestjs/common';
-import { APP_GUARD } from '@nestjs/core';
 import { Test } from '@nestjs/testing';
+import { ApiException } from '@terab/common';
 import { mockAuthUser } from '@terab/test';
-import { TsRestModule } from '@ts-rest/nest';
 import { randomUUID } from 'node:crypto';
-import request from 'supertest';
 import { DeviceController } from './device.controller';
 import { DeviceService } from './device.service';
 
-const mockDeviceService = {
-  register: jest.fn(),
-  findAll: jest.fn(),
-  remove: jest.fn(),
-};
-
 describe('DeviceController', () => {
-  let app: INestApplication;
+  let controller: DeviceController;
+  let service: jest.Mocked<DeviceService>;
 
-  beforeAll(async () => {
+  beforeEach(async () => {
     const module = await Test.createTestingModule({
-      imports: [TsRestModule.register({ isGlobal: true })],
       controllers: [DeviceController],
       providers: [
-        { provide: DeviceService, useValue: mockDeviceService },
         {
-          provide: APP_GUARD,
+          provide: DeviceService,
           useValue: {
-            canActivate: (ctx: ExecutionContext) => {
-              ctx.switchToHttp().getRequest().user = mockAuthUser;
-              return true;
-            },
+            list: jest.fn(),
+            register: jest.fn(),
+            remove: jest.fn(),
           },
         },
       ],
     }).compile();
 
-    app = module.createNestApplication();
-    await app.init();
+    controller = module.get(DeviceController);
+    service = module.get(DeviceService);
+    jest.clearAllMocks();
   });
 
-  afterAll(() => app.close());
-
-  beforeEach(() => jest.clearAllMocks());
-
-  it('POST /devices — 디바이스를 등록하고 204를 반환한다', async () => {
-    const pushToken = 'push-token-value';
-    mockDeviceService.register.mockResolvedValue(undefined);
-
-    await request(app.getHttpServer())
-      .post('/devices')
-      .set('User-Agent', 'Mozilla/5.0')
-      .send({ pushToken: pushToken })
-      .expect(204);
-
-    expect(mockDeviceService.register).toHaveBeenCalledWith(mockAuthUser.userId, pushToken, expect.any(String));
+  it('인스턴스가 생성된다', () => {
+    expect(controller).toBeDefined();
   });
 
-  it('GET /devices — 디바이스 목록을 반환한다', async () => {
-    const devices = [{ id: 'dev-1', userAgent: 'Mozilla/5.0', createdAt: new Date('2026-01-01') }];
-    mockDeviceService.findAll.mockResolvedValue(devices);
+  describe('list', () => {
+    it('등록된 디바이스가 없으면 빈 배열을 반환한다', async () => {
+      service.list.mockResolvedValue([]);
 
-    const res = await request(app.getHttpServer()).get('/devices').expect(200);
+      const result = await controller.list(mockAuthUser);
 
-    expect(mockDeviceService.findAll).toHaveBeenCalledWith(mockAuthUser.userId);
-    expect(res.body[0].id).toBe('dev-1');
+      expect(service.list).toHaveBeenCalledWith(mockAuthUser.userId);
+      expect(result).toEqual([]);
+    });
+
+    it('등록된 디바이스 목록을 반환한다', async () => {
+      const devices = [
+        { id: randomUUID(), userAgent: 'Mozilla/5.0', createdAt: new Date('2026-01-01') },
+      ];
+      service.list.mockResolvedValue(devices);
+
+      const result = await controller.list(mockAuthUser);
+
+      expect(service.list).toHaveBeenCalledWith(mockAuthUser.userId);
+      expect(result).toEqual(devices);
+    });
   });
 
-  it('DELETE /devices/:id — 디바이스를 삭제하고 204를 반환한다', async () => {
-    const deviceId = randomUUID();
-    mockDeviceService.remove.mockResolvedValue(undefined);
+  describe('register', () => {
+    it('user-agent 헤더가 없어도 정상 처리한다', async () => {
+      service.register.mockResolvedValue(undefined);
 
-    await request(app.getHttpServer()).delete(`/devices/${deviceId}`).expect(204);
+      await controller.register(mockAuthUser, { pushToken: 'push-token-value' }, undefined);
 
-    expect(mockDeviceService.remove).toHaveBeenCalledWith(deviceId, mockAuthUser.userId);
+      expect(service.register).toHaveBeenCalledWith(mockAuthUser.userId, 'push-token-value', undefined);
+    });
+
+    it('userId, pushToken, userAgent 순서로 service.register를 호출한다', async () => {
+      service.register.mockResolvedValue(undefined);
+
+      await controller.register(mockAuthUser, { pushToken: 'push-token-value' }, 'Mozilla/5.0');
+
+      expect(service.register).toHaveBeenCalledWith(mockAuthUser.userId, 'push-token-value', 'Mozilla/5.0');
+    });
+  });
+
+  describe('remove', () => {
+    it('service.remove에서 DEVICE_NOT_FOUND를 던지면 그대로 전파한다', async () => {
+      service.remove.mockRejectedValue(new ApiException('DEVICE_NOT_FOUND'));
+      const id = randomUUID();
+
+      await expect(controller.remove(mockAuthUser, id)).rejects.toThrow(ApiException);
+      await expect(controller.remove(mockAuthUser, id)).rejects.toMatchObject({
+        code: 'DEVICE_NOT_FOUND',
+      });
+    });
+
+    it('id, userId 순서로 service.remove를 호출한다', async () => {
+      service.remove.mockResolvedValue(undefined);
+      const id = randomUUID();
+
+      await controller.remove(mockAuthUser, id);
+
+      expect(service.remove).toHaveBeenCalledWith(id, mockAuthUser.userId);
+    });
   });
 });

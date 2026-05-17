@@ -17,12 +17,13 @@ import type {
   AuthControllerHandleRefreshResponses,
   AuthControllerHandleRegisterData,
   AuthControllerHandleRegisterResponses,
-  DeviceControllerHandleListData,
-  DeviceControllerHandleListResponses,
-  DeviceControllerHandleRegisterData,
-  DeviceControllerHandleRegisterResponses,
-  DeviceControllerHandleRemoveData,
-  DeviceControllerHandleRemoveResponses,
+  DeviceControllerListData,
+  DeviceControllerListResponses,
+  DeviceControllerRegisterData,
+  DeviceControllerRegisterResponses,
+  DeviceControllerRemoveData,
+  DeviceControllerRemoveErrors,
+  DeviceControllerRemoveResponses,
   FileControllerHandleCopyData,
   FileControllerHandleCopyResponses,
   FileControllerHandleMoveData,
@@ -133,14 +134,34 @@ export const authControllerHandleLogout = <ThrowOnError extends boolean = false>
 export const authControllerHandleMe = <ThrowOnError extends boolean = false>(options?: Options<AuthControllerHandleMeData, ThrowOnError>) =>
   (options?.client ?? client).get<AuthControllerHandleMeResponses, unknown, ThrowOnError>({ url: '/auth/me', ...options });
 
-export const deviceControllerHandleList = <ThrowOnError extends boolean = false>(options?: Options<DeviceControllerHandleListData, ThrowOnError>) =>
-  (options?.client ?? client).get<DeviceControllerHandleListResponses, unknown, ThrowOnError>({ url: '/devices', ...options });
+/**
+ * 디바이스 목록 조회
+ */
+export const deviceControllerList = <ThrowOnError extends boolean = false>(options?: Options<DeviceControllerListData, ThrowOnError>) =>
+  (options?.client ?? client).get<DeviceControllerListResponses, unknown, ThrowOnError>({
+    responseType: 'json',
+    url: '/devices',
+    ...options,
+  });
 
-export const deviceControllerHandleRegister = <ThrowOnError extends boolean = false>(options: Options<DeviceControllerHandleRegisterData, ThrowOnError>) =>
-  (options.client ?? client).post<DeviceControllerHandleRegisterResponses, unknown, ThrowOnError>({ url: '/devices', ...options });
+/**
+ * 디바이스 등록
+ */
+export const deviceControllerRegister = <ThrowOnError extends boolean = false>(options: Options<DeviceControllerRegisterData, ThrowOnError>) =>
+  (options.client ?? client).post<DeviceControllerRegisterResponses, unknown, ThrowOnError>({
+    url: '/devices',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    },
+  });
 
-export const deviceControllerHandleRemove = <ThrowOnError extends boolean = false>(options?: Options<DeviceControllerHandleRemoveData, ThrowOnError>) =>
-  (options?.client ?? client).delete<DeviceControllerHandleRemoveResponses, unknown, ThrowOnError>({ url: '/devices/{id}', ...options });
+/**
+ * 디바이스 삭제
+ */
+export const deviceControllerRemove = <ThrowOnError extends boolean = false>(options: Options<DeviceControllerRemoveData, ThrowOnError>) =>
+  (options.client ?? client).delete<DeviceControllerRemoveResponses, DeviceControllerRemoveErrors, ThrowOnError>({ url: '/devices/{id}', ...options });
 
 export const twoFaControllerHandleGetStatus = <ThrowOnError extends boolean = false>(options?: Options<TwoFaControllerHandleGetStatusData, ThrowOnError>) =>
   (options?.client ?? client).get<TwoFaControllerHandleGetStatusResponses, unknown, ThrowOnError>({ url: '/auth/2fa/challenge/{id}/status', ...options });

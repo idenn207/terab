@@ -12,9 +12,9 @@ import {
   authControllerHandleMe,
   authControllerHandleRefresh,
   authControllerHandleRegister,
-  deviceControllerHandleList,
-  deviceControllerHandleRegister,
-  deviceControllerHandleRemove,
+  deviceControllerList,
+  deviceControllerRegister,
+  deviceControllerRemove,
   fileControllerHandleCopy,
   fileControllerHandleMove,
   fileControllerHandleRemove,
@@ -53,9 +53,13 @@ import type {
   AuthControllerHandleMeData,
   AuthControllerHandleRefreshData,
   AuthControllerHandleRegisterData,
-  DeviceControllerHandleListData,
-  DeviceControllerHandleRegisterData,
-  DeviceControllerHandleRemoveData,
+  DeviceControllerListData,
+  DeviceControllerListResponse,
+  DeviceControllerRegisterData,
+  DeviceControllerRegisterResponse,
+  DeviceControllerRemoveData,
+  DeviceControllerRemoveError,
+  DeviceControllerRemoveResponse,
   FileControllerHandleCopyData,
   FileControllerHandleMoveData,
   FileControllerHandleRemoveData,
@@ -268,12 +272,15 @@ export const authControllerHandleMeOptions = (options?: Options<AuthControllerHa
     queryKey: authControllerHandleMeQueryKey(options),
   });
 
-export const deviceControllerHandleListQueryKey = (options?: Options<DeviceControllerHandleListData>) => createQueryKey('deviceControllerHandleList', options);
+export const deviceControllerListQueryKey = (options?: Options<DeviceControllerListData>) => createQueryKey('deviceControllerList', options);
 
-export const deviceControllerHandleListOptions = (options?: Options<DeviceControllerHandleListData>) =>
-  queryOptions<unknown, AxiosError<DefaultError>, unknown, ReturnType<typeof deviceControllerHandleListQueryKey>>({
+/**
+ * 디바이스 목록 조회
+ */
+export const deviceControllerListOptions = (options?: Options<DeviceControllerListData>) =>
+  queryOptions<DeviceControllerListResponse, AxiosError<DefaultError>, DeviceControllerListResponse, ReturnType<typeof deviceControllerListQueryKey>>({
     queryFn: async ({ queryKey, signal }) => {
-      const { data } = await deviceControllerHandleList({
+      const { data } = await deviceControllerList({
         ...options,
         ...queryKey[0],
         signal,
@@ -281,15 +288,18 @@ export const deviceControllerHandleListOptions = (options?: Options<DeviceContro
       });
       return data;
     },
-    queryKey: deviceControllerHandleListQueryKey(options),
+    queryKey: deviceControllerListQueryKey(options),
   });
 
-export const deviceControllerHandleRegisterMutation = (
-  options?: Partial<Options<DeviceControllerHandleRegisterData>>,
-): UseMutationOptions<unknown, AxiosError<DefaultError>, Options<DeviceControllerHandleRegisterData>> => {
-  const mutationOptions: UseMutationOptions<unknown, AxiosError<DefaultError>, Options<DeviceControllerHandleRegisterData>> = {
+/**
+ * 디바이스 등록
+ */
+export const deviceControllerRegisterMutation = (
+  options?: Partial<Options<DeviceControllerRegisterData>>,
+): UseMutationOptions<DeviceControllerRegisterResponse, AxiosError<DefaultError>, Options<DeviceControllerRegisterData>> => {
+  const mutationOptions: UseMutationOptions<DeviceControllerRegisterResponse, AxiosError<DefaultError>, Options<DeviceControllerRegisterData>> = {
     mutationFn: async (fnOptions) => {
-      const { data } = await deviceControllerHandleRegister({
+      const { data } = await deviceControllerRegister({
         ...options,
         ...fnOptions,
         throwOnError: true,
@@ -300,12 +310,15 @@ export const deviceControllerHandleRegisterMutation = (
   return mutationOptions;
 };
 
-export const deviceControllerHandleRemoveMutation = (
-  options?: Partial<Options<DeviceControllerHandleRemoveData>>,
-): UseMutationOptions<unknown, AxiosError<DefaultError>, Options<DeviceControllerHandleRemoveData>> => {
-  const mutationOptions: UseMutationOptions<unknown, AxiosError<DefaultError>, Options<DeviceControllerHandleRemoveData>> = {
+/**
+ * 디바이스 삭제
+ */
+export const deviceControllerRemoveMutation = (
+  options?: Partial<Options<DeviceControllerRemoveData>>,
+): UseMutationOptions<DeviceControllerRemoveResponse, AxiosError<DeviceControllerRemoveError>, Options<DeviceControllerRemoveData>> => {
+  const mutationOptions: UseMutationOptions<DeviceControllerRemoveResponse, AxiosError<DeviceControllerRemoveError>, Options<DeviceControllerRemoveData>> = {
     mutationFn: async (fnOptions) => {
-      const { data } = await deviceControllerHandleRemove({
+      const { data } = await deviceControllerRemove({
         ...options,
         ...fnOptions,
         throwOnError: true,

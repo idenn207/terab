@@ -1,5 +1,6 @@
-import { api } from '@/shared/api';
+import { useMutation } from '@tanstack/react-query';
+import { deviceControllerRegisterMutation } from '@shared/api';
 
 export function useRegisterDeviceMutation() {
-  return api.device.register.useMutation();
+  return useMutation({ ...deviceControllerRegisterMutation() });
 }
