@@ -81,12 +81,15 @@ import type {
   TrustedDeviceControllerRevokeData,
   TrustedDeviceControllerRevokeErrors,
   TrustedDeviceControllerRevokeResponses,
-  TwoFaControllerHandleGetStatusData,
-  TwoFaControllerHandleGetStatusResponses,
-  TwoFaControllerHandleResendData,
-  TwoFaControllerHandleResendResponses,
-  TwoFaControllerHandleRespondData,
-  TwoFaControllerHandleRespondResponses,
+  TwoFaControllerGetStatusData,
+  TwoFaControllerGetStatusErrors,
+  TwoFaControllerGetStatusResponses,
+  TwoFaControllerResendData,
+  TwoFaControllerResendErrors,
+  TwoFaControllerResendResponses,
+  TwoFaControllerRespondData,
+  TwoFaControllerRespondErrors,
+  TwoFaControllerRespondResponses,
 } from './types.gen';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean, TResponse = unknown> = Options2<
@@ -163,14 +166,38 @@ export const deviceControllerRegister = <ThrowOnError extends boolean = false>(o
 export const deviceControllerRemove = <ThrowOnError extends boolean = false>(options: Options<DeviceControllerRemoveData, ThrowOnError>) =>
   (options.client ?? client).delete<DeviceControllerRemoveResponses, DeviceControllerRemoveErrors, ThrowOnError>({ url: '/devices/{id}', ...options });
 
-export const twoFaControllerHandleGetStatus = <ThrowOnError extends boolean = false>(options?: Options<TwoFaControllerHandleGetStatusData, ThrowOnError>) =>
-  (options?.client ?? client).get<TwoFaControllerHandleGetStatusResponses, unknown, ThrowOnError>({ url: '/auth/2fa/challenge/{id}/status', ...options });
+/**
+ * 2FA 챌린지 상태 조회
+ */
+export const twoFaControllerGetStatus = <ThrowOnError extends boolean = false>(options: Options<TwoFaControllerGetStatusData, ThrowOnError>) =>
+  (options.client ?? client).get<TwoFaControllerGetStatusResponses, TwoFaControllerGetStatusErrors, ThrowOnError>({
+    responseType: 'json',
+    url: '/auth/2fa/challenge/{id}/status',
+    ...options,
+  });
 
-export const twoFaControllerHandleRespond = <ThrowOnError extends boolean = false>(options?: Options<TwoFaControllerHandleRespondData, ThrowOnError>) =>
-  (options?.client ?? client).post<TwoFaControllerHandleRespondResponses, unknown, ThrowOnError>({ url: '/auth/2fa/challenge/{id}/respond', ...options });
+/**
+ * 2FA 챌린지 응답
+ */
+export const twoFaControllerRespond = <ThrowOnError extends boolean = false>(options: Options<TwoFaControllerRespondData, ThrowOnError>) =>
+  (options.client ?? client).post<TwoFaControllerRespondResponses, TwoFaControllerRespondErrors, ThrowOnError>({
+    url: '/auth/2fa/challenge/{id}/respond',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    },
+  });
 
-export const twoFaControllerHandleResend = <ThrowOnError extends boolean = false>(options?: Options<TwoFaControllerHandleResendData, ThrowOnError>) =>
-  (options?.client ?? client).post<TwoFaControllerHandleResendResponses, unknown, ThrowOnError>({ url: '/auth/2fa/challenge/{id}/resend', ...options });
+/**
+ * 2FA 챌린지 재발송
+ */
+export const twoFaControllerResend = <ThrowOnError extends boolean = false>(options: Options<TwoFaControllerResendData, ThrowOnError>) =>
+  (options.client ?? client).post<TwoFaControllerResendResponses, TwoFaControllerResendErrors, ThrowOnError>({
+    responseType: 'json',
+    url: '/auth/2fa/challenge/{id}/resend',
+    ...options,
+  });
 
 /**
  * 신뢰기기 목록 조회

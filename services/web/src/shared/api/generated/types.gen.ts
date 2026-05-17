@@ -25,6 +25,43 @@ export type ErrorResponseDto = {
   message: string;
 };
 
+export type ChallengeStatusPendingDto = {
+  status: 'PENDING';
+  options: Array<string>;
+  correctNum: string;
+  remainingSeconds: number;
+};
+
+export type UserDto = {
+  id: string;
+  username: string;
+  nickname: string;
+};
+
+export type ChallengeStatusApprovedDto = {
+  status: 'APPROVED';
+  accessToken: string;
+  user: UserDto;
+};
+
+export type ChallengeStatusDeniedDto = {
+  status: 'DENIED';
+};
+
+export type ChallengeStatusExpiredDto = {
+  status: 'EXPIRED';
+};
+
+export type RespondChallengeBodyDto = {
+  selectedNumber: string;
+};
+
+export type ResendChallengeResponseDto = {
+  challengeId: string;
+  options: Array<string>;
+  expiresAt: string;
+};
+
 export type TrustedDeviceResponseDto = {
   id: string;
   userAgent?: string;
@@ -219,38 +256,93 @@ export type DeviceControllerRemoveResponses = {
 
 export type DeviceControllerRemoveResponse = DeviceControllerRemoveResponses[keyof DeviceControllerRemoveResponses];
 
-export type TwoFaControllerHandleGetStatusData = {
+export type TwoFaControllerGetStatusData = {
   body?: never;
-  path?: never;
+  path: {
+    id: string;
+  };
   query?: never;
   url: '/auth/2fa/challenge/{id}/status';
 };
 
-export type TwoFaControllerHandleGetStatusResponses = {
-  200: unknown;
+export type TwoFaControllerGetStatusErrors = {
+  /**
+   * `TWO_FA_CHALLENGE_NOT_FOUND` — 2FA 챌린지를 찾을 수 없습니다.
+   */
+  404: ErrorResponseDto;
 };
 
-export type TwoFaControllerHandleRespondData = {
-  body?: never;
-  path?: never;
+export type TwoFaControllerGetStatusError = TwoFaControllerGetStatusErrors[keyof TwoFaControllerGetStatusErrors];
+
+export type TwoFaControllerGetStatusResponses = {
+  200:
+    | ({
+        status: 'PENDING';
+      } & ChallengeStatusPendingDto)
+    | ({
+        status: 'APPROVED';
+      } & ChallengeStatusApprovedDto)
+    | ({
+        status: 'DENIED';
+      } & ChallengeStatusDeniedDto)
+    | ({
+        status: 'EXPIRED';
+      } & ChallengeStatusExpiredDto);
+};
+
+export type TwoFaControllerGetStatusResponse = TwoFaControllerGetStatusResponses[keyof TwoFaControllerGetStatusResponses];
+
+export type TwoFaControllerRespondData = {
+  body: RespondChallengeBodyDto;
+  path: {
+    id: string;
+  };
   query?: never;
   url: '/auth/2fa/challenge/{id}/respond';
 };
 
-export type TwoFaControllerHandleRespondResponses = {
-  201: unknown;
+export type TwoFaControllerRespondErrors = {
+  /**
+   * `FORBIDDEN` — 접근 권한이 없습니다.
+   */
+  403: ErrorResponseDto;
+  /**
+   * `TWO_FA_CHALLENGE_NOT_FOUND` — 2FA 챌린지를 찾을 수 없습니다.
+   */
+  404: ErrorResponseDto;
 };
 
-export type TwoFaControllerHandleResendData = {
+export type TwoFaControllerRespondError = TwoFaControllerRespondErrors[keyof TwoFaControllerRespondErrors];
+
+export type TwoFaControllerRespondResponses = {
+  204: void;
+};
+
+export type TwoFaControllerRespondResponse = TwoFaControllerRespondResponses[keyof TwoFaControllerRespondResponses];
+
+export type TwoFaControllerResendData = {
   body?: never;
-  path?: never;
+  path: {
+    id: string;
+  };
   query?: never;
   url: '/auth/2fa/challenge/{id}/resend';
 };
 
-export type TwoFaControllerHandleResendResponses = {
-  201: unknown;
+export type TwoFaControllerResendErrors = {
+  /**
+   * `TWO_FA_CHALLENGE_NOT_FOUND` — 2FA 챌린지를 찾을 수 없습니다.
+   */
+  404: ErrorResponseDto;
 };
+
+export type TwoFaControllerResendError = TwoFaControllerResendErrors[keyof TwoFaControllerResendErrors];
+
+export type TwoFaControllerResendResponses = {
+  200: ResendChallengeResponseDto;
+};
+
+export type TwoFaControllerResendResponse = TwoFaControllerResendResponses[keyof TwoFaControllerResendResponses];
 
 export type TrustedDeviceControllerListData = {
   body?: never;

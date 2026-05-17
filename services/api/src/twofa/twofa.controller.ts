@@ -1,36 +1,76 @@
-import { Controller, HttpStatus } from '@nestjs/common';
-import { type AuthUser, CurrentUser, Public } from '@terab/common';
-import { contract } from '@terab/contract';
-import { tsRestHandler, TsRestHandler } from '@ts-rest/nest';
+import { Body, Controller, Get, HttpCode, HttpStatus, Param, Post } from '@nestjs/common';
+import { ApiExtraModels, ApiOperation, ApiResponse, ApiTags, getSchemaPath, refs } from '@nestjs/swagger';
+import { ApiError, type AuthUser, CurrentUser, Public } from '@terab/common';
+import {
+  ChallengeStatusApprovedDto,
+  type ChallengeStatusResponse,
+  ChallengeStatusDeniedDto,
+  ChallengeStatusExpiredDto,
+  ChallengeStatusPendingDto,
+  ResendChallengeResponseDto,
+  RespondChallengeBodyDto,
+} from './dto';
 import { TwoFaService } from './twofa.service';
 
-@Controller()
+@Controller('auth/2fa/challenge')
+@ApiTags('TwoFa')
 export class TwoFaController {
   constructor(private readonly twoFaService: TwoFaService) {}
 
   @Public()
-  @TsRestHandler(contract.twofa.getStatus)
-  handleGetStatus() {
-    return tsRestHandler(contract.twofa.getStatus, async ({ params }) => {
-      const result = await this.twoFaService.getStatus(params.id);
-      return { status: HttpStatus.OK, body: result };
-    });
+  @Get(':id/status')
+  @ApiOperation({ summary: '2FA 챌린지 상태 조회' })
+  @ApiExtraModels(
+    ChallengeStatusPendingDto,
+    ChallengeStatusApprovedDto,
+    ChallengeStatusDeniedDto,
+    ChallengeStatusExpiredDto,
+  )
+  @ApiResponse({
+    status: HttpStatus.OK,
+    schema: {
+      oneOf: refs(
+        ChallengeStatusPendingDto,
+        ChallengeStatusApprovedDto,
+        ChallengeStatusDeniedDto,
+        ChallengeStatusExpiredDto,
+      ),
+      discriminator: {
+        propertyName: 'status',
+        mapping: {
+          PENDING: getSchemaPath(ChallengeStatusPendingDto),
+          APPROVED: getSchemaPath(ChallengeStatusApprovedDto),
+          DENIED: getSchemaPath(ChallengeStatusDeniedDto),
+          EXPIRED: getSchemaPath(ChallengeStatusExpiredDto),
+        },
+      },
+    },
+  })
+  @ApiError('TWO_FA_CHALLENGE_NOT_FOUND')
+  async getStatus(@Param('id') id: string): Promise<ChallengeStatusResponse> {
+    return this.twoFaService.getStatus(id);
   }
 
-  @TsRestHandler(contract.twofa.respond)
-  handleRespond(@CurrentUser() user: AuthUser) {
-    return tsRestHandler(contract.twofa.respond, async ({ body, params }) => {
-      await this.twoFaService.respond(params.id, user.userId, body.selectedNumber);
-      return { status: HttpStatus.NO_CONTENT, body: undefined };
-    });
+  @Post(':id/respond')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({ summary: '2FA 챌린지 응답' })
+  @ApiResponse({ status: HttpStatus.NO_CONTENT })
+  @ApiError('TWO_FA_CHALLENGE_NOT_FOUND', 'FORBIDDEN')
+  async respond(
+    @CurrentUser() user: AuthUser,
+    @Param('id') id: string,
+    @Body() body: RespondChallengeBodyDto,
+  ): Promise<void> {
+    await this.twoFaService.respond(id, user.userId, body.selectedNumber);
   }
 
   @Public()
-  @TsRestHandler(contract.twofa.resend)
-  handleResend() {
-    return tsRestHandler(contract.twofa.resend, async ({ params }) => {
-      const result = await this.twoFaService.resend(params.id);
-      return { status: HttpStatus.OK, body: { ...result, challengeId: result.id } };
-    });
+  @Post(':id/resend')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: '2FA 챌린지 재발송' })
+  @ApiResponse({ status: HttpStatus.OK, type: ResendChallengeResponseDto })
+  @ApiError('TWO_FA_CHALLENGE_NOT_FOUND')
+  async resend(@Param('id') id: string): Promise<ResendChallengeResponseDto> {
+    return this.twoFaService.resend(id);
   }
 }

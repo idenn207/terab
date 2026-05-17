@@ -1,11 +1,10 @@
 import { Injectable } from '@nestjs/common';
 import { ApiException } from '@terab/common';
-import { contract } from '@terab/contract';
 import { DatabaseService, ServiceCore, TransactionContext } from '@terab/db';
 import { LogReplay } from '@terab/logger';
 import { TokenService } from '@terab/security';
-import { ServerInferResponseBody } from '@ts-rest/core';
 import { randomInt } from 'node:crypto';
+import { type ChallengeStatusResponse, ResendChallengeResponseDto } from './dto';
 import { TwoFaRepository } from './twofa.repository';
 
 @Injectable()
@@ -29,7 +28,7 @@ export class TwoFaService extends ServiceCore {
     return this.twoFaRepository.insert({ userId, options, correctNum, expiresAt });
   }
 
-  async getStatus(challengeId: string): Promise<ServerInferResponseBody<typeof contract.twofa.getStatus>> {
+  async getStatus(challengeId: string): Promise<ChallengeStatusResponse> {
     const challenge = await this.twoFaRepository.findById(challengeId);
     if (!challenge) throw new ApiException('TWO_FA_CHALLENGE_NOT_FOUND');
 
@@ -91,14 +90,14 @@ export class TwoFaService extends ServiceCore {
   }
 
   @LogReplay()
-  async resend(oldChallengeId: string): Promise<{ id: string; options: string[]; expiresAt: Date }> {
+  async resend(oldChallengeId: string): Promise<ResendChallengeResponseDto> {
     const old = await this.twoFaRepository.findById(oldChallengeId);
     if (!old) throw new ApiException('TWO_FA_CHALLENGE_NOT_FOUND');
     if (old.status === 'PENDING') {
       await this.twoFaRepository.updateStatus(oldChallengeId, 'EXPIRED');
     }
     const challenge = await this.createChallenge(old.userId);
-    return { id: challenge.id, options: challenge.options.split(','), expiresAt: challenge.expiresAt };
+    return { challengeId: challenge.id, options: challenge.options.split(','), expiresAt: challenge.expiresAt };
   }
 
   private generateOptions(): number[] {

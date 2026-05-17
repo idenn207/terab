@@ -1,10 +1,9 @@
-import { api } from '@/shared/api';
-import { contract } from '@terab/contract';
+import { twoFaControllerGetStatusOptions } from '@shared/api';
+import { useQuery } from '@tanstack/react-query';
 
 export function useChallengeStatusQuery(challengeId: string, enabled: boolean) {
-  return api.twofa.getStatus.useQuery({
-    queryKey: [contract.twofa.getStatus, challengeId],
-    queryData: { params: { id: challengeId } },
+  return useQuery({
+    ...twoFaControllerGetStatusOptions({ path: { id: challengeId } }),
     enabled: enabled && !!challengeId,
     refetchInterval: 3000,
     retry: false,

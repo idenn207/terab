@@ -17,16 +17,15 @@ export function useTwoFactorPolling(initialChallengeId: string, onAuthenticated?
   const { data } = useChallengeStatusQuery(challengeId, pollEnabled);
 
   useEffect(() => {
-    if (!data || data.status !== 200) return;
-    const body = data.body;
+    if (!data) return;
 
-    if (body.status === 'DENIED' || body.status === 'EXPIRED') {
+    if (data.status === 'DENIED' || data.status === 'EXPIRED') {
       setPollEnabled(false);
       navigate('/login?error=2fa_denied');
       return;
     }
 
-    if (body.status === 'APPROVED') {
+    if (data.status === 'APPROVED') {
       setPollEnabled(false);
       completeMutation
         .mutateAsync({ params: { id: challengeId }, body: {} })
@@ -40,17 +39,17 @@ export function useTwoFactorPolling(initialChallengeId: string, onAuthenticated?
         })
         .catch(() => navigate('/login?error=2fa_failed'));
     }
-  }, [data, completeMutation, navigate, challengeId]);
+  }, [data, completeMutation, navigate, challengeId, setAuth]);
 
-  const pendingData = data?.status === 200 && data.body.status === 'PENDING' ? data.body : null;
+  const pendingData = data?.status === 'PENDING' ? data : null;
 
   const resend = async () => {
     resendMutation.mutate(
-      { params: { id: challengeId }, body: {} },
+      { path: { id: challengeId } },
       {
         onSuccess: (response) => {
-          if (response.status === 200) {
-            setChallengeId(response.body.challengeId);
+          if (response) {
+            setChallengeId(response.challengeId);
             setPollEnabled(true);
           }
         },

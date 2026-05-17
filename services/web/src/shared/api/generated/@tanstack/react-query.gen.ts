@@ -41,9 +41,9 @@ import {
   trustedDeviceControllerList,
   trustedDeviceControllerRegister,
   trustedDeviceControllerRevoke,
-  twoFaControllerHandleGetStatus,
-  twoFaControllerHandleResend,
-  twoFaControllerHandleRespond,
+  twoFaControllerGetStatus,
+  twoFaControllerResend,
+  twoFaControllerRespond,
 } from '../sdk.gen';
 import type {
   AuthControllerHandleCompleteTwoFaData,
@@ -103,9 +103,15 @@ import type {
   TrustedDeviceControllerRevokeData,
   TrustedDeviceControllerRevokeError,
   TrustedDeviceControllerRevokeResponse,
-  TwoFaControllerHandleGetStatusData,
-  TwoFaControllerHandleResendData,
-  TwoFaControllerHandleRespondData,
+  TwoFaControllerGetStatusData,
+  TwoFaControllerGetStatusError,
+  TwoFaControllerGetStatusResponse,
+  TwoFaControllerResendData,
+  TwoFaControllerResendError,
+  TwoFaControllerResendResponse,
+  TwoFaControllerRespondData,
+  TwoFaControllerRespondError,
+  TwoFaControllerRespondResponse,
 } from '../types.gen';
 
 export type QueryKey<TOptions extends Options> = [
@@ -329,13 +335,20 @@ export const deviceControllerRemoveMutation = (
   return mutationOptions;
 };
 
-export const twoFaControllerHandleGetStatusQueryKey = (options?: Options<TwoFaControllerHandleGetStatusData>) =>
-  createQueryKey('twoFaControllerHandleGetStatus', options);
+export const twoFaControllerGetStatusQueryKey = (options: Options<TwoFaControllerGetStatusData>) => createQueryKey('twoFaControllerGetStatus', options);
 
-export const twoFaControllerHandleGetStatusOptions = (options?: Options<TwoFaControllerHandleGetStatusData>) =>
-  queryOptions<unknown, AxiosError<DefaultError>, unknown, ReturnType<typeof twoFaControllerHandleGetStatusQueryKey>>({
+/**
+ * 2FA 챌린지 상태 조회
+ */
+export const twoFaControllerGetStatusOptions = (options: Options<TwoFaControllerGetStatusData>) =>
+  queryOptions<
+    TwoFaControllerGetStatusResponse,
+    AxiosError<TwoFaControllerGetStatusError>,
+    TwoFaControllerGetStatusResponse,
+    ReturnType<typeof twoFaControllerGetStatusQueryKey>
+  >({
     queryFn: async ({ queryKey, signal }) => {
-      const { data } = await twoFaControllerHandleGetStatus({
+      const { data } = await twoFaControllerGetStatus({
         ...options,
         ...queryKey[0],
         signal,
@@ -343,15 +356,18 @@ export const twoFaControllerHandleGetStatusOptions = (options?: Options<TwoFaCon
       });
       return data;
     },
-    queryKey: twoFaControllerHandleGetStatusQueryKey(options),
+    queryKey: twoFaControllerGetStatusQueryKey(options),
   });
 
-export const twoFaControllerHandleRespondMutation = (
-  options?: Partial<Options<TwoFaControllerHandleRespondData>>,
-): UseMutationOptions<unknown, AxiosError<DefaultError>, Options<TwoFaControllerHandleRespondData>> => {
-  const mutationOptions: UseMutationOptions<unknown, AxiosError<DefaultError>, Options<TwoFaControllerHandleRespondData>> = {
+/**
+ * 2FA 챌린지 응답
+ */
+export const twoFaControllerRespondMutation = (
+  options?: Partial<Options<TwoFaControllerRespondData>>,
+): UseMutationOptions<TwoFaControllerRespondResponse, AxiosError<TwoFaControllerRespondError>, Options<TwoFaControllerRespondData>> => {
+  const mutationOptions: UseMutationOptions<TwoFaControllerRespondResponse, AxiosError<TwoFaControllerRespondError>, Options<TwoFaControllerRespondData>> = {
     mutationFn: async (fnOptions) => {
-      const { data } = await twoFaControllerHandleRespond({
+      const { data } = await twoFaControllerRespond({
         ...options,
         ...fnOptions,
         throwOnError: true,
@@ -362,12 +378,15 @@ export const twoFaControllerHandleRespondMutation = (
   return mutationOptions;
 };
 
-export const twoFaControllerHandleResendMutation = (
-  options?: Partial<Options<TwoFaControllerHandleResendData>>,
-): UseMutationOptions<unknown, AxiosError<DefaultError>, Options<TwoFaControllerHandleResendData>> => {
-  const mutationOptions: UseMutationOptions<unknown, AxiosError<DefaultError>, Options<TwoFaControllerHandleResendData>> = {
+/**
+ * 2FA 챌린지 재발송
+ */
+export const twoFaControllerResendMutation = (
+  options?: Partial<Options<TwoFaControllerResendData>>,
+): UseMutationOptions<TwoFaControllerResendResponse, AxiosError<TwoFaControllerResendError>, Options<TwoFaControllerResendData>> => {
+  const mutationOptions: UseMutationOptions<TwoFaControllerResendResponse, AxiosError<TwoFaControllerResendError>, Options<TwoFaControllerResendData>> = {
     mutationFn: async (fnOptions) => {
-      const { data } = await twoFaControllerHandleResend({
+      const { data } = await twoFaControllerResend({
         ...options,
         ...fnOptions,
         throwOnError: true,
