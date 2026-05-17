@@ -9,7 +9,7 @@ export function useLogout() {
 
   const logout = () => {
     mutation.mutate(
-      { body: {} },
+      {},
       {
         onSettled: () => {
           clearAuth();

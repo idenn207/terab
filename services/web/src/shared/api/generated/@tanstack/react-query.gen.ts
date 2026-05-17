@@ -5,13 +5,13 @@ import type { AxiosError } from 'axios';
 
 import { client } from '../client.gen';
 import {
-  authControllerHandleCompleteTwoFa,
-  authControllerHandleLogin,
-  authControllerHandleLoginWithBackup,
-  authControllerHandleLogout,
-  authControllerHandleMe,
-  authControllerHandleRefresh,
-  authControllerHandleRegister,
+  authControllerCompleteTwoFa,
+  authControllerLogin,
+  authControllerLoginWithBackup,
+  authControllerLogout,
+  authControllerMe,
+  authControllerRefresh,
+  authControllerRegister,
   deviceControllerList,
   deviceControllerRegister,
   deviceControllerRemove,
@@ -46,13 +46,26 @@ import {
   twoFaControllerRespond,
 } from '../sdk.gen';
 import type {
-  AuthControllerHandleCompleteTwoFaData,
-  AuthControllerHandleLoginData,
-  AuthControllerHandleLoginWithBackupData,
-  AuthControllerHandleLogoutData,
-  AuthControllerHandleMeData,
-  AuthControllerHandleRefreshData,
-  AuthControllerHandleRegisterData,
+  AuthControllerCompleteTwoFaData,
+  AuthControllerCompleteTwoFaError,
+  AuthControllerCompleteTwoFaResponse,
+  AuthControllerLoginData,
+  AuthControllerLoginError,
+  AuthControllerLoginResponse,
+  AuthControllerLoginWithBackupData,
+  AuthControllerLoginWithBackupError,
+  AuthControllerLoginWithBackupResponse,
+  AuthControllerLogoutData,
+  AuthControllerLogoutResponse,
+  AuthControllerMeData,
+  AuthControllerMeError,
+  AuthControllerMeResponse,
+  AuthControllerRefreshData,
+  AuthControllerRefreshError,
+  AuthControllerRefreshResponse,
+  AuthControllerRegisterData,
+  AuthControllerRegisterError,
+  AuthControllerRegisterResponse,
   DeviceControllerListData,
   DeviceControllerListResponse,
   DeviceControllerRegisterData,
@@ -166,12 +179,15 @@ export const healthControllerCheckOptions = (options?: Options<HealthControllerC
     queryKey: healthControllerCheckQueryKey(options),
   });
 
-export const authControllerHandleRegisterMutation = (
-  options?: Partial<Options<AuthControllerHandleRegisterData>>,
-): UseMutationOptions<unknown, AxiosError<DefaultError>, Options<AuthControllerHandleRegisterData>> => {
-  const mutationOptions: UseMutationOptions<unknown, AxiosError<DefaultError>, Options<AuthControllerHandleRegisterData>> = {
+/**
+ * 회원가입 — 초대 토큰 소비 후 RT 쿠키 설정
+ */
+export const authControllerRegisterMutation = (
+  options?: Partial<Options<AuthControllerRegisterData>>,
+): UseMutationOptions<AuthControllerRegisterResponse, AxiosError<AuthControllerRegisterError>, Options<AuthControllerRegisterData>> => {
+  const mutationOptions: UseMutationOptions<AuthControllerRegisterResponse, AxiosError<AuthControllerRegisterError>, Options<AuthControllerRegisterData>> = {
     mutationFn: async (fnOptions) => {
-      const { data } = await authControllerHandleRegister({
+      const { data } = await authControllerRegister({
         ...options,
         ...fnOptions,
         throwOnError: true,
@@ -182,12 +198,15 @@ export const authControllerHandleRegisterMutation = (
   return mutationOptions;
 };
 
-export const authControllerHandleLoginMutation = (
-  options?: Partial<Options<AuthControllerHandleLoginData>>,
-): UseMutationOptions<unknown, AxiosError<DefaultError>, Options<AuthControllerHandleLoginData>> => {
-  const mutationOptions: UseMutationOptions<unknown, AxiosError<DefaultError>, Options<AuthControllerHandleLoginData>> = {
+/**
+ * 로그인 — 2FA 필요 시 챌린지 발급, 아니면 AUTHENTICATED + RT 쿠키
+ */
+export const authControllerLoginMutation = (
+  options?: Partial<Options<AuthControllerLoginData>>,
+): UseMutationOptions<AuthControllerLoginResponse, AxiosError<AuthControllerLoginError>, Options<AuthControllerLoginData>> => {
+  const mutationOptions: UseMutationOptions<AuthControllerLoginResponse, AxiosError<AuthControllerLoginError>, Options<AuthControllerLoginData>> = {
     mutationFn: async (fnOptions) => {
-      const { data } = await authControllerHandleLogin({
+      const { data } = await authControllerLogin({
         ...options,
         ...fnOptions,
         throwOnError: true,
@@ -198,12 +217,19 @@ export const authControllerHandleLoginMutation = (
   return mutationOptions;
 };
 
-export const authControllerHandleLoginWithBackupMutation = (
-  options?: Partial<Options<AuthControllerHandleLoginWithBackupData>>,
-): UseMutationOptions<unknown, AxiosError<DefaultError>, Options<AuthControllerHandleLoginWithBackupData>> => {
-  const mutationOptions: UseMutationOptions<unknown, AxiosError<DefaultError>, Options<AuthControllerHandleLoginWithBackupData>> = {
+/**
+ * 백업 코드 로그인 — 2FA 우회
+ */
+export const authControllerLoginWithBackupMutation = (
+  options?: Partial<Options<AuthControllerLoginWithBackupData>>,
+): UseMutationOptions<AuthControllerLoginWithBackupResponse, AxiosError<AuthControllerLoginWithBackupError>, Options<AuthControllerLoginWithBackupData>> => {
+  const mutationOptions: UseMutationOptions<
+    AuthControllerLoginWithBackupResponse,
+    AxiosError<AuthControllerLoginWithBackupError>,
+    Options<AuthControllerLoginWithBackupData>
+  > = {
     mutationFn: async (fnOptions) => {
-      const { data } = await authControllerHandleLoginWithBackup({
+      const { data } = await authControllerLoginWithBackup({
         ...options,
         ...fnOptions,
         throwOnError: true,
@@ -214,12 +240,19 @@ export const authControllerHandleLoginWithBackupMutation = (
   return mutationOptions;
 };
 
-export const authControllerHandleCompleteTwoFaMutation = (
-  options?: Partial<Options<AuthControllerHandleCompleteTwoFaData>>,
-): UseMutationOptions<unknown, AxiosError<DefaultError>, Options<AuthControllerHandleCompleteTwoFaData>> => {
-  const mutationOptions: UseMutationOptions<unknown, AxiosError<DefaultError>, Options<AuthControllerHandleCompleteTwoFaData>> = {
+/**
+ * 2FA 챌린지 완료 — APPROVED 상태에서 토큰 발급
+ */
+export const authControllerCompleteTwoFaMutation = (
+  options?: Partial<Options<AuthControllerCompleteTwoFaData>>,
+): UseMutationOptions<AuthControllerCompleteTwoFaResponse, AxiosError<AuthControllerCompleteTwoFaError>, Options<AuthControllerCompleteTwoFaData>> => {
+  const mutationOptions: UseMutationOptions<
+    AuthControllerCompleteTwoFaResponse,
+    AxiosError<AuthControllerCompleteTwoFaError>,
+    Options<AuthControllerCompleteTwoFaData>
+  > = {
     mutationFn: async (fnOptions) => {
-      const { data } = await authControllerHandleCompleteTwoFa({
+      const { data } = await authControllerCompleteTwoFa({
         ...options,
         ...fnOptions,
         throwOnError: true,
@@ -230,12 +263,15 @@ export const authControllerHandleCompleteTwoFaMutation = (
   return mutationOptions;
 };
 
-export const authControllerHandleRefreshMutation = (
-  options?: Partial<Options<AuthControllerHandleRefreshData>>,
-): UseMutationOptions<unknown, AxiosError<DefaultError>, Options<AuthControllerHandleRefreshData>> => {
-  const mutationOptions: UseMutationOptions<unknown, AxiosError<DefaultError>, Options<AuthControllerHandleRefreshData>> = {
+/**
+ * Refresh Token 회전
+ */
+export const authControllerRefreshMutation = (
+  options?: Partial<Options<AuthControllerRefreshData>>,
+): UseMutationOptions<AuthControllerRefreshResponse, AxiosError<AuthControllerRefreshError>, Options<AuthControllerRefreshData>> => {
+  const mutationOptions: UseMutationOptions<AuthControllerRefreshResponse, AxiosError<AuthControllerRefreshError>, Options<AuthControllerRefreshData>> = {
     mutationFn: async (fnOptions) => {
-      const { data } = await authControllerHandleRefresh({
+      const { data } = await authControllerRefresh({
         ...options,
         ...fnOptions,
         throwOnError: true,
@@ -246,12 +282,15 @@ export const authControllerHandleRefreshMutation = (
   return mutationOptions;
 };
 
-export const authControllerHandleLogoutMutation = (
-  options?: Partial<Options<AuthControllerHandleLogoutData>>,
-): UseMutationOptions<unknown, AxiosError<DefaultError>, Options<AuthControllerHandleLogoutData>> => {
-  const mutationOptions: UseMutationOptions<unknown, AxiosError<DefaultError>, Options<AuthControllerHandleLogoutData>> = {
+/**
+ * 로그아웃 — RT 폐기 및 쿠키 삭제
+ */
+export const authControllerLogoutMutation = (
+  options?: Partial<Options<AuthControllerLogoutData>>,
+): UseMutationOptions<AuthControllerLogoutResponse, AxiosError<DefaultError>, Options<AuthControllerLogoutData>> => {
+  const mutationOptions: UseMutationOptions<AuthControllerLogoutResponse, AxiosError<DefaultError>, Options<AuthControllerLogoutData>> = {
     mutationFn: async (fnOptions) => {
-      const { data } = await authControllerHandleLogout({
+      const { data } = await authControllerLogout({
         ...options,
         ...fnOptions,
         throwOnError: true,
@@ -262,12 +301,15 @@ export const authControllerHandleLogoutMutation = (
   return mutationOptions;
 };
 
-export const authControllerHandleMeQueryKey = (options?: Options<AuthControllerHandleMeData>) => createQueryKey('authControllerHandleMe', options);
+export const authControllerMeQueryKey = (options?: Options<AuthControllerMeData>) => createQueryKey('authControllerMe', options);
 
-export const authControllerHandleMeOptions = (options?: Options<AuthControllerHandleMeData>) =>
-  queryOptions<unknown, AxiosError<DefaultError>, unknown, ReturnType<typeof authControllerHandleMeQueryKey>>({
+/**
+ * 현재 사용자 조회
+ */
+export const authControllerMeOptions = (options?: Options<AuthControllerMeData>) =>
+  queryOptions<AuthControllerMeResponse, AxiosError<AuthControllerMeError>, AuthControllerMeResponse, ReturnType<typeof authControllerMeQueryKey>>({
     queryFn: async ({ queryKey, signal }) => {
-      const { data } = await authControllerHandleMe({
+      const { data } = await authControllerMe({
         ...options,
         ...queryKey[0],
         signal,
@@ -275,7 +317,7 @@ export const authControllerHandleMeOptions = (options?: Options<AuthControllerHa
       });
       return data;
     },
-    queryKey: authControllerHandleMeQueryKey(options),
+    queryKey: authControllerMeQueryKey(options),
   });
 
 export const deviceControllerListQueryKey = (options?: Options<DeviceControllerListData>) => createQueryKey('deviceControllerList', options);

@@ -28,14 +28,17 @@ export function useTwoFactorPolling(initialChallengeId: string, onAuthenticated?
     if (data.status === 'APPROVED') {
       setPollEnabled(false);
       completeMutation
-        .mutateAsync({ params: { id: challengeId }, body: {} })
+        .mutateAsync({ path: { id: challengeId } })
         .then((completeRes) => {
-          if (completeRes.status === 200 && completeRes.body.status === 'AUTHENTICATED') {
-            setAuth(completeRes.body.accessToken, completeRes.body.user);
+          if (completeRes.status === 'AUTHENTICATED') {
+            setAuth(completeRes.accessToken, completeRes.user);
             onAuthenticatedRef.current?.();
             navigate('/drive');
             return;
           }
+          // 타입상 2FA_REQUIRED 분기 — completeTwoFa는 서버가 항상 AUTHENTICATED만 반환하지만
+          // LoginResponse union 타입을 방어적으로 좁혀 실패로 처리.
+          navigate('/login?error=2fa_failed');
         })
         .catch(() => navigate('/login?error=2fa_failed'));
     }

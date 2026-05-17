@@ -1,6 +1,6 @@
 import { useUserStore } from '@/entities';
 import axios, { AxiosError, type InternalAxiosRequestConfig } from 'axios';
-import { PUBLIC_PATHS } from './generated/public-paths.gen';
+import { isPublicPath } from './generated/public-paths.gen';
 
 export const axiosInstance = axios.create({
   baseURL: '/api',
@@ -8,7 +8,7 @@ export const axiosInstance = axios.create({
 });
 
 axiosInstance.interceptors.request.use((config) => {
-  if (config.url && PUBLIC_PATHS.has(config.url)) {
+  if (config.url && isPublicPath(config.url)) {
     return config;
   }
   const token = useUserStore.getState().accessToken;
@@ -32,8 +32,8 @@ const processQueue = (error: unknown, token: string | null = null) => {
   failedQueue = [];
 };
 
-// Phase 0 호환: 기존 ts-rest consumer가 axiosAuth/axiosBasic을 import 중.
-// Phase 6 (auth) 도메인 전환 완료 시 제거 — axiosInstance 단일화.
+// Phase 0 호환: 레거시 consumer(userApi, backupCodeApi, PrivateRoute)가 axiosAuth/axiosBasic을 import 중.
+// Phase 9 (cleanup)에서 해당 consumer들을 codegen 기반으로 마이그레이션한 뒤 함께 제거 — axiosInstance 단일화.
 export const axiosAuth = axiosInstance;
 export const axiosBasic = axios.create({ baseURL: '/api', withCredentials: true });
 
@@ -49,7 +49,7 @@ axiosInstance.interceptors.response.use(
       throw error;
     }
 
-    if (originalRequest.url && PUBLIC_PATHS.has(originalRequest.url)) {
+    if (originalRequest.url && isPublicPath(originalRequest.url)) {
       throw error;
     }
 

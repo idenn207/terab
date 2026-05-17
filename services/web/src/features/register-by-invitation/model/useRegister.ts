@@ -26,11 +26,9 @@ export function useRegister(token: string, onSuccess: (backupCodes: string[]) =>
         },
       },
       {
-        onSuccess: (response) => {
-          if (response.status === 201) {
-            setAuth(response.body.accessToken, response.body.user);
-            onSuccess(response.body.backupCodes);
-          }
+        onSuccess: (data) => {
+          setAuth(data.accessToken, data.user);
+          onSuccess(data.backupCodes);
         },
       },
     );

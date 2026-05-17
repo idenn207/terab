@@ -3,20 +3,26 @@
 import type { Client, Options as Options2, TDataShape } from './client';
 import { client } from './client.gen';
 import type {
-  AuthControllerHandleCompleteTwoFaData,
-  AuthControllerHandleCompleteTwoFaResponses,
-  AuthControllerHandleLoginData,
-  AuthControllerHandleLoginResponses,
-  AuthControllerHandleLoginWithBackupData,
-  AuthControllerHandleLoginWithBackupResponses,
-  AuthControllerHandleLogoutData,
-  AuthControllerHandleLogoutResponses,
-  AuthControllerHandleMeData,
-  AuthControllerHandleMeResponses,
-  AuthControllerHandleRefreshData,
-  AuthControllerHandleRefreshResponses,
-  AuthControllerHandleRegisterData,
-  AuthControllerHandleRegisterResponses,
+  AuthControllerCompleteTwoFaData,
+  AuthControllerCompleteTwoFaErrors,
+  AuthControllerCompleteTwoFaResponses,
+  AuthControllerLoginData,
+  AuthControllerLoginErrors,
+  AuthControllerLoginResponses,
+  AuthControllerLoginWithBackupData,
+  AuthControllerLoginWithBackupErrors,
+  AuthControllerLoginWithBackupResponses,
+  AuthControllerLogoutData,
+  AuthControllerLogoutResponses,
+  AuthControllerMeData,
+  AuthControllerMeErrors,
+  AuthControllerMeResponses,
+  AuthControllerRefreshData,
+  AuthControllerRefreshErrors,
+  AuthControllerRefreshResponses,
+  AuthControllerRegisterData,
+  AuthControllerRegisterErrors,
+  AuthControllerRegisterResponses,
   DeviceControllerListData,
   DeviceControllerListResponses,
   DeviceControllerRegisterData,
@@ -113,29 +119,83 @@ export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends 
 export const healthControllerCheck = <ThrowOnError extends boolean = false>(options?: Options<HealthControllerCheckData, ThrowOnError>) =>
   (options?.client ?? client).get<HealthControllerCheckResponses, unknown, ThrowOnError>({ url: '/api/health', ...options });
 
-export const authControllerHandleRegister = <ThrowOnError extends boolean = false>(options?: Options<AuthControllerHandleRegisterData, ThrowOnError>) =>
-  (options?.client ?? client).post<AuthControllerHandleRegisterResponses, unknown, ThrowOnError>({ url: '/auth/register', ...options });
+/**
+ * 회원가입 — 초대 토큰 소비 후 RT 쿠키 설정
+ */
+export const authControllerRegister = <ThrowOnError extends boolean = false>(options: Options<AuthControllerRegisterData, ThrowOnError>) =>
+  (options.client ?? client).post<AuthControllerRegisterResponses, AuthControllerRegisterErrors, ThrowOnError>({
+    responseType: 'json',
+    url: '/auth/register',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    },
+  });
 
-export const authControllerHandleLogin = <ThrowOnError extends boolean = false>(options?: Options<AuthControllerHandleLoginData, ThrowOnError>) =>
-  (options?.client ?? client).post<AuthControllerHandleLoginResponses, unknown, ThrowOnError>({ url: '/auth/login', ...options });
+/**
+ * 로그인 — 2FA 필요 시 챌린지 발급, 아니면 AUTHENTICATED + RT 쿠키
+ */
+export const authControllerLogin = <ThrowOnError extends boolean = false>(options: Options<AuthControllerLoginData, ThrowOnError>) =>
+  (options.client ?? client).post<AuthControllerLoginResponses, AuthControllerLoginErrors, ThrowOnError>({
+    responseType: 'json',
+    url: '/auth/login',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    },
+  });
 
-export const authControllerHandleLoginWithBackup = <ThrowOnError extends boolean = false>(
-  options?: Options<AuthControllerHandleLoginWithBackupData, ThrowOnError>,
-) => (options?.client ?? client).post<AuthControllerHandleLoginWithBackupResponses, unknown, ThrowOnError>({ url: '/auth/login/backup', ...options });
+/**
+ * 백업 코드 로그인 — 2FA 우회
+ */
+export const authControllerLoginWithBackup = <ThrowOnError extends boolean = false>(options: Options<AuthControllerLoginWithBackupData, ThrowOnError>) =>
+  (options.client ?? client).post<AuthControllerLoginWithBackupResponses, AuthControllerLoginWithBackupErrors, ThrowOnError>({
+    responseType: 'json',
+    url: '/auth/login/backup',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    },
+  });
 
-export const authControllerHandleCompleteTwoFa = <ThrowOnError extends boolean = false>(
-  options?: Options<AuthControllerHandleCompleteTwoFaData, ThrowOnError>,
-) =>
-  (options?.client ?? client).post<AuthControllerHandleCompleteTwoFaResponses, unknown, ThrowOnError>({ url: '/auth/2fa/challenge/{id}/complete', ...options });
+/**
+ * 2FA 챌린지 완료 — APPROVED 상태에서 토큰 발급
+ */
+export const authControllerCompleteTwoFa = <ThrowOnError extends boolean = false>(options: Options<AuthControllerCompleteTwoFaData, ThrowOnError>) =>
+  (options.client ?? client).post<AuthControllerCompleteTwoFaResponses, AuthControllerCompleteTwoFaErrors, ThrowOnError>({
+    responseType: 'json',
+    url: '/auth/2fa/challenge/{id}/complete',
+    ...options,
+  });
 
-export const authControllerHandleRefresh = <ThrowOnError extends boolean = false>(options?: Options<AuthControllerHandleRefreshData, ThrowOnError>) =>
-  (options?.client ?? client).post<AuthControllerHandleRefreshResponses, unknown, ThrowOnError>({ url: '/auth/refresh', ...options });
+/**
+ * Refresh Token 회전
+ */
+export const authControllerRefresh = <ThrowOnError extends boolean = false>(options?: Options<AuthControllerRefreshData, ThrowOnError>) =>
+  (options?.client ?? client).post<AuthControllerRefreshResponses, AuthControllerRefreshErrors, ThrowOnError>({
+    responseType: 'json',
+    url: '/auth/refresh',
+    ...options,
+  });
 
-export const authControllerHandleLogout = <ThrowOnError extends boolean = false>(options?: Options<AuthControllerHandleLogoutData, ThrowOnError>) =>
-  (options?.client ?? client).post<AuthControllerHandleLogoutResponses, unknown, ThrowOnError>({ url: '/auth/logout', ...options });
+/**
+ * 로그아웃 — RT 폐기 및 쿠키 삭제
+ */
+export const authControllerLogout = <ThrowOnError extends boolean = false>(options?: Options<AuthControllerLogoutData, ThrowOnError>) =>
+  (options?.client ?? client).post<AuthControllerLogoutResponses, unknown, ThrowOnError>({ url: '/auth/logout', ...options });
 
-export const authControllerHandleMe = <ThrowOnError extends boolean = false>(options?: Options<AuthControllerHandleMeData, ThrowOnError>) =>
-  (options?.client ?? client).get<AuthControllerHandleMeResponses, unknown, ThrowOnError>({ url: '/auth/me', ...options });
+/**
+ * 현재 사용자 조회
+ */
+export const authControllerMe = <ThrowOnError extends boolean = false>(options?: Options<AuthControllerMeData, ThrowOnError>) =>
+  (options?.client ?? client).get<AuthControllerMeResponses, AuthControllerMeErrors, ThrowOnError>({
+    responseType: 'json',
+    url: '/auth/me',
+    ...options,
+  });
 
 /**
  * 디바이스 목록 조회

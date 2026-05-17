@@ -19,9 +19,7 @@ export function useLogin() {
     mutation.mutate(
       { body: credentials },
       {
-        onSuccess: (response) => {
-          if (response.status !== 200) return;
-          const data = response.body;
+        onSuccess: (data) => {
           if (data.status === 'AUTHENTICATED') {
             setAuth(data.accessToken, data.user);
             navigate('/drive');

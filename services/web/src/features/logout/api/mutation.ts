@@ -1,5 +1,6 @@
-import { api } from '@/shared/api';
+import { authControllerLogoutMutation } from '@shared/api';
+import { useMutation } from '@tanstack/react-query';
 
 export function useLogoutMutation() {
-  return api.auth.logout.useMutation();
+  return useMutation({ ...authControllerLogoutMutation() });
 }
