@@ -55,12 +55,13 @@ import type {
   FolderControllerHandleRenameResponses,
   HealthControllerCheckData,
   HealthControllerCheckResponses,
-  InvitationControllerHandleCreateData,
-  InvitationControllerHandleCreateResponses,
-  InvitationControllerHandleDeactivateData,
-  InvitationControllerHandleDeactivateResponses,
-  InvitationControllerHandleValidateData,
-  InvitationControllerHandleValidateResponses,
+  InvitationControllerCreateData,
+  InvitationControllerCreateResponses,
+  InvitationControllerDeactivateData,
+  InvitationControllerDeactivateErrors,
+  InvitationControllerDeactivateResponses,
+  InvitationControllerValidateData,
+  InvitationControllerValidateResponses,
   TrashControllerHandleListData,
   TrashControllerHandleListResponses,
   TrashControllerHandlePermanentDeleteData,
@@ -156,16 +157,38 @@ export const trustedDeviceControllerHandleRevoke = <ThrowOnError extends boolean
   options?: Options<TrustedDeviceControllerHandleRevokeData, ThrowOnError>,
 ) => (options?.client ?? client).delete<TrustedDeviceControllerHandleRevokeResponses, unknown, ThrowOnError>({ url: '/trusted-device/{id}', ...options });
 
-export const invitationControllerHandleCreate = <ThrowOnError extends boolean = false>(options?: Options<InvitationControllerHandleCreateData, ThrowOnError>) =>
-  (options?.client ?? client).post<InvitationControllerHandleCreateResponses, unknown, ThrowOnError>({ url: '/invitations', ...options });
+/**
+ * 초대장 생성
+ */
+export const invitationControllerCreate = <ThrowOnError extends boolean = false>(options: Options<InvitationControllerCreateData, ThrowOnError>) =>
+  (options.client ?? client).post<InvitationControllerCreateResponses, unknown, ThrowOnError>({
+    responseType: 'json',
+    url: '/invitations',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    },
+  });
 
-export const invitationControllerHandleDeactivate = <ThrowOnError extends boolean = false>(
-  options?: Options<InvitationControllerHandleDeactivateData, ThrowOnError>,
-) => (options?.client ?? client).delete<InvitationControllerHandleDeactivateResponses, unknown, ThrowOnError>({ url: '/invitations/{token}', ...options });
+/**
+ * 초대장 비활성화
+ */
+export const invitationControllerDeactivate = <ThrowOnError extends boolean = false>(options: Options<InvitationControllerDeactivateData, ThrowOnError>) =>
+  (options.client ?? client).delete<InvitationControllerDeactivateResponses, InvitationControllerDeactivateErrors, ThrowOnError>({
+    url: '/invitations/{token}',
+    ...options,
+  });
 
-export const invitationControllerHandleValidate = <ThrowOnError extends boolean = false>(
-  options?: Options<InvitationControllerHandleValidateData, ThrowOnError>,
-) => (options?.client ?? client).get<InvitationControllerHandleValidateResponses, unknown, ThrowOnError>({ url: '/invitations/{token}', ...options });
+/**
+ * 초대 토큰 유효성 검증
+ */
+export const invitationControllerValidate = <ThrowOnError extends boolean = false>(options: Options<InvitationControllerValidateData, ThrowOnError>) =>
+  (options.client ?? client).get<InvitationControllerValidateResponses, unknown, ThrowOnError>({
+    responseType: 'json',
+    url: '/invitations/{token}',
+    ...options,
+  });
 
 export const folderControllerHandleGetRoot = <ThrowOnError extends boolean = false>(options?: Options<FolderControllerHandleGetRootData, ThrowOnError>) =>
   (options?.client ?? client).get<FolderControllerHandleGetRootResponses, unknown, ThrowOnError>({ url: '/folders/root', ...options });

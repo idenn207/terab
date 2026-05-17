@@ -4,6 +4,31 @@ export type ClientOptions = {
   baseURL: string;
 };
 
+export type CreateInvitationBodyDto = {
+  expiresInDays?: number;
+};
+
+export type InvitationResponseDto = {
+  token: string;
+  url: string;
+  expiresAt: string;
+};
+
+export type ValidateInvitationResponseDto = {
+  valid: boolean;
+};
+
+export type ErrorResponseDto = {
+  /**
+   * ErrorCode 키 또는 일반화된 코드(HTTP_ERROR, INTERNAL_SERVER_ERROR)
+   */
+  code: string;
+  /**
+   * 사용자 노출 메시지
+   */
+  message: string;
+};
+
 export type HealthControllerCheckData = {
   body?: never;
   path?: never;
@@ -194,38 +219,57 @@ export type TrustedDeviceControllerHandleRevokeResponses = {
   200: unknown;
 };
 
-export type InvitationControllerHandleCreateData = {
-  body?: never;
+export type InvitationControllerCreateData = {
+  body: CreateInvitationBodyDto;
   path?: never;
   query?: never;
   url: '/invitations';
 };
 
-export type InvitationControllerHandleCreateResponses = {
-  201: unknown;
+export type InvitationControllerCreateResponses = {
+  201: InvitationResponseDto;
 };
 
-export type InvitationControllerHandleDeactivateData = {
+export type InvitationControllerCreateResponse = InvitationControllerCreateResponses[keyof InvitationControllerCreateResponses];
+
+export type InvitationControllerDeactivateData = {
   body?: never;
-  path?: never;
+  path: {
+    token: string;
+  };
   query?: never;
   url: '/invitations/{token}';
 };
 
-export type InvitationControllerHandleDeactivateResponses = {
-  200: unknown;
+export type InvitationControllerDeactivateErrors = {
+  /**
+   * `INVITATION_NOT_FOUND` — 유효하지 않은 초대 링크입니다.
+   */
+  404: ErrorResponseDto;
 };
 
-export type InvitationControllerHandleValidateData = {
+export type InvitationControllerDeactivateError = InvitationControllerDeactivateErrors[keyof InvitationControllerDeactivateErrors];
+
+export type InvitationControllerDeactivateResponses = {
+  204: void;
+};
+
+export type InvitationControllerDeactivateResponse = InvitationControllerDeactivateResponses[keyof InvitationControllerDeactivateResponses];
+
+export type InvitationControllerValidateData = {
   body?: never;
-  path?: never;
+  path: {
+    token: string;
+  };
   query?: never;
   url: '/invitations/{token}';
 };
 
-export type InvitationControllerHandleValidateResponses = {
-  200: unknown;
+export type InvitationControllerValidateResponses = {
+  200: ValidateInvitationResponseDto;
 };
+
+export type InvitationControllerValidateResponse = InvitationControllerValidateResponses[keyof InvitationControllerValidateResponses];
 
 export type FolderControllerHandleGetRootData = {
   body?: never;

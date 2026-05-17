@@ -31,9 +31,9 @@ import {
   folderControllerHandleRemove,
   folderControllerHandleRename,
   healthControllerCheck,
-  invitationControllerHandleCreate,
-  invitationControllerHandleDeactivate,
-  invitationControllerHandleValidate,
+  invitationControllerCreate,
+  invitationControllerDeactivate,
+  invitationControllerValidate,
   type Options,
   trashControllerHandleList,
   trashControllerHandlePermanentDelete,
@@ -72,9 +72,13 @@ import type {
   FolderControllerHandleRemoveData,
   FolderControllerHandleRenameData,
   HealthControllerCheckData,
-  InvitationControllerHandleCreateData,
-  InvitationControllerHandleDeactivateData,
-  InvitationControllerHandleValidateData,
+  InvitationControllerCreateData,
+  InvitationControllerCreateResponse,
+  InvitationControllerDeactivateData,
+  InvitationControllerDeactivateError,
+  InvitationControllerDeactivateResponse,
+  InvitationControllerValidateData,
+  InvitationControllerValidateResponse,
   TrashControllerHandleListData,
   TrashControllerHandlePermanentDeleteData,
   TrashControllerHandleRestoreData,
@@ -396,12 +400,15 @@ export const trustedDeviceControllerHandleRevokeMutation = (
   return mutationOptions;
 };
 
-export const invitationControllerHandleCreateMutation = (
-  options?: Partial<Options<InvitationControllerHandleCreateData>>,
-): UseMutationOptions<unknown, AxiosError<DefaultError>, Options<InvitationControllerHandleCreateData>> => {
-  const mutationOptions: UseMutationOptions<unknown, AxiosError<DefaultError>, Options<InvitationControllerHandleCreateData>> = {
+/**
+ * 초대장 생성
+ */
+export const invitationControllerCreateMutation = (
+  options?: Partial<Options<InvitationControllerCreateData>>,
+): UseMutationOptions<InvitationControllerCreateResponse, AxiosError<DefaultError>, Options<InvitationControllerCreateData>> => {
+  const mutationOptions: UseMutationOptions<InvitationControllerCreateResponse, AxiosError<DefaultError>, Options<InvitationControllerCreateData>> = {
     mutationFn: async (fnOptions) => {
-      const { data } = await invitationControllerHandleCreate({
+      const { data } = await invitationControllerCreate({
         ...options,
         ...fnOptions,
         throwOnError: true,
@@ -412,12 +419,19 @@ export const invitationControllerHandleCreateMutation = (
   return mutationOptions;
 };
 
-export const invitationControllerHandleDeactivateMutation = (
-  options?: Partial<Options<InvitationControllerHandleDeactivateData>>,
-): UseMutationOptions<unknown, AxiosError<DefaultError>, Options<InvitationControllerHandleDeactivateData>> => {
-  const mutationOptions: UseMutationOptions<unknown, AxiosError<DefaultError>, Options<InvitationControllerHandleDeactivateData>> = {
+/**
+ * 초대장 비활성화
+ */
+export const invitationControllerDeactivateMutation = (
+  options?: Partial<Options<InvitationControllerDeactivateData>>,
+): UseMutationOptions<InvitationControllerDeactivateResponse, AxiosError<InvitationControllerDeactivateError>, Options<InvitationControllerDeactivateData>> => {
+  const mutationOptions: UseMutationOptions<
+    InvitationControllerDeactivateResponse,
+    AxiosError<InvitationControllerDeactivateError>,
+    Options<InvitationControllerDeactivateData>
+  > = {
     mutationFn: async (fnOptions) => {
-      const { data } = await invitationControllerHandleDeactivate({
+      const { data } = await invitationControllerDeactivate({
         ...options,
         ...fnOptions,
         throwOnError: true,
@@ -428,13 +442,21 @@ export const invitationControllerHandleDeactivateMutation = (
   return mutationOptions;
 };
 
-export const invitationControllerHandleValidateQueryKey = (options?: Options<InvitationControllerHandleValidateData>) =>
-  createQueryKey('invitationControllerHandleValidate', options);
+export const invitationControllerValidateQueryKey = (options: Options<InvitationControllerValidateData>) =>
+  createQueryKey('invitationControllerValidate', options);
 
-export const invitationControllerHandleValidateOptions = (options?: Options<InvitationControllerHandleValidateData>) =>
-  queryOptions<unknown, AxiosError<DefaultError>, unknown, ReturnType<typeof invitationControllerHandleValidateQueryKey>>({
+/**
+ * 초대 토큰 유효성 검증
+ */
+export const invitationControllerValidateOptions = (options: Options<InvitationControllerValidateData>) =>
+  queryOptions<
+    InvitationControllerValidateResponse,
+    AxiosError<DefaultError>,
+    InvitationControllerValidateResponse,
+    ReturnType<typeof invitationControllerValidateQueryKey>
+  >({
     queryFn: async ({ queryKey, signal }) => {
-      const { data } = await invitationControllerHandleValidate({
+      const { data } = await invitationControllerValidate({
         ...options,
         ...queryKey[0],
         signal,
@@ -442,7 +464,7 @@ export const invitationControllerHandleValidateOptions = (options?: Options<Invi
       });
       return data;
     },
-    queryKey: invitationControllerHandleValidateQueryKey(options),
+    queryKey: invitationControllerValidateQueryKey(options),
   });
 
 export const folderControllerHandleGetRootQueryKey = (options?: Options<FolderControllerHandleGetRootData>) =>

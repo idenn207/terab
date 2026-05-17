@@ -1,39 +1,46 @@
-import { Controller, HttpStatus } from '@nestjs/common';
+import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, Post } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
-import { type AuthUser, CurrentUser, Public, RequirePermission } from '@terab/common';
-import { contract } from '@terab/contract';
-import { tsRestHandler, TsRestHandler } from '@ts-rest/nest';
+import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { ApiError, type AuthUser, CurrentUser, Public, RequirePermission } from '@terab/common';
 import { InvitationService } from './invitation.service';
+import {
+  CreateInvitationBodyDto,
+  InvitationResponseDto,
+  ValidateInvitationResponseDto,
+} from './dto';
 
-@Controller()
+@Controller('invitations')
+@ApiTags('Invitation')
 export class InvitationController {
   constructor(private readonly invitationService: InvitationService) {}
 
   @RequirePermission('user:invite')
-  @TsRestHandler(contract.invitation.create)
-  handleCreate(@CurrentUser() user: AuthUser) {
-    return tsRestHandler(contract.invitation.create, async ({ body }) => {
-      const result = await this.invitationService.create(user.userId, body.expiresInDays);
-      return { status: HttpStatus.CREATED, body: result };
-    });
+  @Post()
+  @ApiOperation({ summary: '초대장 생성' })
+  @ApiResponse({ status: HttpStatus.CREATED, type: InvitationResponseDto })
+  async create(
+    @CurrentUser() user: AuthUser,
+    @Body() body: CreateInvitationBodyDto,
+  ): Promise<InvitationResponseDto> {
+    return this.invitationService.create(user.userId, body.expiresInDays);
   }
 
   @Public()
   @Throttle({ default: { ttl: 60000, limit: 30 } })
-  @TsRestHandler(contract.invitation.validate)
-  handleValidate() {
-    return tsRestHandler(contract.invitation.validate, async ({ params }) => {
-      const result = await this.invitationService.validate(params.token);
-      return { status: HttpStatus.OK, body: result };
-    });
+  @Get(':token')
+  @ApiOperation({ summary: '초대 토큰 유효성 검증' })
+  @ApiResponse({ status: HttpStatus.OK, type: ValidateInvitationResponseDto })
+  async validate(@Param('token') token: string): Promise<ValidateInvitationResponseDto> {
+    return this.invitationService.validate(token);
   }
 
   @RequirePermission('user:manage')
-  @TsRestHandler(contract.invitation.deactivate)
-  handleDeactivate() {
-    return tsRestHandler(contract.invitation.deactivate, async ({ params }) => {
-      await this.invitationService.deactivate(params.token);
-      return { status: HttpStatus.NO_CONTENT, body: undefined };
-    });
+  @Delete(':token')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({ summary: '초대장 비활성화' })
+  @ApiResponse({ status: HttpStatus.NO_CONTENT })
+  @ApiError('INVITATION_NOT_FOUND')
+  async deactivate(@Param('token') token: string): Promise<void> {
+    await this.invitationService.deactivate(token);
   }
 }

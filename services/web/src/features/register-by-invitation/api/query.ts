@@ -1,10 +1,9 @@
-import { api } from '@/shared/api';
-import { contract } from '@terab/contract';
+import { useQuery } from '@tanstack/react-query';
+import { invitationControllerValidateOptions } from '@shared/api';
 
 export function useValidateInvitationQuery(token: string) {
-  return api.invitation.validate.useQuery({
-    queryKey: [contract.invitation.validate.path, token],
-    queryData: { params: { token } },
+  return useQuery({
+    ...invitationControllerValidateOptions({ path: { token } }),
     enabled: !!token,
     retry: false,
     staleTime: 1000 * 30,
