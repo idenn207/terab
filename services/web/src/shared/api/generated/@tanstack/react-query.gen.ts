@@ -38,9 +38,9 @@ import {
   trashControllerHandleList,
   trashControllerHandlePermanentDelete,
   trashControllerHandleRestore,
-  trustedDeviceControllerHandleList,
-  trustedDeviceControllerHandleRegister,
-  trustedDeviceControllerHandleRevoke,
+  trustedDeviceControllerList,
+  trustedDeviceControllerRegister,
+  trustedDeviceControllerRevoke,
   twoFaControllerHandleGetStatus,
   twoFaControllerHandleResend,
   twoFaControllerHandleRespond,
@@ -93,9 +93,12 @@ import type {
   TrashControllerHandleListData,
   TrashControllerHandlePermanentDeleteData,
   TrashControllerHandleRestoreData,
-  TrustedDeviceControllerHandleListData,
-  TrustedDeviceControllerHandleRegisterData,
-  TrustedDeviceControllerHandleRevokeData,
+  TrustedDeviceControllerListData,
+  TrustedDeviceControllerListResponse,
+  TrustedDeviceControllerRegisterData,
+  TrustedDeviceControllerRevokeData,
+  TrustedDeviceControllerRevokeError,
+  TrustedDeviceControllerRevokeResponse,
   TwoFaControllerHandleGetStatusData,
   TwoFaControllerHandleResendData,
   TwoFaControllerHandleRespondData,
@@ -362,13 +365,21 @@ export const twoFaControllerHandleResendMutation = (
   return mutationOptions;
 };
 
-export const trustedDeviceControllerHandleListQueryKey = (options?: Options<TrustedDeviceControllerHandleListData>) =>
-  createQueryKey('trustedDeviceControllerHandleList', options);
+export const trustedDeviceControllerListQueryKey = (options?: Options<TrustedDeviceControllerListData>) =>
+  createQueryKey('trustedDeviceControllerList', options);
 
-export const trustedDeviceControllerHandleListOptions = (options?: Options<TrustedDeviceControllerHandleListData>) =>
-  queryOptions<unknown, AxiosError<DefaultError>, unknown, ReturnType<typeof trustedDeviceControllerHandleListQueryKey>>({
+/**
+ * 신뢰기기 목록 조회
+ */
+export const trustedDeviceControllerListOptions = (options?: Options<TrustedDeviceControllerListData>) =>
+  queryOptions<
+    TrustedDeviceControllerListResponse,
+    AxiosError<DefaultError>,
+    TrustedDeviceControllerListResponse,
+    ReturnType<typeof trustedDeviceControllerListQueryKey>
+  >({
     queryFn: async ({ queryKey, signal }) => {
-      const { data } = await trustedDeviceControllerHandleList({
+      const { data } = await trustedDeviceControllerList({
         ...options,
         ...queryKey[0],
         signal,
@@ -376,15 +387,18 @@ export const trustedDeviceControllerHandleListOptions = (options?: Options<Trust
       });
       return data;
     },
-    queryKey: trustedDeviceControllerHandleListQueryKey(options),
+    queryKey: trustedDeviceControllerListQueryKey(options),
   });
 
-export const trustedDeviceControllerHandleRegisterMutation = (
-  options?: Partial<Options<TrustedDeviceControllerHandleRegisterData>>,
-): UseMutationOptions<unknown, AxiosError<DefaultError>, Options<TrustedDeviceControllerHandleRegisterData>> => {
-  const mutationOptions: UseMutationOptions<unknown, AxiosError<DefaultError>, Options<TrustedDeviceControllerHandleRegisterData>> = {
+/**
+ * 신뢰기기 등록 — trustToken 쿠키를 설정한다
+ */
+export const trustedDeviceControllerRegisterMutation = (
+  options?: Partial<Options<TrustedDeviceControllerRegisterData>>,
+): UseMutationOptions<unknown, AxiosError<DefaultError>, Options<TrustedDeviceControllerRegisterData>> => {
+  const mutationOptions: UseMutationOptions<unknown, AxiosError<DefaultError>, Options<TrustedDeviceControllerRegisterData>> = {
     mutationFn: async (fnOptions) => {
-      const { data } = await trustedDeviceControllerHandleRegister({
+      const { data } = await trustedDeviceControllerRegister({
         ...options,
         ...fnOptions,
         throwOnError: true,
@@ -395,12 +409,19 @@ export const trustedDeviceControllerHandleRegisterMutation = (
   return mutationOptions;
 };
 
-export const trustedDeviceControllerHandleRevokeMutation = (
-  options?: Partial<Options<TrustedDeviceControllerHandleRevokeData>>,
-): UseMutationOptions<unknown, AxiosError<DefaultError>, Options<TrustedDeviceControllerHandleRevokeData>> => {
-  const mutationOptions: UseMutationOptions<unknown, AxiosError<DefaultError>, Options<TrustedDeviceControllerHandleRevokeData>> = {
+/**
+ * 신뢰기기 해제
+ */
+export const trustedDeviceControllerRevokeMutation = (
+  options?: Partial<Options<TrustedDeviceControllerRevokeData>>,
+): UseMutationOptions<TrustedDeviceControllerRevokeResponse, AxiosError<TrustedDeviceControllerRevokeError>, Options<TrustedDeviceControllerRevokeData>> => {
+  const mutationOptions: UseMutationOptions<
+    TrustedDeviceControllerRevokeResponse,
+    AxiosError<TrustedDeviceControllerRevokeError>,
+    Options<TrustedDeviceControllerRevokeData>
+  > = {
     mutationFn: async (fnOptions) => {
-      const { data } = await trustedDeviceControllerHandleRevoke({
+      const { data } = await trustedDeviceControllerRevoke({
         ...options,
         ...fnOptions,
         throwOnError: true,

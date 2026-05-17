@@ -1,9 +1,9 @@
-import { api } from '@/shared/api';
-import { contract } from '@terab/contract';
+import { useQuery } from '@tanstack/react-query';
+import { trustedDeviceControllerListOptions } from '@shared/api';
 
 export function useTrustedDevicesQuery() {
-  return api.trustedDevice.list.useQuery({
-    queryKey: [contract.trustedDevice.list],
+  return useQuery({
+    ...trustedDeviceControllerListOptions(),
     staleTime: 1000 * 60,
   });
 }

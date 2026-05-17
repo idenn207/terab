@@ -1,82 +1,117 @@
-import { ExecutionContext, INestApplication } from '@nestjs/common';
-import { APP_GUARD } from '@nestjs/core';
 import { Test } from '@nestjs/testing';
+import { ApiException } from '@terab/common';
 import { mockAuthUser } from '@terab/test';
-import { TsRestModule } from '@ts-rest/nest';
+import type { Response } from 'express';
 import { randomUUID } from 'node:crypto';
-import request from 'supertest';
 import { TrustedDeviceController } from './trusted-device.controller';
 import { TrustedDeviceService } from './trusted-device.service';
 
-const mockTrustedDeviceService = {
-  findAll: jest.fn(),
-  register: jest.fn(),
-  revoke: jest.fn(),
-  trustDurationMs: 2592000000,
-};
-
 describe('TrustedDeviceController', () => {
-  let app: INestApplication;
+  let controller: TrustedDeviceController;
+  let service: jest.Mocked<TrustedDeviceService>;
 
-  beforeAll(async () => {
+  const TRUST_DURATION_MS = 30 * 24 * 60 * 60 * 1000;
+
+  beforeEach(async () => {
     const module = await Test.createTestingModule({
-      imports: [TsRestModule.register({ isGlobal: true })],
       controllers: [TrustedDeviceController],
       providers: [
-        { provide: TrustedDeviceService, useValue: mockTrustedDeviceService },
         {
-          provide: APP_GUARD,
+          provide: TrustedDeviceService,
           useValue: {
-            canActivate: (ctx: ExecutionContext) => {
-              ctx.switchToHttp().getRequest().user = mockAuthUser;
-              return true;
-            },
+            list: jest.fn(),
+            register: jest.fn(),
+            revoke: jest.fn(),
+            trustDurationMs: TRUST_DURATION_MS,
           },
         },
       ],
     }).compile();
 
-    app = module.createNestApplication();
-    await app.init();
+    controller = module.get(TrustedDeviceController);
+    service = module.get(TrustedDeviceService);
+    jest.clearAllMocks();
   });
 
-  afterAll(() => app.close());
-
-  beforeEach(() => jest.clearAllMocks());
-
-  it('GET /trusted-device — 목록을 반환한다', async () => {
-    const trustedDeviceId = 'td-1';
-    const devices = [{ id: trustedDeviceId, userAgent: 'Mozilla/5.0', createdAt: new Date('2026-01-01') }];
-    mockTrustedDeviceService.findAll.mockResolvedValue(devices);
-
-    const res = await request(app.getHttpServer()).get('/trusted-device').expect(200);
-
-    expect(mockTrustedDeviceService.findAll).toHaveBeenCalledWith(mockAuthUser.userId);
-    expect(res.body[0].id).toBe(trustedDeviceId);
+  it('인스턴스가 생성된다', () => {
+    expect(controller).toBeDefined();
   });
 
-  it('POST /trusted-device — trustToken 쿠키를 설정하고 201을 반환한다', async () => {
-    mockTrustedDeviceService.register.mockResolvedValue('raw-trust-token');
+  describe('list', () => {
+    it('등록된 신뢰기기가 없으면 빈 배열을 반환한다', async () => {
+      service.list.mockResolvedValue([]);
 
-    const res = await request(app.getHttpServer())
-      .post('/trusted-device')
-      .set('user-agent', 'Mozilla/5.0')
-      .send({})
-      .expect(201);
+      const result = await controller.list(mockAuthUser);
 
-    expect(mockTrustedDeviceService.register).toHaveBeenCalledWith(mockAuthUser.userId, expect.any(String));
-    expect(res.headers['set-cookie']).toBeDefined();
-    expect(res.headers['set-cookie']).toEqual(
-      expect.arrayContaining([expect.stringMatching(/trustToken=raw-trust-token;/)]),
-    );
+      expect(service.list).toHaveBeenCalledWith(mockAuthUser.userId);
+      expect(result).toEqual([]);
+    });
+
+    it('등록된 신뢰기기 목록을 반환한다', async () => {
+      const devices = [
+        { id: randomUUID(), userAgent: 'Mozilla/5.0', createdAt: new Date('2026-01-01') },
+      ];
+      service.list.mockResolvedValue(devices);
+
+      const result = await controller.list(mockAuthUser);
+
+      expect(service.list).toHaveBeenCalledWith(mockAuthUser.userId);
+      expect(result).toEqual(devices);
+    });
   });
 
-  it('DELETE /trusted-device/:id — 204를 반환한다', async () => {
-    const trustedDeviceId = randomUUID();
-    mockTrustedDeviceService.revoke.mockResolvedValue(undefined);
+  describe('register', () => {
+    it('service.register를 호출하고 trustToken 쿠키를 설정한다', async () => {
+      const rawToken = 'raw-trust-token';
+      service.register.mockResolvedValue(rawToken);
+      const res = { cookie: jest.fn() } as unknown as Response;
 
-    await request(app.getHttpServer()).delete(`/trusted-device/${trustedDeviceId}`).expect(204);
+      const result = await controller.register(mockAuthUser, 'Mozilla/5.0', res);
 
-    expect(mockTrustedDeviceService.revoke).toHaveBeenCalledWith(trustedDeviceId, mockAuthUser.userId);
+      expect(service.register).toHaveBeenCalledWith(mockAuthUser.userId, 'Mozilla/5.0');
+      expect(res.cookie).toHaveBeenCalledWith(
+        'trustToken',
+        rawToken,
+        expect.objectContaining({
+          httpOnly: true,
+          secure: true,
+          sameSite: 'strict',
+          maxAge: TRUST_DURATION_MS,
+          path: '/',
+        }),
+      );
+      expect(result).toBeUndefined();
+    });
+
+    it('user-agent 헤더가 없어도 정상 처리한다', async () => {
+      service.register.mockResolvedValue('raw-token');
+      const res = { cookie: jest.fn() } as unknown as Response;
+
+      await controller.register(mockAuthUser, undefined, res);
+
+      expect(service.register).toHaveBeenCalledWith(mockAuthUser.userId, undefined);
+      expect(res.cookie).toHaveBeenCalled();
+    });
+  });
+
+  describe('revoke', () => {
+    it('service.revoke에서 TRUSTED_DEVICE_NOT_FOUND를 던지면 그대로 전파한다', async () => {
+      service.revoke.mockRejectedValue(new ApiException('TRUSTED_DEVICE_NOT_FOUND'));
+      const id = randomUUID();
+
+      await expect(controller.revoke(mockAuthUser, id)).rejects.toThrow(ApiException);
+      await expect(controller.revoke(mockAuthUser, id)).rejects.toMatchObject({
+        code: 'TRUSTED_DEVICE_NOT_FOUND',
+      });
+    });
+
+    it('id, userId 순서로 service.revoke를 호출한다', async () => {
+      service.revoke.mockResolvedValue(undefined);
+      const id = randomUUID();
+
+      await controller.revoke(mockAuthUser, id);
+
+      expect(service.revoke).toHaveBeenCalledWith(id, mockAuthUser.userId);
+    });
   });
 });

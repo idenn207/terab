@@ -73,12 +73,13 @@ import type {
   TrashControllerHandlePermanentDeleteResponses,
   TrashControllerHandleRestoreData,
   TrashControllerHandleRestoreResponses,
-  TrustedDeviceControllerHandleListData,
-  TrustedDeviceControllerHandleListResponses,
-  TrustedDeviceControllerHandleRegisterData,
-  TrustedDeviceControllerHandleRegisterResponses,
-  TrustedDeviceControllerHandleRevokeData,
-  TrustedDeviceControllerHandleRevokeResponses,
+  TrustedDeviceControllerListData,
+  TrustedDeviceControllerListResponses,
+  TrustedDeviceControllerRegisterData,
+  TrustedDeviceControllerRegisterResponses,
+  TrustedDeviceControllerRevokeData,
+  TrustedDeviceControllerRevokeErrors,
+  TrustedDeviceControllerRevokeResponses,
   TwoFaControllerHandleGetStatusData,
   TwoFaControllerHandleGetStatusResponses,
   TwoFaControllerHandleResendData,
@@ -150,17 +151,30 @@ export const twoFaControllerHandleRespond = <ThrowOnError extends boolean = fals
 export const twoFaControllerHandleResend = <ThrowOnError extends boolean = false>(options?: Options<TwoFaControllerHandleResendData, ThrowOnError>) =>
   (options?.client ?? client).post<TwoFaControllerHandleResendResponses, unknown, ThrowOnError>({ url: '/auth/2fa/challenge/{id}/resend', ...options });
 
-export const trustedDeviceControllerHandleList = <ThrowOnError extends boolean = false>(
-  options?: Options<TrustedDeviceControllerHandleListData, ThrowOnError>,
-) => (options?.client ?? client).get<TrustedDeviceControllerHandleListResponses, unknown, ThrowOnError>({ url: '/trusted-device', ...options });
+/**
+ * 신뢰기기 목록 조회
+ */
+export const trustedDeviceControllerList = <ThrowOnError extends boolean = false>(options?: Options<TrustedDeviceControllerListData, ThrowOnError>) =>
+  (options?.client ?? client).get<TrustedDeviceControllerListResponses, unknown, ThrowOnError>({
+    responseType: 'json',
+    url: '/trusted-device',
+    ...options,
+  });
 
-export const trustedDeviceControllerHandleRegister = <ThrowOnError extends boolean = false>(
-  options?: Options<TrustedDeviceControllerHandleRegisterData, ThrowOnError>,
-) => (options?.client ?? client).post<TrustedDeviceControllerHandleRegisterResponses, unknown, ThrowOnError>({ url: '/trusted-device', ...options });
+/**
+ * 신뢰기기 등록 — trustToken 쿠키를 설정한다
+ */
+export const trustedDeviceControllerRegister = <ThrowOnError extends boolean = false>(options?: Options<TrustedDeviceControllerRegisterData, ThrowOnError>) =>
+  (options?.client ?? client).post<TrustedDeviceControllerRegisterResponses, unknown, ThrowOnError>({ url: '/trusted-device', ...options });
 
-export const trustedDeviceControllerHandleRevoke = <ThrowOnError extends boolean = false>(
-  options?: Options<TrustedDeviceControllerHandleRevokeData, ThrowOnError>,
-) => (options?.client ?? client).delete<TrustedDeviceControllerHandleRevokeResponses, unknown, ThrowOnError>({ url: '/trusted-device/{id}', ...options });
+/**
+ * 신뢰기기 해제
+ */
+export const trustedDeviceControllerRevoke = <ThrowOnError extends boolean = false>(options: Options<TrustedDeviceControllerRevokeData, ThrowOnError>) =>
+  (options.client ?? client).delete<TrustedDeviceControllerRevokeResponses, TrustedDeviceControllerRevokeErrors, ThrowOnError>({
+    url: '/trusted-device/{id}',
+    ...options,
+  });
 
 /**
  * 초대장 생성

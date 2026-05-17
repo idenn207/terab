@@ -4,6 +4,23 @@ export type ClientOptions = {
   baseURL: string;
 };
 
+export type TrustedDeviceResponseDto = {
+  id: string;
+  userAgent?: string;
+  createdAt: string;
+};
+
+export type ErrorResponseDto = {
+  /**
+   * ErrorCode 키 또는 일반화된 코드(HTTP_ERROR, INTERNAL_SERVER_ERROR)
+   */
+  code: string;
+  /**
+   * 사용자 노출 메시지
+   */
+  message: string;
+};
+
 export type CreateInvitationBodyDto = {
   [key: string]: unknown;
 };
@@ -16,17 +33,6 @@ export type InvitationResponseDto = {
 
 export type ValidateInvitationResponseDto = {
   valid: boolean;
-};
-
-export type ErrorResponseDto = {
-  /**
-   * ErrorCode 키 또는 일반화된 코드(HTTP_ERROR, INTERNAL_SERVER_ERROR)
-   */
-  code: string;
-  /**
-   * 사용자 노출 메시지
-   */
-  message: string;
 };
 
 export type FolderItemDto = {
@@ -222,38 +228,53 @@ export type TwoFaControllerHandleResendResponses = {
   201: unknown;
 };
 
-export type TrustedDeviceControllerHandleListData = {
+export type TrustedDeviceControllerListData = {
   body?: never;
   path?: never;
   query?: never;
   url: '/trusted-device';
 };
 
-export type TrustedDeviceControllerHandleListResponses = {
-  200: unknown;
+export type TrustedDeviceControllerListResponses = {
+  200: Array<TrustedDeviceResponseDto>;
 };
 
-export type TrustedDeviceControllerHandleRegisterData = {
+export type TrustedDeviceControllerListResponse = TrustedDeviceControllerListResponses[keyof TrustedDeviceControllerListResponses];
+
+export type TrustedDeviceControllerRegisterData = {
   body?: never;
   path?: never;
   query?: never;
   url: '/trusted-device';
 };
 
-export type TrustedDeviceControllerHandleRegisterResponses = {
+export type TrustedDeviceControllerRegisterResponses = {
   201: unknown;
 };
 
-export type TrustedDeviceControllerHandleRevokeData = {
+export type TrustedDeviceControllerRevokeData = {
   body?: never;
-  path?: never;
+  path: {
+    id: string;
+  };
   query?: never;
   url: '/trusted-device/{id}';
 };
 
-export type TrustedDeviceControllerHandleRevokeResponses = {
-  200: unknown;
+export type TrustedDeviceControllerRevokeErrors = {
+  /**
+   * `TRUSTED_DEVICE_NOT_FOUND` — 등록되지 않은 신뢰기기입니다.
+   */
+  404: ErrorResponseDto;
 };
+
+export type TrustedDeviceControllerRevokeError = TrustedDeviceControllerRevokeErrors[keyof TrustedDeviceControllerRevokeErrors];
+
+export type TrustedDeviceControllerRevokeResponses = {
+  204: void;
+};
+
+export type TrustedDeviceControllerRevokeResponse = TrustedDeviceControllerRevokeResponses[keyof TrustedDeviceControllerRevokeResponses];
 
 export type InvitationControllerCreateData = {
   body: CreateInvitationBodyDto;

@@ -1,9 +1,26 @@
-import { api } from '@/shared/api';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import {
+  trustedDeviceControllerListQueryKey,
+  trustedDeviceControllerRegisterMutation,
+  trustedDeviceControllerRevokeMutation,
+} from '@shared/api';
 
 export function useRegisterTrustedDeviceMutation() {
-  return api.trustedDevice.register.useMutation();
+  const queryClient = useQueryClient();
+  return useMutation({
+    ...trustedDeviceControllerRegisterMutation(),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: trustedDeviceControllerListQueryKey() });
+    },
+  });
 }
 
 export function useRevokeTrustedDeviceMutation() {
-  return api.trustedDevice.revoke.useMutation();
+  const queryClient = useQueryClient();
+  return useMutation({
+    ...trustedDeviceControllerRevokeMutation(),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: trustedDeviceControllerListQueryKey() });
+    },
+  });
 }

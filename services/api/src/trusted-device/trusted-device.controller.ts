@@ -1,49 +1,63 @@
-import { Controller, Headers, HttpStatus, Res } from '@nestjs/common';
-import { type AuthUser, CurrentUser } from '@terab/common';
-import { contract } from '@terab/contract';
-import { tsRestHandler, TsRestHandler } from '@ts-rest/nest';
+import {
+  Controller,
+  Delete,
+  Get,
+  Headers,
+  HttpCode,
+  HttpStatus,
+  Param,
+  ParseUUIDPipe,
+  Post,
+  Res,
+} from '@nestjs/common';
+import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { ApiError, type AuthUser, CurrentUser } from '@terab/common';
 import type { Response } from 'express';
+import { TrustedDeviceResponseDto } from './dto';
 import { TrustedDeviceService } from './trusted-device.service';
 
-@Controller()
+@Controller('trusted-device')
+@ApiTags('TrustedDevice')
 export class TrustedDeviceController {
   private readonly TRUST_TOKEN_COOKIE = 'trustToken';
   private readonly COOKIE_PATH = '/';
 
   constructor(private readonly trustedDeviceService: TrustedDeviceService) {}
 
-  @TsRestHandler(contract.trustedDevice.list)
-  handleList(@CurrentUser() user: AuthUser) {
-    return tsRestHandler(contract.trustedDevice.list, async () => {
-      const result = await this.trustedDeviceService.findAll(user.userId);
-      return { status: HttpStatus.OK, body: result };
-    });
+  @Get()
+  @ApiOperation({ summary: '신뢰기기 목록 조회' })
+  @ApiResponse({ status: HttpStatus.OK, type: TrustedDeviceResponseDto, isArray: true })
+  async list(@CurrentUser() user: AuthUser): Promise<TrustedDeviceResponseDto[]> {
+    return this.trustedDeviceService.list(user.userId);
   }
 
-  @TsRestHandler(contract.trustedDevice.register)
-  handleRegister(
+  @Post()
+  @ApiOperation({ summary: '신뢰기기 등록 — trustToken 쿠키를 설정한다' })
+  @ApiResponse({ status: HttpStatus.CREATED })
+  async register(
     @CurrentUser() user: AuthUser,
     @Headers('user-agent') userAgent: string | undefined,
     @Res({ passthrough: true }) res: Response,
-  ) {
-    return tsRestHandler(contract.trustedDevice.register, async () => {
-      const rawToken = await this.trustedDeviceService.register(user.userId, userAgent);
-      res.cookie(this.TRUST_TOKEN_COOKIE, rawToken, {
-        httpOnly: true,
-        secure: true,
-        sameSite: 'strict',
-        maxAge: this.trustedDeviceService.trustDurationMs,
-        path: this.COOKIE_PATH,
-      });
-      return { status: HttpStatus.CREATED, body: undefined };
+  ): Promise<void> {
+    const rawToken = await this.trustedDeviceService.register(user.userId, userAgent);
+    res.cookie(this.TRUST_TOKEN_COOKIE, rawToken, {
+      httpOnly: true,
+      secure: true,
+      sameSite: 'strict',
+      maxAge: this.trustedDeviceService.trustDurationMs,
+      path: this.COOKIE_PATH,
     });
   }
 
-  @TsRestHandler(contract.trustedDevice.revoke)
-  handleRevoke(@CurrentUser() user: AuthUser) {
-    return tsRestHandler(contract.trustedDevice.revoke, async ({ params }) => {
-      await this.trustedDeviceService.revoke(params.id, user.userId);
-      return { status: HttpStatus.NO_CONTENT, body: undefined };
-    });
+  @Delete(':id')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({ summary: '신뢰기기 해제' })
+  @ApiResponse({ status: HttpStatus.NO_CONTENT })
+  @ApiError('TRUSTED_DEVICE_NOT_FOUND')
+  async revoke(
+    @CurrentUser() user: AuthUser,
+    @Param('id', ParseUUIDPipe) id: string,
+  ): Promise<void> {
+    await this.trustedDeviceService.revoke(id, user.userId);
   }
 }
