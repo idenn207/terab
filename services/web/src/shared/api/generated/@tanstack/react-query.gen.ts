@@ -24,12 +24,12 @@ import {
   fileDownloadControllerDownloadZip,
   fileUploadControllerHandleComplete,
   fileUploadControllerHandleInit,
-  folderControllerHandleCreate,
-  folderControllerHandleGetChildren,
-  folderControllerHandleGetRoot,
-  folderControllerHandleMove,
-  folderControllerHandleRemove,
-  folderControllerHandleRename,
+  folderControllerCreate,
+  folderControllerGetChildren,
+  folderControllerGetRoot,
+  folderControllerMove,
+  folderControllerRemove,
+  folderControllerRename,
   healthControllerCheck,
   invitationControllerCreate,
   invitationControllerDeactivate,
@@ -65,12 +65,23 @@ import type {
   FileDownloadControllerDownloadZipData,
   FileUploadControllerHandleCompleteData,
   FileUploadControllerHandleInitData,
-  FolderControllerHandleCreateData,
-  FolderControllerHandleGetChildrenData,
-  FolderControllerHandleGetRootData,
-  FolderControllerHandleMoveData,
-  FolderControllerHandleRemoveData,
-  FolderControllerHandleRenameData,
+  FolderControllerCreateData,
+  FolderControllerCreateError,
+  FolderControllerCreateResponse,
+  FolderControllerGetChildrenData,
+  FolderControllerGetChildrenError,
+  FolderControllerGetChildrenResponse,
+  FolderControllerGetRootData,
+  FolderControllerGetRootResponse,
+  FolderControllerMoveData,
+  FolderControllerMoveError,
+  FolderControllerMoveResponse,
+  FolderControllerRemoveData,
+  FolderControllerRemoveError,
+  FolderControllerRemoveResponse,
+  FolderControllerRenameData,
+  FolderControllerRenameError,
+  FolderControllerRenameResponse,
   HealthControllerCheckData,
   InvitationControllerCreateData,
   InvitationControllerCreateResponse,
@@ -467,13 +478,15 @@ export const invitationControllerValidateOptions = (options: Options<InvitationC
     queryKey: invitationControllerValidateQueryKey(options),
   });
 
-export const folderControllerHandleGetRootQueryKey = (options?: Options<FolderControllerHandleGetRootData>) =>
-  createQueryKey('folderControllerHandleGetRoot', options);
+export const folderControllerGetRootQueryKey = (options?: Options<FolderControllerGetRootData>) => createQueryKey('folderControllerGetRoot', options);
 
-export const folderControllerHandleGetRootOptions = (options?: Options<FolderControllerHandleGetRootData>) =>
-  queryOptions<unknown, AxiosError<DefaultError>, unknown, ReturnType<typeof folderControllerHandleGetRootQueryKey>>({
+/**
+ * 루트 폴더 목록 조회
+ */
+export const folderControllerGetRootOptions = (options?: Options<FolderControllerGetRootData>) =>
+  queryOptions<FolderControllerGetRootResponse, AxiosError<DefaultError>, FolderControllerGetRootResponse, ReturnType<typeof folderControllerGetRootQueryKey>>({
     queryFn: async ({ queryKey, signal }) => {
-      const { data } = await folderControllerHandleGetRoot({
+      const { data } = await folderControllerGetRoot({
         ...options,
         ...queryKey[0],
         signal,
@@ -481,16 +494,24 @@ export const folderControllerHandleGetRootOptions = (options?: Options<FolderCon
       });
       return data;
     },
-    queryKey: folderControllerHandleGetRootQueryKey(options),
+    queryKey: folderControllerGetRootQueryKey(options),
   });
 
-export const folderControllerHandleGetChildrenQueryKey = (options?: Options<FolderControllerHandleGetChildrenData>) =>
-  createQueryKey('folderControllerHandleGetChildren', options);
+export const folderControllerGetChildrenQueryKey = (options: Options<FolderControllerGetChildrenData>) =>
+  createQueryKey('folderControllerGetChildren', options);
 
-export const folderControllerHandleGetChildrenOptions = (options?: Options<FolderControllerHandleGetChildrenData>) =>
-  queryOptions<unknown, AxiosError<DefaultError>, unknown, ReturnType<typeof folderControllerHandleGetChildrenQueryKey>>({
+/**
+ * 서브폴더 목록 조회
+ */
+export const folderControllerGetChildrenOptions = (options: Options<FolderControllerGetChildrenData>) =>
+  queryOptions<
+    FolderControllerGetChildrenResponse,
+    AxiosError<FolderControllerGetChildrenError>,
+    FolderControllerGetChildrenResponse,
+    ReturnType<typeof folderControllerGetChildrenQueryKey>
+  >({
     queryFn: async ({ queryKey, signal }) => {
-      const { data } = await folderControllerHandleGetChildren({
+      const { data } = await folderControllerGetChildren({
         ...options,
         ...queryKey[0],
         signal,
@@ -498,15 +519,18 @@ export const folderControllerHandleGetChildrenOptions = (options?: Options<Folde
       });
       return data;
     },
-    queryKey: folderControllerHandleGetChildrenQueryKey(options),
+    queryKey: folderControllerGetChildrenQueryKey(options),
   });
 
-export const folderControllerHandleCreateMutation = (
-  options?: Partial<Options<FolderControllerHandleCreateData>>,
-): UseMutationOptions<unknown, AxiosError<DefaultError>, Options<FolderControllerHandleCreateData>> => {
-  const mutationOptions: UseMutationOptions<unknown, AxiosError<DefaultError>, Options<FolderControllerHandleCreateData>> = {
+/**
+ * 폴더 생성
+ */
+export const folderControllerCreateMutation = (
+  options?: Partial<Options<FolderControllerCreateData>>,
+): UseMutationOptions<FolderControllerCreateResponse, AxiosError<FolderControllerCreateError>, Options<FolderControllerCreateData>> => {
+  const mutationOptions: UseMutationOptions<FolderControllerCreateResponse, AxiosError<FolderControllerCreateError>, Options<FolderControllerCreateData>> = {
     mutationFn: async (fnOptions) => {
-      const { data } = await folderControllerHandleCreate({
+      const { data } = await folderControllerCreate({
         ...options,
         ...fnOptions,
         throwOnError: true,
@@ -517,12 +541,15 @@ export const folderControllerHandleCreateMutation = (
   return mutationOptions;
 };
 
-export const folderControllerHandleRemoveMutation = (
-  options?: Partial<Options<FolderControllerHandleRemoveData>>,
-): UseMutationOptions<unknown, AxiosError<DefaultError>, Options<FolderControllerHandleRemoveData>> => {
-  const mutationOptions: UseMutationOptions<unknown, AxiosError<DefaultError>, Options<FolderControllerHandleRemoveData>> = {
+/**
+ * 폴더 소프트 삭제
+ */
+export const folderControllerRemoveMutation = (
+  options?: Partial<Options<FolderControllerRemoveData>>,
+): UseMutationOptions<FolderControllerRemoveResponse, AxiosError<FolderControllerRemoveError>, Options<FolderControllerRemoveData>> => {
+  const mutationOptions: UseMutationOptions<FolderControllerRemoveResponse, AxiosError<FolderControllerRemoveError>, Options<FolderControllerRemoveData>> = {
     mutationFn: async (fnOptions) => {
-      const { data } = await folderControllerHandleRemove({
+      const { data } = await folderControllerRemove({
         ...options,
         ...fnOptions,
         throwOnError: true,
@@ -533,12 +560,15 @@ export const folderControllerHandleRemoveMutation = (
   return mutationOptions;
 };
 
-export const folderControllerHandleRenameMutation = (
-  options?: Partial<Options<FolderControllerHandleRenameData>>,
-): UseMutationOptions<unknown, AxiosError<DefaultError>, Options<FolderControllerHandleRenameData>> => {
-  const mutationOptions: UseMutationOptions<unknown, AxiosError<DefaultError>, Options<FolderControllerHandleRenameData>> = {
+/**
+ * 폴더 이름 변경
+ */
+export const folderControllerRenameMutation = (
+  options?: Partial<Options<FolderControllerRenameData>>,
+): UseMutationOptions<FolderControllerRenameResponse, AxiosError<FolderControllerRenameError>, Options<FolderControllerRenameData>> => {
+  const mutationOptions: UseMutationOptions<FolderControllerRenameResponse, AxiosError<FolderControllerRenameError>, Options<FolderControllerRenameData>> = {
     mutationFn: async (fnOptions) => {
-      const { data } = await folderControllerHandleRename({
+      const { data } = await folderControllerRename({
         ...options,
         ...fnOptions,
         throwOnError: true,
@@ -549,12 +579,15 @@ export const folderControllerHandleRenameMutation = (
   return mutationOptions;
 };
 
-export const folderControllerHandleMoveMutation = (
-  options?: Partial<Options<FolderControllerHandleMoveData>>,
-): UseMutationOptions<unknown, AxiosError<DefaultError>, Options<FolderControllerHandleMoveData>> => {
-  const mutationOptions: UseMutationOptions<unknown, AxiosError<DefaultError>, Options<FolderControllerHandleMoveData>> = {
+/**
+ * 폴더 이동
+ */
+export const folderControllerMoveMutation = (
+  options?: Partial<Options<FolderControllerMoveData>>,
+): UseMutationOptions<FolderControllerMoveResponse, AxiosError<FolderControllerMoveError>, Options<FolderControllerMoveData>> => {
+  const mutationOptions: UseMutationOptions<FolderControllerMoveResponse, AxiosError<FolderControllerMoveError>, Options<FolderControllerMoveData>> = {
     mutationFn: async (fnOptions) => {
-      const { data } = await folderControllerHandleMove({
+      const { data } = await folderControllerMove({
         ...options,
         ...fnOptions,
         throwOnError: true,

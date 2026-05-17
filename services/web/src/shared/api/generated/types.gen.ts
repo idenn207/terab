@@ -5,7 +5,7 @@ export type ClientOptions = {
 };
 
 export type CreateInvitationBodyDto = {
-  expiresInDays?: number;
+  [key: string]: unknown;
 };
 
 export type InvitationResponseDto = {
@@ -27,6 +27,42 @@ export type ErrorResponseDto = {
    * 사용자 노출 메시지
    */
   message: string;
+};
+
+export type FolderItemDto = {
+  id: string;
+  name: string;
+  parentId: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type FileItemDto = {
+  id: string;
+  name: string;
+  folderId: string | null;
+  size: number;
+  mimeType: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type FolderChildrenResponseDto = {
+  folders: Array<FolderItemDto>;
+  files: Array<FileItemDto>;
+};
+
+export type CreateFolderBodyDto = {
+  name: string;
+  parentId: string | null;
+};
+
+export type RenameFolderBodyDto = {
+  name: string;
+};
+
+export type MoveFolderBodyDto = {
+  parentId: string | null;
 };
 
 export type HealthControllerCheckData = {
@@ -271,71 +307,144 @@ export type InvitationControllerValidateResponses = {
 
 export type InvitationControllerValidateResponse = InvitationControllerValidateResponses[keyof InvitationControllerValidateResponses];
 
-export type FolderControllerHandleGetRootData = {
+export type FolderControllerGetRootData = {
   body?: never;
   path?: never;
   query?: never;
   url: '/folders/root';
 };
 
-export type FolderControllerHandleGetRootResponses = {
-  200: unknown;
+export type FolderControllerGetRootResponses = {
+  200: FolderChildrenResponseDto;
 };
 
-export type FolderControllerHandleGetChildrenData = {
+export type FolderControllerGetRootResponse = FolderControllerGetRootResponses[keyof FolderControllerGetRootResponses];
+
+export type FolderControllerGetChildrenData = {
   body?: never;
-  path?: never;
+  path: {
+    id: string;
+  };
   query?: never;
   url: '/folders/{id}/children';
 };
 
-export type FolderControllerHandleGetChildrenResponses = {
-  200: unknown;
+export type FolderControllerGetChildrenErrors = {
+  /**
+   * `FOLDER_NOT_FOUND` — 폴더를 찾을 수 없습니다.
+   */
+  404: ErrorResponseDto;
 };
 
-export type FolderControllerHandleCreateData = {
-  body?: never;
+export type FolderControllerGetChildrenError = FolderControllerGetChildrenErrors[keyof FolderControllerGetChildrenErrors];
+
+export type FolderControllerGetChildrenResponses = {
+  200: FolderChildrenResponseDto;
+};
+
+export type FolderControllerGetChildrenResponse = FolderControllerGetChildrenResponses[keyof FolderControllerGetChildrenResponses];
+
+export type FolderControllerCreateData = {
+  body: CreateFolderBodyDto;
   path?: never;
   query?: never;
   url: '/folders';
 };
 
-export type FolderControllerHandleCreateResponses = {
-  201: unknown;
+export type FolderControllerCreateErrors = {
+  /**
+   * `FOLDER_DEPTH_EXCEEDED` — 폴더 중첩 깊이 한도를 초과했습니다.
+   */
+  400: ErrorResponseDto;
+  /**
+   * `FOLDER_NOT_FOUND` — 폴더를 찾을 수 없습니다.
+   */
+  404: ErrorResponseDto;
 };
 
-export type FolderControllerHandleRemoveData = {
+export type FolderControllerCreateError = FolderControllerCreateErrors[keyof FolderControllerCreateErrors];
+
+export type FolderControllerCreateResponses = {
+  201: FolderItemDto;
+};
+
+export type FolderControllerCreateResponse = FolderControllerCreateResponses[keyof FolderControllerCreateResponses];
+
+export type FolderControllerRemoveData = {
   body?: never;
-  path?: never;
+  path: {
+    id: string;
+  };
   query?: never;
   url: '/folders/{id}';
 };
 
-export type FolderControllerHandleRemoveResponses = {
-  200: unknown;
+export type FolderControllerRemoveErrors = {
+  /**
+   * `FOLDER_NOT_FOUND` — 폴더를 찾을 수 없습니다.
+   */
+  404: ErrorResponseDto;
 };
 
-export type FolderControllerHandleRenameData = {
-  body?: never;
-  path?: never;
+export type FolderControllerRemoveError = FolderControllerRemoveErrors[keyof FolderControllerRemoveErrors];
+
+export type FolderControllerRemoveResponses = {
+  204: void;
+};
+
+export type FolderControllerRemoveResponse = FolderControllerRemoveResponses[keyof FolderControllerRemoveResponses];
+
+export type FolderControllerRenameData = {
+  body: RenameFolderBodyDto;
+  path: {
+    id: string;
+  };
   query?: never;
   url: '/folders/{id}';
 };
 
-export type FolderControllerHandleRenameResponses = {
-  200: unknown;
+export type FolderControllerRenameErrors = {
+  /**
+   * `FOLDER_NOT_FOUND` — 폴더를 찾을 수 없습니다.
+   */
+  404: ErrorResponseDto;
 };
 
-export type FolderControllerHandleMoveData = {
-  body?: never;
-  path?: never;
+export type FolderControllerRenameError = FolderControllerRenameErrors[keyof FolderControllerRenameErrors];
+
+export type FolderControllerRenameResponses = {
+  200: FolderItemDto;
+};
+
+export type FolderControllerRenameResponse = FolderControllerRenameResponses[keyof FolderControllerRenameResponses];
+
+export type FolderControllerMoveData = {
+  body: MoveFolderBodyDto;
+  path: {
+    id: string;
+  };
   query?: never;
   url: '/folders/{id}/move';
 };
 
-export type FolderControllerHandleMoveResponses = {
-  200: unknown;
+export type FolderControllerMoveErrors = {
+  /**
+   * `INVALID_MOVE_TARGET` — 하위 폴더로 이동할 수 없습니다.
+   */
+  400: ErrorResponseDto;
+  /**
+   * `FOLDER_NOT_FOUND` — 폴더를 찾을 수 없습니다.
+   */
+  404: ErrorResponseDto;
 };
+
+export type FolderControllerMoveError = FolderControllerMoveErrors[keyof FolderControllerMoveErrors];
+
+export type FolderControllerMoveResponses = {
+  200: FolderItemDto;
+};
+
+export type FolderControllerMoveResponse = FolderControllerMoveResponses[keyof FolderControllerMoveResponses];
 
 export type FileControllerHandleRemoveData = {
   body?: never;

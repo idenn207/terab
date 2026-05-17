@@ -41,18 +41,23 @@ import type {
   FileUploadControllerHandleCompleteResponses,
   FileUploadControllerHandleInitData,
   FileUploadControllerHandleInitResponses,
-  FolderControllerHandleCreateData,
-  FolderControllerHandleCreateResponses,
-  FolderControllerHandleGetChildrenData,
-  FolderControllerHandleGetChildrenResponses,
-  FolderControllerHandleGetRootData,
-  FolderControllerHandleGetRootResponses,
-  FolderControllerHandleMoveData,
-  FolderControllerHandleMoveResponses,
-  FolderControllerHandleRemoveData,
-  FolderControllerHandleRemoveResponses,
-  FolderControllerHandleRenameData,
-  FolderControllerHandleRenameResponses,
+  FolderControllerCreateData,
+  FolderControllerCreateErrors,
+  FolderControllerCreateResponses,
+  FolderControllerGetChildrenData,
+  FolderControllerGetChildrenErrors,
+  FolderControllerGetChildrenResponses,
+  FolderControllerGetRootData,
+  FolderControllerGetRootResponses,
+  FolderControllerMoveData,
+  FolderControllerMoveErrors,
+  FolderControllerMoveResponses,
+  FolderControllerRemoveData,
+  FolderControllerRemoveErrors,
+  FolderControllerRemoveResponses,
+  FolderControllerRenameData,
+  FolderControllerRenameErrors,
+  FolderControllerRenameResponses,
   HealthControllerCheckData,
   HealthControllerCheckResponses,
   InvitationControllerCreateData,
@@ -190,24 +195,73 @@ export const invitationControllerValidate = <ThrowOnError extends boolean = fals
     ...options,
   });
 
-export const folderControllerHandleGetRoot = <ThrowOnError extends boolean = false>(options?: Options<FolderControllerHandleGetRootData, ThrowOnError>) =>
-  (options?.client ?? client).get<FolderControllerHandleGetRootResponses, unknown, ThrowOnError>({ url: '/folders/root', ...options });
+/**
+ * 루트 폴더 목록 조회
+ */
+export const folderControllerGetRoot = <ThrowOnError extends boolean = false>(options?: Options<FolderControllerGetRootData, ThrowOnError>) =>
+  (options?.client ?? client).get<FolderControllerGetRootResponses, unknown, ThrowOnError>({
+    responseType: 'json',
+    url: '/folders/root',
+    ...options,
+  });
 
-export const folderControllerHandleGetChildren = <ThrowOnError extends boolean = false>(
-  options?: Options<FolderControllerHandleGetChildrenData, ThrowOnError>,
-) => (options?.client ?? client).get<FolderControllerHandleGetChildrenResponses, unknown, ThrowOnError>({ url: '/folders/{id}/children', ...options });
+/**
+ * 서브폴더 목록 조회
+ */
+export const folderControllerGetChildren = <ThrowOnError extends boolean = false>(options: Options<FolderControllerGetChildrenData, ThrowOnError>) =>
+  (options.client ?? client).get<FolderControllerGetChildrenResponses, FolderControllerGetChildrenErrors, ThrowOnError>({
+    responseType: 'json',
+    url: '/folders/{id}/children',
+    ...options,
+  });
 
-export const folderControllerHandleCreate = <ThrowOnError extends boolean = false>(options?: Options<FolderControllerHandleCreateData, ThrowOnError>) =>
-  (options?.client ?? client).post<FolderControllerHandleCreateResponses, unknown, ThrowOnError>({ url: '/folders', ...options });
+/**
+ * 폴더 생성
+ */
+export const folderControllerCreate = <ThrowOnError extends boolean = false>(options: Options<FolderControllerCreateData, ThrowOnError>) =>
+  (options.client ?? client).post<FolderControllerCreateResponses, FolderControllerCreateErrors, ThrowOnError>({
+    responseType: 'json',
+    url: '/folders',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    },
+  });
 
-export const folderControllerHandleRemove = <ThrowOnError extends boolean = false>(options?: Options<FolderControllerHandleRemoveData, ThrowOnError>) =>
-  (options?.client ?? client).delete<FolderControllerHandleRemoveResponses, unknown, ThrowOnError>({ url: '/folders/{id}', ...options });
+/**
+ * 폴더 소프트 삭제
+ */
+export const folderControllerRemove = <ThrowOnError extends boolean = false>(options: Options<FolderControllerRemoveData, ThrowOnError>) =>
+  (options.client ?? client).delete<FolderControllerRemoveResponses, FolderControllerRemoveErrors, ThrowOnError>({ url: '/folders/{id}', ...options });
 
-export const folderControllerHandleRename = <ThrowOnError extends boolean = false>(options?: Options<FolderControllerHandleRenameData, ThrowOnError>) =>
-  (options?.client ?? client).patch<FolderControllerHandleRenameResponses, unknown, ThrowOnError>({ url: '/folders/{id}', ...options });
+/**
+ * 폴더 이름 변경
+ */
+export const folderControllerRename = <ThrowOnError extends boolean = false>(options: Options<FolderControllerRenameData, ThrowOnError>) =>
+  (options.client ?? client).patch<FolderControllerRenameResponses, FolderControllerRenameErrors, ThrowOnError>({
+    responseType: 'json',
+    url: '/folders/{id}',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    },
+  });
 
-export const folderControllerHandleMove = <ThrowOnError extends boolean = false>(options?: Options<FolderControllerHandleMoveData, ThrowOnError>) =>
-  (options?.client ?? client).patch<FolderControllerHandleMoveResponses, unknown, ThrowOnError>({ url: '/folders/{id}/move', ...options });
+/**
+ * 폴더 이동
+ */
+export const folderControllerMove = <ThrowOnError extends boolean = false>(options: Options<FolderControllerMoveData, ThrowOnError>) =>
+  (options.client ?? client).patch<FolderControllerMoveResponses, FolderControllerMoveErrors, ThrowOnError>({
+    responseType: 'json',
+    url: '/folders/{id}/move',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    },
+  });
 
 export const fileControllerHandleRemove = <ThrowOnError extends boolean = false>(options?: Options<FileControllerHandleRemoveData, ThrowOnError>) =>
   (options?.client ?? client).delete<FileControllerHandleRemoveResponses, unknown, ThrowOnError>({ url: '/files/{id}', ...options });
