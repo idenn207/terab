@@ -35,9 +35,9 @@ import {
   invitationControllerDeactivate,
   invitationControllerValidate,
   type Options,
-  trashControllerHandleList,
-  trashControllerHandlePermanentDelete,
-  trashControllerHandleRestore,
+  trashControllerList,
+  trashControllerPermanentDelete,
+  trashControllerRestore,
   trustedDeviceControllerList,
   trustedDeviceControllerRegister,
   trustedDeviceControllerRevoke,
@@ -125,9 +125,14 @@ import type {
   InvitationControllerDeactivateResponse,
   InvitationControllerValidateData,
   InvitationControllerValidateResponse,
-  TrashControllerHandleListData,
-  TrashControllerHandlePermanentDeleteData,
-  TrashControllerHandleRestoreData,
+  TrashControllerListData,
+  TrashControllerListResponse,
+  TrashControllerPermanentDeleteData,
+  TrashControllerPermanentDeleteError,
+  TrashControllerPermanentDeleteResponse,
+  TrashControllerRestoreData,
+  TrashControllerRestoreError,
+  TrashControllerRestoreResponse,
   TrustedDeviceControllerListData,
   TrustedDeviceControllerListResponse,
   TrustedDeviceControllerRegisterData,
@@ -909,12 +914,15 @@ export const fileUploadControllerCompleteMutation = (
   return mutationOptions;
 };
 
-export const trashControllerHandleListQueryKey = (options?: Options<TrashControllerHandleListData>) => createQueryKey('trashControllerHandleList', options);
+export const trashControllerListQueryKey = (options?: Options<TrashControllerListData>) => createQueryKey('trashControllerList', options);
 
-export const trashControllerHandleListOptions = (options?: Options<TrashControllerHandleListData>) =>
-  queryOptions<unknown, AxiosError<DefaultError>, unknown, ReturnType<typeof trashControllerHandleListQueryKey>>({
+/**
+ * 휴지통 목록 조회
+ */
+export const trashControllerListOptions = (options?: Options<TrashControllerListData>) =>
+  queryOptions<TrashControllerListResponse, AxiosError<DefaultError>, TrashControllerListResponse, ReturnType<typeof trashControllerListQueryKey>>({
     queryFn: async ({ queryKey, signal }) => {
-      const { data } = await trashControllerHandleList({
+      const { data } = await trashControllerList({
         ...options,
         ...queryKey[0],
         signal,
@@ -922,15 +930,18 @@ export const trashControllerHandleListOptions = (options?: Options<TrashControll
       });
       return data;
     },
-    queryKey: trashControllerHandleListQueryKey(options),
+    queryKey: trashControllerListQueryKey(options),
   });
 
-export const trashControllerHandleRestoreMutation = (
-  options?: Partial<Options<TrashControllerHandleRestoreData>>,
-): UseMutationOptions<unknown, AxiosError<DefaultError>, Options<TrashControllerHandleRestoreData>> => {
-  const mutationOptions: UseMutationOptions<unknown, AxiosError<DefaultError>, Options<TrashControllerHandleRestoreData>> = {
+/**
+ * 휴지통 항목 복원
+ */
+export const trashControllerRestoreMutation = (
+  options?: Partial<Options<TrashControllerRestoreData>>,
+): UseMutationOptions<TrashControllerRestoreResponse, AxiosError<TrashControllerRestoreError>, Options<TrashControllerRestoreData>> => {
+  const mutationOptions: UseMutationOptions<TrashControllerRestoreResponse, AxiosError<TrashControllerRestoreError>, Options<TrashControllerRestoreData>> = {
     mutationFn: async (fnOptions) => {
-      const { data } = await trashControllerHandleRestore({
+      const { data } = await trashControllerRestore({
         ...options,
         ...fnOptions,
         throwOnError: true,
@@ -941,12 +952,19 @@ export const trashControllerHandleRestoreMutation = (
   return mutationOptions;
 };
 
-export const trashControllerHandlePermanentDeleteMutation = (
-  options?: Partial<Options<TrashControllerHandlePermanentDeleteData>>,
-): UseMutationOptions<unknown, AxiosError<DefaultError>, Options<TrashControllerHandlePermanentDeleteData>> => {
-  const mutationOptions: UseMutationOptions<unknown, AxiosError<DefaultError>, Options<TrashControllerHandlePermanentDeleteData>> = {
+/**
+ * 영구 삭제
+ */
+export const trashControllerPermanentDeleteMutation = (
+  options?: Partial<Options<TrashControllerPermanentDeleteData>>,
+): UseMutationOptions<TrashControllerPermanentDeleteResponse, AxiosError<TrashControllerPermanentDeleteError>, Options<TrashControllerPermanentDeleteData>> => {
+  const mutationOptions: UseMutationOptions<
+    TrashControllerPermanentDeleteResponse,
+    AxiosError<TrashControllerPermanentDeleteError>,
+    Options<TrashControllerPermanentDeleteData>
+  > = {
     mutationFn: async (fnOptions) => {
-      const { data } = await trashControllerHandlePermanentDelete({
+      const { data } = await trashControllerPermanentDelete({
         ...options,
         ...fnOptions,
         throwOnError: true,

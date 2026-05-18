@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { ApiException } from '@terab/common';
-import { TrashListResponse } from '@terab/contract';
 import { DatabaseService, ServiceCore, TransactionContext } from '@terab/db';
+import { TrashListResponseDto } from './dto';
 import { MinioService } from '../minio/minio.service';
 import { TrashRepository } from './trash.repository';
 
@@ -16,12 +16,12 @@ export class TrashService extends ServiceCore {
     super(database, txContext);
   }
 
-  async list(userId: string): Promise<TrashListResponse> {
+  async list(userId: string): Promise<TrashListResponseDto> {
     const items = await this.trashRepository.findAllDeleted(userId);
     return { items };
   }
 
-  async restore(id: string, type: 'file' | 'folder', userId: string): Promise<void> {
+  async restore(userId: string, id: string, type: 'file' | 'folder'): Promise<void> {
     if (type === 'file') {
       const file = await this.trashRepository.findDeletedFile(id, userId);
       if (!file) throw new ApiException('FILE_NOT_FOUND');
@@ -33,7 +33,7 @@ export class TrashService extends ServiceCore {
     }
   }
 
-  async permanentDelete(id: string, type: 'file' | 'folder', userId: string): Promise<void> {
+  async permanentDelete(userId: string, id: string, type: 'file' | 'folder'): Promise<void> {
     if (type === 'file') {
       const minioKey = await this.trashRepository.permanentDeleteFile(id, userId);
       if (!minioKey) throw new ApiException('FILE_NOT_FOUND');

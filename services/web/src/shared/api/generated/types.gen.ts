@@ -204,6 +204,21 @@ export type UploadCompleteBodyDto = {
   parts: Array<UploadCompletePartDto>;
 };
 
+export type TrashItemDto = {
+  id: string;
+  type: 'file' | 'folder';
+  name: string;
+  deletedAt: string;
+};
+
+export type TrashListResponseDto = {
+  items: Array<TrashItemDto>;
+};
+
+export type TrashActionBodyDto = {
+  type: 'file' | 'folder';
+};
+
 export type HealthControllerCheckData = {
   body?: never;
   path?: never;
@@ -1015,35 +1030,65 @@ export type FileUploadControllerCompleteResponses = {
 
 export type FileUploadControllerCompleteResponse = FileUploadControllerCompleteResponses[keyof FileUploadControllerCompleteResponses];
 
-export type TrashControllerHandleListData = {
+export type TrashControllerListData = {
   body?: never;
   path?: never;
   query?: never;
   url: '/trash';
 };
 
-export type TrashControllerHandleListResponses = {
-  200: unknown;
+export type TrashControllerListResponses = {
+  200: TrashListResponseDto;
 };
 
-export type TrashControllerHandleRestoreData = {
-  body?: never;
-  path?: never;
+export type TrashControllerListResponse = TrashControllerListResponses[keyof TrashControllerListResponses];
+
+export type TrashControllerRestoreData = {
+  body: TrashActionBodyDto;
+  path: {
+    id: string;
+  };
   query?: never;
   url: '/trash/{id}/restore';
 };
 
-export type TrashControllerHandleRestoreResponses = {
-  201: unknown;
+export type TrashControllerRestoreErrors = {
+  /**
+   * `FILE_NOT_FOUND` — 파일을 찾을 수 없습니다.
+   * `FOLDER_NOT_FOUND` — 폴더를 찾을 수 없습니다.
+   */
+  404: ErrorResponseDto;
 };
 
-export type TrashControllerHandlePermanentDeleteData = {
-  body?: never;
-  path?: never;
+export type TrashControllerRestoreError = TrashControllerRestoreErrors[keyof TrashControllerRestoreErrors];
+
+export type TrashControllerRestoreResponses = {
+  204: void;
+};
+
+export type TrashControllerRestoreResponse = TrashControllerRestoreResponses[keyof TrashControllerRestoreResponses];
+
+export type TrashControllerPermanentDeleteData = {
+  body: TrashActionBodyDto;
+  path: {
+    id: string;
+  };
   query?: never;
   url: '/trash/{id}';
 };
 
-export type TrashControllerHandlePermanentDeleteResponses = {
-  200: unknown;
+export type TrashControllerPermanentDeleteErrors = {
+  /**
+   * `FILE_NOT_FOUND` — 파일을 찾을 수 없습니다.
+   * `FOLDER_NOT_FOUND` — 폴더를 찾을 수 없습니다.
+   */
+  404: ErrorResponseDto;
 };
+
+export type TrashControllerPermanentDeleteError = TrashControllerPermanentDeleteErrors[keyof TrashControllerPermanentDeleteErrors];
+
+export type TrashControllerPermanentDeleteResponses = {
+  204: void;
+};
+
+export type TrashControllerPermanentDeleteResponse = TrashControllerPermanentDeleteResponses[keyof TrashControllerPermanentDeleteResponses];

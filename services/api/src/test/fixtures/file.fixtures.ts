@@ -1,6 +1,6 @@
-import type { TrashItem } from '@terab/contract';
 import type { FileItemDto } from '../../file/dto';
 import type { FolderChildrenResponseDto, FolderItemDto } from '../../folder/dto';
+import type { TrashItemDto } from '../../trash/dto';
 
 export const FOLDER_ID = '00000000-0000-0000-0000-000000000001';
 export const FILE_ID = '00000000-0000-0000-0000-000000000002';
@@ -29,7 +29,7 @@ export const mockFolderChildrenResponse: FolderChildrenResponseDto = {
   files: [mockFileItem],
 };
 
-export const mockTrashItem: TrashItem = {
+export const mockTrashItem: TrashItemDto = {
   id: FILE_ID,
   type: 'file',
   name: 'test.txt',

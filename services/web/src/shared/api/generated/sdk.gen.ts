@@ -83,12 +83,14 @@ import type {
   InvitationControllerDeactivateResponses,
   InvitationControllerValidateData,
   InvitationControllerValidateResponses,
-  TrashControllerHandleListData,
-  TrashControllerHandleListResponses,
-  TrashControllerHandlePermanentDeleteData,
-  TrashControllerHandlePermanentDeleteResponses,
-  TrashControllerHandleRestoreData,
-  TrashControllerHandleRestoreResponses,
+  TrashControllerListData,
+  TrashControllerListResponses,
+  TrashControllerPermanentDeleteData,
+  TrashControllerPermanentDeleteErrors,
+  TrashControllerPermanentDeleteResponses,
+  TrashControllerRestoreData,
+  TrashControllerRestoreErrors,
+  TrashControllerRestoreResponses,
   TrustedDeviceControllerListData,
   TrustedDeviceControllerListResponses,
   TrustedDeviceControllerRegisterData,
@@ -508,12 +510,38 @@ export const fileUploadControllerComplete = <ThrowOnError extends boolean = fals
     },
   });
 
-export const trashControllerHandleList = <ThrowOnError extends boolean = false>(options?: Options<TrashControllerHandleListData, ThrowOnError>) =>
-  (options?.client ?? client).get<TrashControllerHandleListResponses, unknown, ThrowOnError>({ url: '/trash', ...options });
+/**
+ * 휴지통 목록 조회
+ */
+export const trashControllerList = <ThrowOnError extends boolean = false>(options?: Options<TrashControllerListData, ThrowOnError>) =>
+  (options?.client ?? client).get<TrashControllerListResponses, unknown, ThrowOnError>({
+    responseType: 'json',
+    url: '/trash',
+    ...options,
+  });
 
-export const trashControllerHandleRestore = <ThrowOnError extends boolean = false>(options?: Options<TrashControllerHandleRestoreData, ThrowOnError>) =>
-  (options?.client ?? client).post<TrashControllerHandleRestoreResponses, unknown, ThrowOnError>({ url: '/trash/{id}/restore', ...options });
+/**
+ * 휴지통 항목 복원
+ */
+export const trashControllerRestore = <ThrowOnError extends boolean = false>(options: Options<TrashControllerRestoreData, ThrowOnError>) =>
+  (options.client ?? client).post<TrashControllerRestoreResponses, TrashControllerRestoreErrors, ThrowOnError>({
+    url: '/trash/{id}/restore',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    },
+  });
 
-export const trashControllerHandlePermanentDelete = <ThrowOnError extends boolean = false>(
-  options?: Options<TrashControllerHandlePermanentDeleteData, ThrowOnError>,
-) => (options?.client ?? client).delete<TrashControllerHandlePermanentDeleteResponses, unknown, ThrowOnError>({ url: '/trash/{id}', ...options });
+/**
+ * 영구 삭제
+ */
+export const trashControllerPermanentDelete = <ThrowOnError extends boolean = false>(options: Options<TrashControllerPermanentDeleteData, ThrowOnError>) =>
+  (options.client ?? client).delete<TrashControllerPermanentDeleteResponses, TrashControllerPermanentDeleteErrors, ThrowOnError>({
+    url: '/trash/{id}',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    },
+  });

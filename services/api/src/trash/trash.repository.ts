@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
-import { TrashItem } from '@terab/contract';
 import { DatabaseService, files, folders, RepositoryCore, TransactionContext } from '@terab/db';
+import { TrashItemDto } from './dto';
 import { and, eq, isNotNull, sql } from 'drizzle-orm';
 
 @Injectable()
@@ -9,7 +9,7 @@ export class TrashRepository extends RepositoryCore {
     super(database, txContext);
   }
 
-  async findAllDeleted(userId: string) {
+  async findAllDeleted(userId: string): Promise<TrashItemDto[]> {
     const [deletedFiles, deletedFolders] = await Promise.all([
       this.conn
         .select()
@@ -21,14 +21,14 @@ export class TrashRepository extends RepositoryCore {
         .where(and(eq(folders.userId, userId), isNotNull(folders.softDeletedAt))),
     ]);
 
-    const fileItems: TrashItem[] = deletedFiles.map((f) => ({
+    const fileItems: TrashItemDto[] = deletedFiles.map((f) => ({
       id: f.id,
       type: 'file' as const,
       name: f.name,
       deletedAt: f.softDeletedAt!,
     }));
 
-    const folderItems: TrashItem[] = deletedFolders.map((f) => ({
+    const folderItems: TrashItemDto[] = deletedFolders.map((f) => ({
       id: f.id,
       type: 'folder' as const,
       name: f.name,
