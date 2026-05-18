@@ -1,5 +1,10 @@
 {
   "extends": "./tsconfig.json",
-  "include": ["types/global.d.ts"],
+  "compilerOptions": {
+    "module": "commonjs",
+    "moduleResolution": "node",
+    "resolvePackageJsonExports": false
+  },
+  "include": ["src/**/*", "types/global.d.ts"],
   "exclude": ["node_modules", "test", "dist", "**/*.spec.ts", "**/*.e2e-spec.ts"]
 }

@@ -65,7 +65,7 @@ export type DeviceResponseDto = {
 };
 
 export type RegisterDeviceBodyDto = {
-  [key: string]: unknown;
+  pushToken: string;
 };
 
 export type ChallengeStatusPendingDto = {
@@ -106,7 +106,7 @@ export type TrustedDeviceResponseDto = {
 };
 
 export type CreateInvitationBodyDto = {
-  [key: string]: unknown;
+  expiresInDays?: number;
 };
 
 export type InvitationResponseDto = {
@@ -121,16 +121,16 @@ export type ValidateInvitationResponseDto = {
 
 export type FolderItemDto = {
   id: string;
-  name: string;
   parentId: string | null;
+  name: string;
   createdAt: string;
   updatedAt: string;
 };
 
 export type FileItemDto = {
   id: string;
-  name: string;
   folderId: string | null;
+  name: string;
   size: number;
   mimeType: string;
   createdAt: string;
@@ -172,12 +172,12 @@ export type ZipDownloadBodyDto = {
 };
 
 export type UploadInitBodyDto = {
-  folderId?: string;
-  name: string;
   /**
    * 파일 크기 (byte). 최대 100 GiB
    */
   size: number;
+  folderId?: string;
+  name: string;
   mimeType: string;
 };
 
@@ -188,10 +188,10 @@ export type UploadPartDto = {
 
 export type UploadInitResponseDto = {
   sessionId: string;
-  parts: Array<UploadPartDto>;
   uploadHeaders: {
     [key: string]: string;
   };
+  parts: Array<UploadPartDto>;
   expiresAt: string;
 };
 
@@ -227,8 +227,12 @@ export type HealthControllerCheckData = {
 };
 
 export type HealthControllerCheckResponses = {
-  200: unknown;
+  200: {
+    [key: string]: unknown;
+  };
 };
+
+export type HealthControllerCheckResponse = HealthControllerCheckResponses[keyof HealthControllerCheckResponses];
 
 export type AuthControllerRegisterData = {
   body: RegisterBodyDto;
@@ -805,8 +809,8 @@ export type FileControllerSearchData = {
   body?: never;
   path?: never;
   query: {
-    q: string;
     scope: 'all' | 'folder';
+    q: string;
     folderId?: string;
   };
   url: '/files/search';

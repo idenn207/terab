@@ -175,6 +175,7 @@ export type {
   FolderControllerRenameResponses,
   FolderItemDto,
   HealthControllerCheckData,
+  HealthControllerCheckResponse,
   HealthControllerCheckResponses,
   InvitationControllerCreateData,
   InvitationControllerCreateResponse,

@@ -118,6 +118,7 @@ import type {
   FolderControllerRenameError,
   FolderControllerRenameResponse,
   HealthControllerCheckData,
+  HealthControllerCheckResponse,
   InvitationControllerCreateData,
   InvitationControllerCreateResponse,
   InvitationControllerDeactivateData,
@@ -189,7 +190,7 @@ const createQueryKey = <TOptions extends Options>(
 export const healthControllerCheckQueryKey = (options?: Options<HealthControllerCheckData>) => createQueryKey('healthControllerCheck', options);
 
 export const healthControllerCheckOptions = (options?: Options<HealthControllerCheckData>) =>
-  queryOptions<unknown, AxiosError<DefaultError>, unknown, ReturnType<typeof healthControllerCheckQueryKey>>({
+  queryOptions<HealthControllerCheckResponse, AxiosError<DefaultError>, HealthControllerCheckResponse, ReturnType<typeof healthControllerCheckQueryKey>>({
     queryFn: async ({ queryKey, signal }) => {
       const { data } = await healthControllerCheck({
         ...options,

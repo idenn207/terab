@@ -128,7 +128,11 @@ export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends 
 };
 
 export const healthControllerCheck = <ThrowOnError extends boolean = false>(options?: Options<HealthControllerCheckData, ThrowOnError>) =>
-  (options?.client ?? client).get<HealthControllerCheckResponses, unknown, ThrowOnError>({ url: '/api/health', ...options });
+  (options?.client ?? client).get<HealthControllerCheckResponses, unknown, ThrowOnError>({
+    responseType: 'json',
+    url: '/api/health',
+    ...options,
+  });
 
 /**
  * 회원가입 — 초대 토큰 소비 후 RT 쿠키 설정

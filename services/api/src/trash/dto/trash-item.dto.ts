@@ -7,9 +7,7 @@ export class TrashItemDto {
   @ApiProperty({ enum: ['file', 'folder'] })
   type!: 'file' | 'folder';
 
-  @ApiProperty()
   name!: string;
 
-  @ApiProperty({ format: 'date-time', type: String })
   deletedAt!: Date;
 }

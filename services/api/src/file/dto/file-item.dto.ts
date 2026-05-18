@@ -4,21 +4,16 @@ export class FileItemDto {
   @ApiProperty({ format: 'uuid' })
   id!: string;
 
-  @ApiProperty()
   name!: string;
 
-  @ApiProperty({ type: String, format: 'uuid', nullable: true })
+  @ApiProperty({ type: String, format: 'uuid' })
   folderId!: string | null;
 
-  @ApiProperty()
   size!: number;
 
-  @ApiProperty()
   mimeType!: string;
 
-  @ApiProperty({ format: 'date-time' })
   createdAt!: Date;
 
-  @ApiProperty({ format: 'date-time' })
   updatedAt!: Date;
 }

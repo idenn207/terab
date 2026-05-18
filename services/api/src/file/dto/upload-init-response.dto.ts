@@ -12,12 +12,10 @@ export class UploadInitResponseDto {
   @ApiProperty({ format: 'uuid' })
   sessionId!: string;
 
-  @ApiProperty({ type: UploadPartDto, isArray: true, minItems: 1 })
   parts!: UploadPartDto[];
 
   @ApiProperty({ type: 'object', additionalProperties: { type: 'string' } })
   uploadHeaders!: Record<string, string>;
 
-  @ApiProperty({ format: 'date-time' })
   expiresAt!: Date;
 }
