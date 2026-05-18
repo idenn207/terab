@@ -1,125 +1,119 @@
-import { ExecutionContext, HttpStatus, INestApplication } from '@nestjs/common';
-import { APP_GUARD } from '@nestjs/core';
 import { Test } from '@nestjs/testing';
+import { ApiException } from '@terab/common';
 import { FILE_ID, mockAuthUser } from '@terab/test';
+import type { Response } from 'express';
 import { Readable } from 'node:stream';
-import request from 'supertest';
 import { FileDownloadController } from './file-download.controller';
 import { FileService } from './file.service';
-
-const mockFileService = {
-  getDownloadStream: jest.fn(),
-  getObjectStream: jest.fn(),
-  resolveZipFiles: jest.fn(),
-};
 
 const SECOND_FILE_ID = '00000000-0000-0000-0000-000000000009';
 
 describe('FileDownloadController', () => {
-  let app: INestApplication;
+  let controller: FileDownloadController;
+  let service: jest.Mocked<FileService>;
 
-  beforeAll(async () => {
+  beforeEach(async () => {
     const module = await Test.createTestingModule({
       controllers: [FileDownloadController],
       providers: [
-        { provide: FileService, useValue: mockFileService },
         {
-          provide: APP_GUARD,
+          provide: FileService,
           useValue: {
-            canActivate: (ctx: ExecutionContext) => {
-              ctx.switchToHttp().getRequest().user = mockAuthUser;
-              return true;
-            },
+            getDownloadStream: jest.fn(),
+            getObjectStream: jest.fn(),
+            resolveZipFiles: jest.fn(),
           },
         },
       ],
     }).compile();
 
-    app = module.createNestApplication();
-    await app.init();
+    controller = module.get(FileDownloadController);
+    service = module.get(FileService) as jest.Mocked<FileService>;
+    jest.clearAllMocks();
   });
-
-  afterAll(() => app.close());
-  beforeEach(() => jest.clearAllMocks());
 
   it('인스턴스가 생성된다', () => {
-    expect(app).toBeDefined();
+    expect(controller).toBeDefined();
   });
 
-  describe('GET /files/:id/download', () => {
-    it('파일 스트림과 Content 헤더를 반환한다', async () => {
-      mockFileService.getDownloadStream.mockResolvedValue({
+  describe('downloadFile', () => {
+    it('FILE_NOT_FOUND가 발생하면 그대로 전파한다', async () => {
+      service.getDownloadStream.mockRejectedValue(new ApiException('FILE_NOT_FOUND'));
+      const mockRes = { set: jest.fn() } as unknown as Response;
+
+      await expect(controller.downloadFile(mockAuthUser, FILE_ID, mockRes)).rejects.toMatchObject({
+        code: 'FILE_NOT_FOUND',
+      });
+    });
+
+    it('스트림과 Content 헤더를 설정하고 StreamableFile을 반환한다', async () => {
+      service.getDownloadStream.mockResolvedValue({
         stream: Readable.from(['file content']),
         name: 'test.txt',
         size: 12,
         mimeType: 'text/plain',
       });
+      const mockRes = { set: jest.fn() } as unknown as Response;
 
-      const res = await request(app.getHttpServer())
-        .get(`/files/${FILE_ID}/download`)
-        .expect(HttpStatus.OK);
+      const result = await controller.downloadFile(mockAuthUser, FILE_ID, mockRes);
 
-      expect(mockFileService.getDownloadStream).toHaveBeenCalledWith(mockAuthUser.userId, FILE_ID);
-      expect(res.headers['content-type']).toContain('text/plain');
-      expect(res.headers['content-disposition']).toContain('test.txt');
-      expect(res.headers['content-length']).toBe('12');
+      expect(service.getDownloadStream).toHaveBeenCalledWith(mockAuthUser.userId, FILE_ID);
+      expect(mockRes.set).toHaveBeenCalledWith(
+        expect.objectContaining({
+          'Content-Type': 'text/plain',
+          'Content-Length': '12',
+        }),
+      );
+      expect(result).toBeDefined();
     });
 
-    it('파일명에 한글이 포함되면 URL 인코딩하여 반환한다', async () => {
-      mockFileService.getDownloadStream.mockResolvedValue({
+    it('파일명에 한글이 포함되면 URL 인코딩하여 헤더를 설정한다', async () => {
+      service.getDownloadStream.mockResolvedValue({
         stream: Readable.from(['내용']),
         name: '한글파일.txt',
         size: 6,
         mimeType: 'text/plain',
       });
+      const mockRes = { set: jest.fn() } as unknown as Response;
 
-      const res = await request(app.getHttpServer())
-        .get(`/files/${FILE_ID}/download`)
-        .expect(HttpStatus.OK);
+      await controller.downloadFile(mockAuthUser, FILE_ID, mockRes);
 
-      expect(res.headers['content-disposition']).toContain(encodeURIComponent('한글파일.txt'));
+      expect(mockRes.set).toHaveBeenCalledWith(
+        expect.objectContaining({
+          'Content-Disposition': expect.stringContaining(encodeURIComponent('한글파일.txt')),
+        }),
+      );
     });
   });
 
-  describe('POST /files/download/zip', () => {
-    it('여러 파일을 ZIP으로 다운로드한다', async () => {
-      mockFileService.resolveZipFiles.mockResolvedValue([
+  describe('downloadZip', () => {
+    it('FILE_NOT_FOUND가 발생하면 그대로 전파한다', async () => {
+      service.resolveZipFiles.mockRejectedValue(new ApiException('FILE_NOT_FOUND'));
+      const mockRes = { set: jest.fn() } as unknown as Response;
+
+      await expect(
+        controller.downloadZip(mockAuthUser, { fileIds: [FILE_ID] }, mockRes),
+      ).rejects.toMatchObject({ code: 'FILE_NOT_FOUND' });
+    });
+
+    it('ZIP 스트림과 Content 헤더를 설정하고 StreamableFile을 반환한다', async () => {
+      service.resolveZipFiles.mockResolvedValue([
         { name: 'file1.txt', key: `${mockAuthUser.userId}/key1` },
         { name: 'file2.txt', key: `${mockAuthUser.userId}/key2` },
       ]);
-      mockFileService.getObjectStream.mockResolvedValue(Readable.from(['content']));
+      service.getObjectStream.mockResolvedValue(Readable.from(['content']));
+      const mockRes = { set: jest.fn() } as unknown as Response;
 
-      const res = await request(app.getHttpServer())
-        .post('/files/download/zip')
-        .send({ fileIds: [FILE_ID, SECOND_FILE_ID] })
-        .expect(HttpStatus.CREATED);
+      const result = await controller.downloadZip(mockAuthUser, { fileIds: [FILE_ID, SECOND_FILE_ID] }, mockRes);
 
-      expect(mockFileService.resolveZipFiles).toHaveBeenCalledWith(
-        [FILE_ID, SECOND_FILE_ID],
-        mockAuthUser.userId,
+      expect(service.resolveZipFiles).toHaveBeenCalledWith([FILE_ID, SECOND_FILE_ID], mockAuthUser.userId);
+      expect(mockRes.set).toHaveBeenCalledWith(
+        expect.objectContaining({
+          'Content-Type': 'application/zip',
+          'Content-Disposition': expect.stringContaining('download.zip'),
+        }),
       );
-      expect(res.headers['content-type']).toContain('application/zip');
-      expect(res.headers['content-disposition']).toContain('download.zip');
-    });
-
-    it('100개를 초과하면 ZIP_LIMIT_EXCEEDED를 반환한다', async () => {
-      const overLimitIds = Array.from({ length: 101 }, (_, i) => `file-${i}`);
-
-      await request(app.getHttpServer())
-        .post('/files/download/zip')
-        .send({ fileIds: overLimitIds })
-        .expect(HttpStatus.BAD_REQUEST);
-
-      expect(mockFileService.resolveZipFiles).not.toHaveBeenCalled();
-    });
-
-    it('fileIds가 없으면 ZIP_LIMIT_EXCEEDED를 반환한다', async () => {
-      await request(app.getHttpServer())
-        .post('/files/download/zip')
-        .send({})
-        .expect(HttpStatus.BAD_REQUEST);
-
-      expect(mockFileService.resolveZipFiles).not.toHaveBeenCalled();
+      expect(result).toBeDefined();
     });
   });
 });

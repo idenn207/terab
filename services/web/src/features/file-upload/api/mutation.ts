@@ -1,9 +1,10 @@
-import { api } from '@/shared/api';
+import { fileUploadControllerCompleteMutation, fileUploadControllerInitMutation } from '@shared/api';
+import { useMutation } from '@tanstack/react-query';
 
 export function useUploadInitMutation() {
-  return api.file.uploadInit.useMutation();
+  return useMutation({ ...fileUploadControllerInitMutation() });
 }
 
 export function useUploadCompleteMutation() {
-  return api.file.uploadComplete.useMutation();
+  return useMutation({ ...fileUploadControllerCompleteMutation() });
 }

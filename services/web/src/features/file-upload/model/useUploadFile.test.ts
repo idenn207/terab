@@ -21,17 +21,15 @@ vi.mock('./upload-parts', () => ({
 beforeEach(() => vi.clearAllMocks());
 
 describe('useUploadFile', () => {
-  it('init → uploadParts → complete 순서로 호출하고 결과 body를 반환한다', async () => {
+  it('init → uploadParts → complete 순서로 호출하고 결과를 반환한다', async () => {
     mockInitMutate.mockResolvedValue({
-      status: 201,
-      body: {
-        sessionId: 'sess-1',
-        parts: [{ partNumber: 1, uploadUrl: 'https://x' }],
-        uploadHeaders: { 'Content-Type': 'application/octet-stream' },
-      },
+      sessionId: 'sess-1',
+      parts: [{ partNumber: 1, uploadUrl: 'https://x' }],
+      uploadHeaders: { 'Content-Type': 'application/octet-stream' },
+      expiresAt: '2026-05-18T00:00:00.000Z',
     });
     mockUploadParts.mockResolvedValue([{ partNumber: 1, etag: 'e1' }]);
-    mockCompleteMutate.mockResolvedValue({ status: 201, body: { id: 'file-1', name: 'a.bin' } });
+    mockCompleteMutate.mockResolvedValue({ id: 'file-1', name: 'a.bin' });
 
     const { result } = renderHook(() => useUploadFile(), { wrapper: makeQueryWrapper() });
     const file = new File([new Uint8Array(10)], 'a.bin');
@@ -45,7 +43,7 @@ describe('useUploadFile', () => {
       'Content-Type': 'application/octet-stream',
     });
     expect(mockCompleteMutate).toHaveBeenCalledWith({
-      params: { sessionId: 'sess-1' },
+      path: { sessionId: 'sess-1' },
       body: { parts: [{ partNumber: 1, etag: 'e1' }] },
     });
     expect(data).toEqual({ id: 'file-1', name: 'a.bin' });
@@ -64,8 +62,10 @@ describe('useUploadFile', () => {
 
   it('uploadParts가 실패하면 complete을 호출하지 않는다 (서버 cleanup-worker가 회수)', async () => {
     mockInitMutate.mockResolvedValue({
-      status: 201,
-      body: { sessionId: 's', parts: [{ partNumber: 1, uploadUrl: 'x' }], uploadHeaders: {} },
+      sessionId: 's',
+      parts: [{ partNumber: 1, uploadUrl: 'x' }],
+      uploadHeaders: {},
+      expiresAt: '2026-05-18T00:00:00.000Z',
     });
     mockUploadParts.mockRejectedValue(new Error('PUT failed'));
 

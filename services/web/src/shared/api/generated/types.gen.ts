@@ -155,6 +155,55 @@ export type MoveFolderBodyDto = {
   parentId: string | null;
 };
 
+export type FileSearchResponseDto = {
+  files: Array<FileItemDto>;
+};
+
+export type RenameFileBodyDto = {
+  name: string;
+};
+
+export type MoveFileBodyDto = {
+  folderId: string | null;
+};
+
+export type ZipDownloadBodyDto = {
+  fileIds: Array<string>;
+};
+
+export type UploadInitBodyDto = {
+  folderId?: string;
+  name: string;
+  /**
+   * 파일 크기 (byte). 최대 100 GiB
+   */
+  size: number;
+  mimeType: string;
+};
+
+export type UploadPartDto = {
+  partNumber: number;
+  uploadUrl: string;
+};
+
+export type UploadInitResponseDto = {
+  sessionId: string;
+  parts: Array<UploadPartDto>;
+  uploadHeaders: {
+    [key: string]: string;
+  };
+  expiresAt: string;
+};
+
+export type UploadCompletePartDto = {
+  partNumber: number;
+  etag: string;
+};
+
+export type UploadCompleteBodyDto = {
+  parts: Array<UploadCompletePartDto>;
+};
+
 export type HealthControllerCheckData = {
   body?: never;
   path?: never;
@@ -737,60 +786,129 @@ export type FolderControllerMoveResponses = {
 
 export type FolderControllerMoveResponse = FolderControllerMoveResponses[keyof FolderControllerMoveResponses];
 
-export type FileControllerHandleRemoveData = {
+export type FileControllerSearchData = {
   body?: never;
   path?: never;
+  query: {
+    q: string;
+    scope: 'all' | 'folder';
+    folderId?: string;
+  };
+  url: '/files/search';
+};
+
+export type FileControllerSearchErrors = {
+  /**
+   * `FOLDER_NOT_FOUND` — 폴더를 찾을 수 없습니다.
+   */
+  404: ErrorResponseDto;
+};
+
+export type FileControllerSearchError = FileControllerSearchErrors[keyof FileControllerSearchErrors];
+
+export type FileControllerSearchResponses = {
+  200: FileSearchResponseDto;
+};
+
+export type FileControllerSearchResponse = FileControllerSearchResponses[keyof FileControllerSearchResponses];
+
+export type FileControllerRemoveData = {
+  body?: never;
+  path: {
+    id: string;
+  };
   query?: never;
   url: '/files/{id}';
 };
 
-export type FileControllerHandleRemoveResponses = {
-  200: unknown;
+export type FileControllerRemoveErrors = {
+  /**
+   * `FILE_NOT_FOUND` — 파일을 찾을 수 없습니다.
+   */
+  404: ErrorResponseDto;
 };
 
-export type FileControllerHandleRenameData = {
-  body?: never;
-  path?: never;
+export type FileControllerRemoveError = FileControllerRemoveErrors[keyof FileControllerRemoveErrors];
+
+export type FileControllerRemoveResponses = {
+  204: void;
+};
+
+export type FileControllerRemoveResponse = FileControllerRemoveResponses[keyof FileControllerRemoveResponses];
+
+export type FileControllerRenameData = {
+  body: RenameFileBodyDto;
+  path: {
+    id: string;
+  };
   query?: never;
   url: '/files/{id}';
 };
 
-export type FileControllerHandleRenameResponses = {
-  200: unknown;
+export type FileControllerRenameErrors = {
+  /**
+   * `FILE_NOT_FOUND` — 파일을 찾을 수 없습니다.
+   */
+  404: ErrorResponseDto;
 };
 
-export type FileControllerHandleMoveData = {
-  body?: never;
-  path?: never;
+export type FileControllerRenameError = FileControllerRenameErrors[keyof FileControllerRenameErrors];
+
+export type FileControllerRenameResponses = {
+  200: FileItemDto;
+};
+
+export type FileControllerRenameResponse = FileControllerRenameResponses[keyof FileControllerRenameResponses];
+
+export type FileControllerMoveData = {
+  body: MoveFileBodyDto;
+  path: {
+    id: string;
+  };
   query?: never;
   url: '/files/{id}/move';
 };
 
-export type FileControllerHandleMoveResponses = {
-  200: unknown;
+export type FileControllerMoveErrors = {
+  /**
+   * `FILE_NOT_FOUND` — 파일을 찾을 수 없습니다.
+   * `FOLDER_NOT_FOUND` — 폴더를 찾을 수 없습니다.
+   */
+  404: ErrorResponseDto;
 };
 
-export type FileControllerHandleCopyData = {
-  body?: never;
-  path?: never;
+export type FileControllerMoveError = FileControllerMoveErrors[keyof FileControllerMoveErrors];
+
+export type FileControllerMoveResponses = {
+  200: FileItemDto;
+};
+
+export type FileControllerMoveResponse = FileControllerMoveResponses[keyof FileControllerMoveResponses];
+
+export type FileControllerCopyData = {
+  body: MoveFileBodyDto;
+  path: {
+    id: string;
+  };
   query?: never;
   url: '/files/{id}/copy';
 };
 
-export type FileControllerHandleCopyResponses = {
-  201: unknown;
+export type FileControllerCopyErrors = {
+  /**
+   * `FILE_NOT_FOUND` — 파일을 찾을 수 없습니다.
+   * `FOLDER_NOT_FOUND` — 폴더를 찾을 수 없습니다.
+   */
+  404: ErrorResponseDto;
 };
 
-export type FileControllerHandleSearchData = {
-  body?: never;
-  path?: never;
-  query?: never;
-  url: '/files/search';
+export type FileControllerCopyError = FileControllerCopyErrors[keyof FileControllerCopyErrors];
+
+export type FileControllerCopyResponses = {
+  201: FileItemDto;
 };
 
-export type FileControllerHandleSearchResponses = {
-  200: unknown;
-};
+export type FileControllerCopyResponse = FileControllerCopyResponses[keyof FileControllerCopyResponses];
 
 export type FileDownloadControllerDownloadFileData = {
   body?: never;
@@ -801,42 +919,101 @@ export type FileDownloadControllerDownloadFileData = {
   url: '/files/{id}/download';
 };
 
-export type FileDownloadControllerDownloadFileResponses = {
-  200: unknown;
+export type FileDownloadControllerDownloadFileErrors = {
+  /**
+   * `FILE_NOT_FOUND` — 파일을 찾을 수 없습니다.
+   */
+  404: ErrorResponseDto;
 };
 
+export type FileDownloadControllerDownloadFileError = FileDownloadControllerDownloadFileErrors[keyof FileDownloadControllerDownloadFileErrors];
+
+export type FileDownloadControllerDownloadFileResponses = {
+  200: Blob | File;
+};
+
+export type FileDownloadControllerDownloadFileResponse = FileDownloadControllerDownloadFileResponses[keyof FileDownloadControllerDownloadFileResponses];
+
 export type FileDownloadControllerDownloadZipData = {
-  body?: never;
+  body: ZipDownloadBodyDto;
   path?: never;
   query?: never;
   url: '/files/download/zip';
 };
 
-export type FileDownloadControllerDownloadZipResponses = {
-  201: unknown;
+export type FileDownloadControllerDownloadZipErrors = {
+  /**
+   * `FILE_NOT_FOUND` — 파일을 찾을 수 없습니다.
+   */
+  404: ErrorResponseDto;
 };
 
-export type FileUploadControllerHandleInitData = {
-  body?: never;
+export type FileDownloadControllerDownloadZipError = FileDownloadControllerDownloadZipErrors[keyof FileDownloadControllerDownloadZipErrors];
+
+export type FileDownloadControllerDownloadZipResponses = {
+  200: Blob | File;
+};
+
+export type FileDownloadControllerDownloadZipResponse = FileDownloadControllerDownloadZipResponses[keyof FileDownloadControllerDownloadZipResponses];
+
+export type FileUploadControllerInitData = {
+  body: UploadInitBodyDto;
   path?: never;
   query?: never;
   url: '/files/upload-init';
 };
 
-export type FileUploadControllerHandleInitResponses = {
-  201: unknown;
+export type FileUploadControllerInitErrors = {
+  /**
+   * `FOLDER_NOT_FOUND` — 폴더를 찾을 수 없습니다.
+   */
+  404: ErrorResponseDto;
+  /**
+   * `FILE_TOO_LARGE` — 파일 크기가 한도(100GB)를 초과했습니다.
+   */
+  413: ErrorResponseDto;
 };
 
-export type FileUploadControllerHandleCompleteData = {
-  body?: never;
-  path?: never;
+export type FileUploadControllerInitError = FileUploadControllerInitErrors[keyof FileUploadControllerInitErrors];
+
+export type FileUploadControllerInitResponses = {
+  201: UploadInitResponseDto;
+};
+
+export type FileUploadControllerInitResponse = FileUploadControllerInitResponses[keyof FileUploadControllerInitResponses];
+
+export type FileUploadControllerCompleteData = {
+  body: UploadCompleteBodyDto;
+  path: {
+    sessionId: string;
+  };
   query?: never;
   url: '/files/{sessionId}/upload-complete';
 };
 
-export type FileUploadControllerHandleCompleteResponses = {
-  201: unknown;
+export type FileUploadControllerCompleteErrors = {
+  /**
+   * `UPLOAD_OBJECT_MISSING` — 업로드된 파일을 찾을 수 없습니다.
+   * `UPLOAD_SIZE_MISMATCH` — 업로드된 파일 크기가 선언값과 다릅니다.
+   */
+  400: ErrorResponseDto;
+  /**
+   * `UPLOAD_SESSION_NOT_FOUND` — 업로드 세션을 찾을 수 없습니다.
+   */
+  404: ErrorResponseDto;
+  /**
+   * `UPLOAD_SESSION_EXPIRED` — 업로드 세션이 만료됐습니다.
+   */
+  410: ErrorResponseDto;
 };
+
+export type FileUploadControllerCompleteError = FileUploadControllerCompleteErrors[keyof FileUploadControllerCompleteErrors];
+
+export type FileUploadControllerCompleteResponses = {
+  201: FileItemDto;
+};
+
+export type FileUploadControllerCompleteResponse = FileUploadControllerCompleteResponses[keyof FileUploadControllerCompleteResponses];
 
 export type TrashControllerHandleListData = {
   body?: never;

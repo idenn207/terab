@@ -1,5 +1,4 @@
 import { Injectable } from '@nestjs/common';
-import { FileItem, FolderItem } from '@terab/contract';
 import {
   DatabaseService,
   files,
@@ -10,6 +9,8 @@ import {
   TransactionContext,
 } from '@terab/db';
 import { and, eq, isNull, sql } from 'drizzle-orm';
+import { FileItemDto } from '../file/dto';
+import { FolderItemDto } from './dto';
 
 @Injectable()
 export class FolderRepository extends RepositoryCore {
@@ -17,7 +18,7 @@ export class FolderRepository extends RepositoryCore {
     super(database, txContext);
   }
 
-  toFolderItem(row: Folders$Select): FolderItem {
+  toFolderItem(row: Folders$Select): FolderItemDto {
     return {
       id: row.id,
       name: row.name,
@@ -75,7 +76,7 @@ export class FolderRepository extends RepositoryCore {
   }
 
   // ───── Business ──────────────────────────────
-  async findRootFiles(userId: string): Promise<FileItem[]> {
+  async findRootFiles(userId: string): Promise<FileItemDto[]> {
     const rows = await this.conn
       .select()
       .from(files)
@@ -83,7 +84,7 @@ export class FolderRepository extends RepositoryCore {
     return rows.map((r) => ({ ...r, folderId: r.folderId ?? null }));
   }
 
-  async findFilesByFolder(folderId: string, userId: string): Promise<FileItem[]> {
+  async findFilesByFolder(folderId: string, userId: string): Promise<FileItemDto[]> {
     const rows = await this.conn
       .select()
       .from(files)

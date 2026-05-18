@@ -15,15 +15,15 @@ import {
   deviceControllerList,
   deviceControllerRegister,
   deviceControllerRemove,
-  fileControllerHandleCopy,
-  fileControllerHandleMove,
-  fileControllerHandleRemove,
-  fileControllerHandleRename,
-  fileControllerHandleSearch,
+  fileControllerCopy,
+  fileControllerMove,
+  fileControllerRemove,
+  fileControllerRename,
+  fileControllerSearch,
   fileDownloadControllerDownloadFile,
   fileDownloadControllerDownloadZip,
-  fileUploadControllerHandleComplete,
-  fileUploadControllerHandleInit,
+  fileUploadControllerComplete,
+  fileUploadControllerInit,
   folderControllerCreate,
   folderControllerGetChildren,
   folderControllerGetRoot,
@@ -73,15 +73,33 @@ import type {
   DeviceControllerRemoveData,
   DeviceControllerRemoveError,
   DeviceControllerRemoveResponse,
-  FileControllerHandleCopyData,
-  FileControllerHandleMoveData,
-  FileControllerHandleRemoveData,
-  FileControllerHandleRenameData,
-  FileControllerHandleSearchData,
+  FileControllerCopyData,
+  FileControllerCopyError,
+  FileControllerCopyResponse,
+  FileControllerMoveData,
+  FileControllerMoveError,
+  FileControllerMoveResponse,
+  FileControllerRemoveData,
+  FileControllerRemoveError,
+  FileControllerRemoveResponse,
+  FileControllerRenameData,
+  FileControllerRenameError,
+  FileControllerRenameResponse,
+  FileControllerSearchData,
+  FileControllerSearchError,
+  FileControllerSearchResponse,
   FileDownloadControllerDownloadFileData,
+  FileDownloadControllerDownloadFileError,
+  FileDownloadControllerDownloadFileResponse,
   FileDownloadControllerDownloadZipData,
-  FileUploadControllerHandleCompleteData,
-  FileUploadControllerHandleInitData,
+  FileDownloadControllerDownloadZipError,
+  FileDownloadControllerDownloadZipResponse,
+  FileUploadControllerCompleteData,
+  FileUploadControllerCompleteError,
+  FileUploadControllerCompleteResponse,
+  FileUploadControllerInitData,
+  FileUploadControllerInitError,
+  FileUploadControllerInitResponse,
   FolderControllerCreateData,
   FolderControllerCreateError,
   FolderControllerCreateResponse,
@@ -693,76 +711,20 @@ export const folderControllerMoveMutation = (
   return mutationOptions;
 };
 
-export const fileControllerHandleRemoveMutation = (
-  options?: Partial<Options<FileControllerHandleRemoveData>>,
-): UseMutationOptions<unknown, AxiosError<DefaultError>, Options<FileControllerHandleRemoveData>> => {
-  const mutationOptions: UseMutationOptions<unknown, AxiosError<DefaultError>, Options<FileControllerHandleRemoveData>> = {
-    mutationFn: async (fnOptions) => {
-      const { data } = await fileControllerHandleRemove({
-        ...options,
-        ...fnOptions,
-        throwOnError: true,
-      });
-      return data;
-    },
-  };
-  return mutationOptions;
-};
+export const fileControllerSearchQueryKey = (options: Options<FileControllerSearchData>) => createQueryKey('fileControllerSearch', options);
 
-export const fileControllerHandleRenameMutation = (
-  options?: Partial<Options<FileControllerHandleRenameData>>,
-): UseMutationOptions<unknown, AxiosError<DefaultError>, Options<FileControllerHandleRenameData>> => {
-  const mutationOptions: UseMutationOptions<unknown, AxiosError<DefaultError>, Options<FileControllerHandleRenameData>> = {
-    mutationFn: async (fnOptions) => {
-      const { data } = await fileControllerHandleRename({
-        ...options,
-        ...fnOptions,
-        throwOnError: true,
-      });
-      return data;
-    },
-  };
-  return mutationOptions;
-};
-
-export const fileControllerHandleMoveMutation = (
-  options?: Partial<Options<FileControllerHandleMoveData>>,
-): UseMutationOptions<unknown, AxiosError<DefaultError>, Options<FileControllerHandleMoveData>> => {
-  const mutationOptions: UseMutationOptions<unknown, AxiosError<DefaultError>, Options<FileControllerHandleMoveData>> = {
-    mutationFn: async (fnOptions) => {
-      const { data } = await fileControllerHandleMove({
-        ...options,
-        ...fnOptions,
-        throwOnError: true,
-      });
-      return data;
-    },
-  };
-  return mutationOptions;
-};
-
-export const fileControllerHandleCopyMutation = (
-  options?: Partial<Options<FileControllerHandleCopyData>>,
-): UseMutationOptions<unknown, AxiosError<DefaultError>, Options<FileControllerHandleCopyData>> => {
-  const mutationOptions: UseMutationOptions<unknown, AxiosError<DefaultError>, Options<FileControllerHandleCopyData>> = {
-    mutationFn: async (fnOptions) => {
-      const { data } = await fileControllerHandleCopy({
-        ...options,
-        ...fnOptions,
-        throwOnError: true,
-      });
-      return data;
-    },
-  };
-  return mutationOptions;
-};
-
-export const fileControllerHandleSearchQueryKey = (options?: Options<FileControllerHandleSearchData>) => createQueryKey('fileControllerHandleSearch', options);
-
-export const fileControllerHandleSearchOptions = (options?: Options<FileControllerHandleSearchData>) =>
-  queryOptions<unknown, AxiosError<DefaultError>, unknown, ReturnType<typeof fileControllerHandleSearchQueryKey>>({
+/**
+ * 파일 검색
+ */
+export const fileControllerSearchOptions = (options: Options<FileControllerSearchData>) =>
+  queryOptions<
+    FileControllerSearchResponse,
+    AxiosError<FileControllerSearchError>,
+    FileControllerSearchResponse,
+    ReturnType<typeof fileControllerSearchQueryKey>
+  >({
     queryFn: async ({ queryKey, signal }) => {
-      const { data } = await fileControllerHandleSearch({
+      const { data } = await fileControllerSearch({
         ...options,
         ...queryKey[0],
         signal,
@@ -770,14 +732,98 @@ export const fileControllerHandleSearchOptions = (options?: Options<FileControll
       });
       return data;
     },
-    queryKey: fileControllerHandleSearchQueryKey(options),
+    queryKey: fileControllerSearchQueryKey(options),
   });
+
+/**
+ * 파일 소프트 삭제
+ */
+export const fileControllerRemoveMutation = (
+  options?: Partial<Options<FileControllerRemoveData>>,
+): UseMutationOptions<FileControllerRemoveResponse, AxiosError<FileControllerRemoveError>, Options<FileControllerRemoveData>> => {
+  const mutationOptions: UseMutationOptions<FileControllerRemoveResponse, AxiosError<FileControllerRemoveError>, Options<FileControllerRemoveData>> = {
+    mutationFn: async (fnOptions) => {
+      const { data } = await fileControllerRemove({
+        ...options,
+        ...fnOptions,
+        throwOnError: true,
+      });
+      return data;
+    },
+  };
+  return mutationOptions;
+};
+
+/**
+ * 파일 이름 변경
+ */
+export const fileControllerRenameMutation = (
+  options?: Partial<Options<FileControllerRenameData>>,
+): UseMutationOptions<FileControllerRenameResponse, AxiosError<FileControllerRenameError>, Options<FileControllerRenameData>> => {
+  const mutationOptions: UseMutationOptions<FileControllerRenameResponse, AxiosError<FileControllerRenameError>, Options<FileControllerRenameData>> = {
+    mutationFn: async (fnOptions) => {
+      const { data } = await fileControllerRename({
+        ...options,
+        ...fnOptions,
+        throwOnError: true,
+      });
+      return data;
+    },
+  };
+  return mutationOptions;
+};
+
+/**
+ * 파일 이동
+ */
+export const fileControllerMoveMutation = (
+  options?: Partial<Options<FileControllerMoveData>>,
+): UseMutationOptions<FileControllerMoveResponse, AxiosError<FileControllerMoveError>, Options<FileControllerMoveData>> => {
+  const mutationOptions: UseMutationOptions<FileControllerMoveResponse, AxiosError<FileControllerMoveError>, Options<FileControllerMoveData>> = {
+    mutationFn: async (fnOptions) => {
+      const { data } = await fileControllerMove({
+        ...options,
+        ...fnOptions,
+        throwOnError: true,
+      });
+      return data;
+    },
+  };
+  return mutationOptions;
+};
+
+/**
+ * 파일 복사
+ */
+export const fileControllerCopyMutation = (
+  options?: Partial<Options<FileControllerCopyData>>,
+): UseMutationOptions<FileControllerCopyResponse, AxiosError<FileControllerCopyError>, Options<FileControllerCopyData>> => {
+  const mutationOptions: UseMutationOptions<FileControllerCopyResponse, AxiosError<FileControllerCopyError>, Options<FileControllerCopyData>> = {
+    mutationFn: async (fnOptions) => {
+      const { data } = await fileControllerCopy({
+        ...options,
+        ...fnOptions,
+        throwOnError: true,
+      });
+      return data;
+    },
+  };
+  return mutationOptions;
+};
 
 export const fileDownloadControllerDownloadFileQueryKey = (options: Options<FileDownloadControllerDownloadFileData>) =>
   createQueryKey('fileDownloadControllerDownloadFile', options);
 
+/**
+ * 파일 다운로드
+ */
 export const fileDownloadControllerDownloadFileOptions = (options: Options<FileDownloadControllerDownloadFileData>) =>
-  queryOptions<unknown, AxiosError<DefaultError>, unknown, ReturnType<typeof fileDownloadControllerDownloadFileQueryKey>>({
+  queryOptions<
+    FileDownloadControllerDownloadFileResponse,
+    AxiosError<FileDownloadControllerDownloadFileError>,
+    FileDownloadControllerDownloadFileResponse,
+    ReturnType<typeof fileDownloadControllerDownloadFileQueryKey>
+  >({
     queryFn: async ({ queryKey, signal }) => {
       const { data } = await fileDownloadControllerDownloadFile({
         ...options,
@@ -790,10 +836,21 @@ export const fileDownloadControllerDownloadFileOptions = (options: Options<FileD
     queryKey: fileDownloadControllerDownloadFileQueryKey(options),
   });
 
+/**
+ * ZIP 다운로드
+ */
 export const fileDownloadControllerDownloadZipMutation = (
   options?: Partial<Options<FileDownloadControllerDownloadZipData>>,
-): UseMutationOptions<unknown, AxiosError<DefaultError>, Options<FileDownloadControllerDownloadZipData>> => {
-  const mutationOptions: UseMutationOptions<unknown, AxiosError<DefaultError>, Options<FileDownloadControllerDownloadZipData>> = {
+): UseMutationOptions<
+  FileDownloadControllerDownloadZipResponse,
+  AxiosError<FileDownloadControllerDownloadZipError>,
+  Options<FileDownloadControllerDownloadZipData>
+> => {
+  const mutationOptions: UseMutationOptions<
+    FileDownloadControllerDownloadZipResponse,
+    AxiosError<FileDownloadControllerDownloadZipError>,
+    Options<FileDownloadControllerDownloadZipData>
+  > = {
     mutationFn: async (fnOptions) => {
       const { data } = await fileDownloadControllerDownloadZip({
         ...options,
@@ -806,12 +863,19 @@ export const fileDownloadControllerDownloadZipMutation = (
   return mutationOptions;
 };
 
-export const fileUploadControllerHandleInitMutation = (
-  options?: Partial<Options<FileUploadControllerHandleInitData>>,
-): UseMutationOptions<unknown, AxiosError<DefaultError>, Options<FileUploadControllerHandleInitData>> => {
-  const mutationOptions: UseMutationOptions<unknown, AxiosError<DefaultError>, Options<FileUploadControllerHandleInitData>> = {
+/**
+ * 파일 업로드 세션 생성 (presigned URL 발급)
+ */
+export const fileUploadControllerInitMutation = (
+  options?: Partial<Options<FileUploadControllerInitData>>,
+): UseMutationOptions<FileUploadControllerInitResponse, AxiosError<FileUploadControllerInitError>, Options<FileUploadControllerInitData>> => {
+  const mutationOptions: UseMutationOptions<
+    FileUploadControllerInitResponse,
+    AxiosError<FileUploadControllerInitError>,
+    Options<FileUploadControllerInitData>
+  > = {
     mutationFn: async (fnOptions) => {
-      const { data } = await fileUploadControllerHandleInit({
+      const { data } = await fileUploadControllerInit({
         ...options,
         ...fnOptions,
         throwOnError: true,
@@ -822,12 +886,19 @@ export const fileUploadControllerHandleInitMutation = (
   return mutationOptions;
 };
 
-export const fileUploadControllerHandleCompleteMutation = (
-  options?: Partial<Options<FileUploadControllerHandleCompleteData>>,
-): UseMutationOptions<unknown, AxiosError<DefaultError>, Options<FileUploadControllerHandleCompleteData>> => {
-  const mutationOptions: UseMutationOptions<unknown, AxiosError<DefaultError>, Options<FileUploadControllerHandleCompleteData>> = {
+/**
+ * 파일 업로드 완료 (DB 반영)
+ */
+export const fileUploadControllerCompleteMutation = (
+  options?: Partial<Options<FileUploadControllerCompleteData>>,
+): UseMutationOptions<FileUploadControllerCompleteResponse, AxiosError<FileUploadControllerCompleteError>, Options<FileUploadControllerCompleteData>> => {
+  const mutationOptions: UseMutationOptions<
+    FileUploadControllerCompleteResponse,
+    AxiosError<FileUploadControllerCompleteError>,
+    Options<FileUploadControllerCompleteData>
+  > = {
     mutationFn: async (fnOptions) => {
-      const { data } = await fileUploadControllerHandleComplete({
+      const { data } = await fileUploadControllerComplete({
         ...options,
         ...fnOptions,
         throwOnError: true,

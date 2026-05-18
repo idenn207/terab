@@ -30,24 +30,33 @@ import type {
   DeviceControllerRemoveData,
   DeviceControllerRemoveErrors,
   DeviceControllerRemoveResponses,
-  FileControllerHandleCopyData,
-  FileControllerHandleCopyResponses,
-  FileControllerHandleMoveData,
-  FileControllerHandleMoveResponses,
-  FileControllerHandleRemoveData,
-  FileControllerHandleRemoveResponses,
-  FileControllerHandleRenameData,
-  FileControllerHandleRenameResponses,
-  FileControllerHandleSearchData,
-  FileControllerHandleSearchResponses,
+  FileControllerCopyData,
+  FileControllerCopyErrors,
+  FileControllerCopyResponses,
+  FileControllerMoveData,
+  FileControllerMoveErrors,
+  FileControllerMoveResponses,
+  FileControllerRemoveData,
+  FileControllerRemoveErrors,
+  FileControllerRemoveResponses,
+  FileControllerRenameData,
+  FileControllerRenameErrors,
+  FileControllerRenameResponses,
+  FileControllerSearchData,
+  FileControllerSearchErrors,
+  FileControllerSearchResponses,
   FileDownloadControllerDownloadFileData,
+  FileDownloadControllerDownloadFileErrors,
   FileDownloadControllerDownloadFileResponses,
   FileDownloadControllerDownloadZipData,
+  FileDownloadControllerDownloadZipErrors,
   FileDownloadControllerDownloadZipResponses,
-  FileUploadControllerHandleCompleteData,
-  FileUploadControllerHandleCompleteResponses,
-  FileUploadControllerHandleInitData,
-  FileUploadControllerHandleInitResponses,
+  FileUploadControllerCompleteData,
+  FileUploadControllerCompleteErrors,
+  FileUploadControllerCompleteResponses,
+  FileUploadControllerInitData,
+  FileUploadControllerInitErrors,
+  FileUploadControllerInitResponses,
   FolderControllerCreateData,
   FolderControllerCreateErrors,
   FolderControllerCreateResponses,
@@ -385,38 +394,118 @@ export const folderControllerMove = <ThrowOnError extends boolean = false>(optio
     },
   });
 
-export const fileControllerHandleRemove = <ThrowOnError extends boolean = false>(options?: Options<FileControllerHandleRemoveData, ThrowOnError>) =>
-  (options?.client ?? client).delete<FileControllerHandleRemoveResponses, unknown, ThrowOnError>({ url: '/files/{id}', ...options });
+/**
+ * 파일 검색
+ */
+export const fileControllerSearch = <ThrowOnError extends boolean = false>(options: Options<FileControllerSearchData, ThrowOnError>) =>
+  (options.client ?? client).get<FileControllerSearchResponses, FileControllerSearchErrors, ThrowOnError>({
+    responseType: 'json',
+    url: '/files/search',
+    ...options,
+  });
 
-export const fileControllerHandleRename = <ThrowOnError extends boolean = false>(options?: Options<FileControllerHandleRenameData, ThrowOnError>) =>
-  (options?.client ?? client).patch<FileControllerHandleRenameResponses, unknown, ThrowOnError>({ url: '/files/{id}', ...options });
+/**
+ * 파일 소프트 삭제
+ */
+export const fileControllerRemove = <ThrowOnError extends boolean = false>(options: Options<FileControllerRemoveData, ThrowOnError>) =>
+  (options.client ?? client).delete<FileControllerRemoveResponses, FileControllerRemoveErrors, ThrowOnError>({ url: '/files/{id}', ...options });
 
-export const fileControllerHandleMove = <ThrowOnError extends boolean = false>(options?: Options<FileControllerHandleMoveData, ThrowOnError>) =>
-  (options?.client ?? client).patch<FileControllerHandleMoveResponses, unknown, ThrowOnError>({ url: '/files/{id}/move', ...options });
+/**
+ * 파일 이름 변경
+ */
+export const fileControllerRename = <ThrowOnError extends boolean = false>(options: Options<FileControllerRenameData, ThrowOnError>) =>
+  (options.client ?? client).patch<FileControllerRenameResponses, FileControllerRenameErrors, ThrowOnError>({
+    responseType: 'json',
+    url: '/files/{id}',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    },
+  });
 
-export const fileControllerHandleCopy = <ThrowOnError extends boolean = false>(options?: Options<FileControllerHandleCopyData, ThrowOnError>) =>
-  (options?.client ?? client).post<FileControllerHandleCopyResponses, unknown, ThrowOnError>({ url: '/files/{id}/copy', ...options });
+/**
+ * 파일 이동
+ */
+export const fileControllerMove = <ThrowOnError extends boolean = false>(options: Options<FileControllerMoveData, ThrowOnError>) =>
+  (options.client ?? client).patch<FileControllerMoveResponses, FileControllerMoveErrors, ThrowOnError>({
+    responseType: 'json',
+    url: '/files/{id}/move',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    },
+  });
 
-export const fileControllerHandleSearch = <ThrowOnError extends boolean = false>(options?: Options<FileControllerHandleSearchData, ThrowOnError>) =>
-  (options?.client ?? client).get<FileControllerHandleSearchResponses, unknown, ThrowOnError>({ url: '/files/search', ...options });
+/**
+ * 파일 복사
+ */
+export const fileControllerCopy = <ThrowOnError extends boolean = false>(options: Options<FileControllerCopyData, ThrowOnError>) =>
+  (options.client ?? client).post<FileControllerCopyResponses, FileControllerCopyErrors, ThrowOnError>({
+    responseType: 'json',
+    url: '/files/{id}/copy',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    },
+  });
 
+/**
+ * 파일 다운로드
+ */
 export const fileDownloadControllerDownloadFile = <ThrowOnError extends boolean = false>(
   options: Options<FileDownloadControllerDownloadFileData, ThrowOnError>,
-) => (options.client ?? client).get<FileDownloadControllerDownloadFileResponses, unknown, ThrowOnError>({ url: '/files/{id}/download', ...options });
-
-export const fileDownloadControllerDownloadZip = <ThrowOnError extends boolean = false>(
-  options?: Options<FileDownloadControllerDownloadZipData, ThrowOnError>,
-) => (options?.client ?? client).post<FileDownloadControllerDownloadZipResponses, unknown, ThrowOnError>({ url: '/files/download/zip', ...options });
-
-export const fileUploadControllerHandleInit = <ThrowOnError extends boolean = false>(options?: Options<FileUploadControllerHandleInitData, ThrowOnError>) =>
-  (options?.client ?? client).post<FileUploadControllerHandleInitResponses, unknown, ThrowOnError>({ url: '/files/upload-init', ...options });
-
-export const fileUploadControllerHandleComplete = <ThrowOnError extends boolean = false>(
-  options?: Options<FileUploadControllerHandleCompleteData, ThrowOnError>,
 ) =>
-  (options?.client ?? client).post<FileUploadControllerHandleCompleteResponses, unknown, ThrowOnError>({
+  (options.client ?? client).get<FileDownloadControllerDownloadFileResponses, FileDownloadControllerDownloadFileErrors, ThrowOnError>({
+    responseType: 'blob',
+    url: '/files/{id}/download',
+    ...options,
+  });
+
+/**
+ * ZIP 다운로드
+ */
+export const fileDownloadControllerDownloadZip = <ThrowOnError extends boolean = false>(
+  options: Options<FileDownloadControllerDownloadZipData, ThrowOnError>,
+) =>
+  (options.client ?? client).post<FileDownloadControllerDownloadZipResponses, FileDownloadControllerDownloadZipErrors, ThrowOnError>({
+    responseType: 'blob',
+    url: '/files/download/zip',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    },
+  });
+
+/**
+ * 파일 업로드 세션 생성 (presigned URL 발급)
+ */
+export const fileUploadControllerInit = <ThrowOnError extends boolean = false>(options: Options<FileUploadControllerInitData, ThrowOnError>) =>
+  (options.client ?? client).post<FileUploadControllerInitResponses, FileUploadControllerInitErrors, ThrowOnError>({
+    responseType: 'json',
+    url: '/files/upload-init',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    },
+  });
+
+/**
+ * 파일 업로드 완료 (DB 반영)
+ */
+export const fileUploadControllerComplete = <ThrowOnError extends boolean = false>(options: Options<FileUploadControllerCompleteData, ThrowOnError>) =>
+  (options.client ?? client).post<FileUploadControllerCompleteResponses, FileUploadControllerCompleteErrors, ThrowOnError>({
+    responseType: 'json',
     url: '/files/{sessionId}/upload-complete',
     ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    },
   });
 
 export const trashControllerHandleList = <ThrowOnError extends boolean = false>(options?: Options<TrashControllerHandleListData, ThrowOnError>) =>

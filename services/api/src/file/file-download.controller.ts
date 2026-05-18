@@ -1,13 +1,15 @@
-import { Body, Controller, Get, Param, Post, Res, StreamableFile } from '@nestjs/common';
-import { ApiException, CurrentUser, type AuthUser } from '@terab/common';
+import { Body, Controller, Get, HttpStatus, Param, ParseUUIDPipe, Post, Res, StreamableFile } from '@nestjs/common';
+import { ApiOperation, ApiProduces, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { ApiError, type AuthUser, CurrentUser } from '@terab/common';
 import archiver from 'archiver';
 import type { Response } from 'express';
 import { Readable } from 'node:stream';
+import { ZipDownloadBodyDto } from './dto';
 import { FileService } from './file.service';
 
 @Controller()
+@ApiTags('File')
 export class FileDownloadController {
-  private readonly ZIP_LIMIT = 100;
   constructor(private readonly fileService: FileService) {}
 
   // archiver가 해당 엔트리를 처리할 시점에만 MinIO 연결을 여는 lazy 스트림
@@ -36,9 +38,13 @@ export class FileDownloadController {
   }
 
   @Get('/files/:id/download')
+  @ApiOperation({ summary: '파일 다운로드' })
+  @ApiProduces('application/octet-stream')
+  @ApiResponse({ status: HttpStatus.OK, schema: { type: 'string', format: 'binary' } })
+  @ApiError('FILE_NOT_FOUND')
   async downloadFile(
     @CurrentUser() user: AuthUser,
-    @Param('id') id: string,
+    @Param('id', ParseUUIDPipe) id: string,
     @Res({ passthrough: true }) res: Response,
   ): Promise<StreamableFile> {
     const { stream, name, size, mimeType } = await this.fileService.getDownloadStream(user.userId, id);
@@ -51,15 +57,15 @@ export class FileDownloadController {
   }
 
   @Post('/files/download/zip')
+  @ApiOperation({ summary: 'ZIP 다운로드' })
+  @ApiProduces('application/zip')
+  @ApiResponse({ status: HttpStatus.OK, schema: { type: 'string', format: 'binary' } })
+  @ApiError('FILE_NOT_FOUND')
   async downloadZip(
     @CurrentUser() user: AuthUser,
-    @Body() body: { fileIds: string[] },
+    @Body() body: ZipDownloadBodyDto,
     @Res({ passthrough: true }) res: Response,
   ): Promise<StreamableFile> {
-    if (!body.fileIds || body.fileIds.length > this.ZIP_LIMIT) {
-      throw new ApiException('ZIP_LIMIT_EXCEEDED');
-    }
-
     const files = await this.fileService.resolveZipFiles(body.fileIds, user.userId);
 
     const archive = archiver('zip', { zlib: { level: 1 } });

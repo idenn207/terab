@@ -1,7 +1,6 @@
 import { Cache, CACHE_MANAGER } from '@nestjs/cache-manager';
 import { Inject, Injectable } from '@nestjs/common';
 import { ApiException } from '@terab/common';
-import { FileItem, FileSearchResponse } from '@terab/contract';
 import { DatabaseService, ServiceCore, TransactionContext } from '@terab/db';
 import { extension as mimeExtension } from 'mime-types';
 import { randomUUID } from 'node:crypto';
@@ -9,6 +8,13 @@ import { extname } from 'node:path';
 import { Readable } from 'node:stream';
 import { FolderService } from '../folder/folder.service';
 import { MinioService } from '../minio/minio.service';
+import {
+  FileItemDto,
+  FileSearchQueryDto,
+  FileSearchResponseDto,
+  MoveFileBodyDto,
+  RenameFileBodyDto,
+} from './dto';
 import { FileRepository } from './file.repository';
 
 @Injectable()
@@ -60,44 +66,44 @@ export class FileService extends ServiceCore {
       .map((r) => ({ name: this.ensureExtension(r.name, r.mimeType), key: r.minioKey }));
   }
 
-  async rename(id: string, userId: string, name: string): Promise<FileItem> {
-    const row = await this.fileRepository.rename(id, userId, name);
+  async rename(userId: string, id: string, body: RenameFileBodyDto): Promise<FileItemDto> {
+    const row = await this.fileRepository.rename(id, userId, body.name);
     if (!row) throw new ApiException('FILE_NOT_FOUND');
     await this.invalidate(userId, row.folderId ?? null);
     return this.fileRepository.toFileItem(row);
   }
 
-  async move(id: string, userId: string, folderId: string | null): Promise<FileItem> {
+  async move(userId: string, id: string, body: MoveFileBodyDto): Promise<FileItemDto> {
     const file = await this.fileRepository.findByIdAndUser(id, userId);
     if (!file) throw new ApiException('FILE_NOT_FOUND');
-    if (folderId) await this.folderService.assertBelongsToUser(folderId, userId);
+    if (body.folderId) await this.folderService.assertBelongsToUser(body.folderId, userId);
 
-    const row = await this.fileRepository.move(id, userId, folderId);
+    const row = await this.fileRepository.move(id, userId, body.folderId);
     if (!row) throw new ApiException('FILE_NOT_FOUND');
 
-    await Promise.all([this.invalidate(userId, file.folderId ?? null), this.invalidate(userId, folderId)]);
+    await Promise.all([this.invalidate(userId, file.folderId ?? null), this.invalidate(userId, body.folderId)]);
     return this.fileRepository.toFileItem(row);
   }
 
-  async copy(id: string, userId: string, folderId: string | null): Promise<FileItem> {
+  async copy(userId: string, id: string, body: MoveFileBodyDto): Promise<FileItemDto> {
     const file = await this.fileRepository.findByIdAndUser(id, userId);
     if (!file) throw new ApiException('FILE_NOT_FOUND');
-    if (folderId) await this.folderService.assertBelongsToUser(folderId, userId);
+    if (body.folderId) await this.folderService.assertBelongsToUser(body.folderId, userId);
 
     const newKey = `${userId}/${randomUUID()}`;
     await this.minioService.copyObject(file.minioKey, newKey);
     // DB insert 실패 시 MinIO에 생성된 복사본을 정리하여 orphan 방지
     const row = await this.fileRepository
-      .insert({ userId, folderId, name: file.name, minioKey: newKey, size: file.size, mimeType: file.mimeType })
+      .insert({ userId, folderId: body.folderId, name: file.name, minioKey: newKey, size: file.size, mimeType: file.mimeType })
       .catch(async (err) => {
         await this.minioService.removeObject(newKey).catch(() => undefined);
         throw err;
       });
-    await this.invalidate(userId, folderId);
+    await this.invalidate(userId, body.folderId);
     return this.fileRepository.toFileItem(row);
   }
 
-  async remove(id: string, userId: string): Promise<void> {
+  async remove(userId: string, id: string): Promise<void> {
     const file = await this.fileRepository.findByIdAndUser(id, userId);
     if (!file) throw new ApiException('FILE_NOT_FOUND');
     const deleted = await this.fileRepository.softDelete(id, userId);
@@ -105,9 +111,9 @@ export class FileService extends ServiceCore {
     await this.invalidate(userId, file.folderId ?? null);
   }
 
-  async search(userId: string, q: string, scope: 'all' | 'folder', folderId?: string): Promise<FileSearchResponse> {
-    if (scope === 'folder' && !folderId) throw new ApiException('FOLDER_NOT_FOUND');
-    const rows = await this.fileRepository.search(userId, q, scope === 'folder' ? folderId : undefined);
+  async search(userId: string, query: FileSearchQueryDto): Promise<FileSearchResponseDto> {
+    if (query.scope === 'folder' && !query.folderId) throw new ApiException('FOLDER_NOT_FOUND');
+    const rows = await this.fileRepository.search(userId, query.q, query.scope === 'folder' ? query.folderId : undefined);
     return { files: rows.map((r) => this.fileRepository.toFileItem(r)) };
   }
 }

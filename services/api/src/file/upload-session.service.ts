@@ -1,10 +1,15 @@
 import { Injectable } from '@nestjs/common';
 import { ApiException } from '@terab/common';
-import { FileItem, UploadCompletePart, UploadInitBody, UploadInitResponse } from '@terab/contract';
 import { DatabaseService, ServiceCore, TransactionContext } from '@terab/db';
 import { randomUUID } from 'node:crypto';
 import { FolderService } from '../folder/folder.service';
 import { MinioService } from '../minio/minio.service';
+import {
+  FileItemDto,
+  UploadCompletePartDto,
+  UploadInitBodyDto,
+  UploadInitResponseDto,
+} from './dto';
 import { FileRepository } from './file.repository';
 import { UploadSessionRepository } from './upload-session.repository';
 
@@ -43,7 +48,7 @@ export class UploadSessionService extends ServiceCore {
     return this.DANGEROUS_MIME_PREFIXES.includes(normalized) ? 'application/octet-stream' : mimeType;
   }
 
-  async init(userId: string, body: UploadInitBody): Promise<UploadInitResponse> {
+  async init(userId: string, body: UploadInitBodyDto): Promise<UploadInitResponseDto> {
     if (body.size > this.MAX_FILE_SIZE) throw new ApiException('FILE_TOO_LARGE');
     if (body.folderId) await this.folderService.assertBelongsToUser(body.folderId, userId);
 
@@ -107,7 +112,7 @@ export class UploadSessionService extends ServiceCore {
     };
   }
 
-  async complete(userId: string, sessionId: string, parts: UploadCompletePart[]): Promise<FileItem> {
+  async complete(userId: string, sessionId: string, parts: UploadCompletePartDto[]): Promise<FileItemDto> {
     return this.runInTx(async () => {
       const session = await this.uploadSessionRepository.findByIdForUpdate(sessionId);
       if (!session || session.userId !== userId) throw new ApiException('UPLOAD_SESSION_NOT_FOUND');

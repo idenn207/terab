@@ -1,26 +1,39 @@
-import { Controller, HttpStatus } from '@nestjs/common';
-import { CurrentUser, type AuthUser } from '@terab/common';
-import { contract } from '@terab/contract';
-import { tsRestHandler, TsRestHandler } from '@ts-rest/nest';
+import { Body, Controller, HttpStatus, Param, ParseUUIDPipe, Post } from '@nestjs/common';
+import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { ApiError, type AuthUser, CurrentUser } from '@terab/common';
+import {
+  FileItemDto,
+  UploadCompleteBodyDto,
+  UploadInitBodyDto,
+  UploadInitResponseDto,
+} from './dto';
 import { UploadSessionService } from './upload-session.service';
 
-@Controller()
+@Controller('files')
+@ApiTags('File')
 export class FileUploadController {
   constructor(private readonly uploadSessionService: UploadSessionService) {}
 
-  @TsRestHandler(contract.file.uploadInit)
-  handleInit(@CurrentUser() user: AuthUser) {
-    return tsRestHandler(contract.file.uploadInit, async ({ body }) => {
-      const result = await this.uploadSessionService.init(user.userId, body);
-      return { status: HttpStatus.CREATED, body: result };
-    });
+  @Post('upload-init')
+  @ApiOperation({ summary: '파일 업로드 세션 생성 (presigned URL 발급)' })
+  @ApiResponse({ status: HttpStatus.CREATED, type: UploadInitResponseDto })
+  @ApiError('FOLDER_NOT_FOUND', 'FILE_TOO_LARGE')
+  async init(
+    @CurrentUser() user: AuthUser,
+    @Body() body: UploadInitBodyDto,
+  ): Promise<UploadInitResponseDto> {
+    return this.uploadSessionService.init(user.userId, body);
   }
 
-  @TsRestHandler(contract.file.uploadComplete)
-  handleComplete(@CurrentUser() user: AuthUser) {
-    return tsRestHandler(contract.file.uploadComplete, async ({ params, body }) => {
-      const result = await this.uploadSessionService.complete(user.userId, params.sessionId, body.parts);
-      return { status: HttpStatus.CREATED, body: result };
-    });
+  @Post(':sessionId/upload-complete')
+  @ApiOperation({ summary: '파일 업로드 완료 (DB 반영)' })
+  @ApiResponse({ status: HttpStatus.CREATED, type: FileItemDto })
+  @ApiError('UPLOAD_SESSION_NOT_FOUND', 'UPLOAD_SESSION_EXPIRED', 'UPLOAD_OBJECT_MISSING', 'UPLOAD_SIZE_MISMATCH')
+  async complete(
+    @CurrentUser() user: AuthUser,
+    @Param('sessionId', ParseUUIDPipe) sessionId: string,
+    @Body() body: UploadCompleteBodyDto,
+  ): Promise<FileItemDto> {
+    return this.uploadSessionService.complete(user.userId, sessionId, body.parts);
   }
 }

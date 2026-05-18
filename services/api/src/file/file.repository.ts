@@ -1,5 +1,4 @@
 import { Injectable } from '@nestjs/common';
-import { FileItem } from '@terab/contract';
 import {
   DatabaseService,
   files,
@@ -10,6 +9,7 @@ import {
   TransactionContext,
 } from '@terab/db';
 import { and, eq, ilike, isNull } from 'drizzle-orm';
+import { FileItemDto } from './dto';
 
 @Injectable()
 export class FileRepository extends RepositoryCore {
@@ -17,7 +17,7 @@ export class FileRepository extends RepositoryCore {
     super(database, txContext);
   }
 
-  toFileItem(row: Files$Select): FileItem {
+  toFileItem(row: Files$Select): FileItemDto {
     return {
       id: row.id,
       name: row.name,
