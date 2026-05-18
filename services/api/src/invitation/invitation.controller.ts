@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, Post } from '@nestjs/common';
+import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, ParseUUIDPipe, Post } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { ApiError, type AuthUser, CurrentUser, Public, RequirePermission } from '@terab/common';
@@ -30,7 +30,7 @@ export class InvitationController {
   @Get(':token')
   @ApiOperation({ summary: '초대 토큰 유효성 검증' })
   @ApiResponse({ status: HttpStatus.OK, type: ValidateInvitationResponseDto })
-  async validate(@Param('token') token: string): Promise<ValidateInvitationResponseDto> {
+  async validate(@Param('token', ParseUUIDPipe) token: string): Promise<ValidateInvitationResponseDto> {
     return this.invitationService.validate(token);
   }
 
@@ -40,7 +40,7 @@ export class InvitationController {
   @ApiOperation({ summary: '초대장 비활성화' })
   @ApiResponse({ status: HttpStatus.NO_CONTENT })
   @ApiError('INVITATION_NOT_FOUND')
-  async deactivate(@Param('token') token: string): Promise<void> {
+  async deactivate(@Param('token', ParseUUIDPipe) token: string): Promise<void> {
     await this.invitationService.deactivate(token);
   }
 }

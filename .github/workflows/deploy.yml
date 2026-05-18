@@ -25,21 +25,6 @@ jobs:
           cache: npm
           cache-dependency-path: services/api/package-lock.json
 
-      - name: Set up Node 24 (contracts)
-        uses: actions/setup-node@v6
-        with:
-          node-version: 24
-          cache: npm
-          cache-dependency-path: packages/contracts/package-lock.json
-
-      # contract
-      - name: Build contracts
-        working-directory: packages/contracts
-        run: |
-          npm ci
-          npm run build
-
-      # api
       - name: Api build & type check
         working-directory: services/api
         run: |
@@ -88,21 +73,6 @@ jobs:
           cache: npm
           cache-dependency-path: services/web/package-lock.json
 
-      # contract
-      - name: Set up Node 24 (contracts)
-        uses: actions/setup-node@v6
-        with:
-          node-version: 24
-          cache: npm
-          cache-dependency-path: packages/contracts/package-lock.json
-
-      - name: Build contracts
-        working-directory: packages/contracts
-        run: |
-          npm ci
-          npm run build
-
-      # web
       - name: Frontend build & type check
         working-directory: services/web
         run: |
@@ -126,13 +96,11 @@ jobs:
       matrix:
         include:
           - service: api
-            context: .
-            file: services/api/Dockerfile
+            context: ./services/api
           - service: mq
             context: ./services/mq
           - service: web
-            context: .
-            file: services/web/Dockerfile
+            context: ./services/web
 
     steps:
       - uses: actions/checkout@v6
@@ -160,7 +128,6 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: ${{ matrix.context }}
-          file: ${{ matrix.file }}
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}

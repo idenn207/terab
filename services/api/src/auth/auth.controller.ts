@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Headers, HttpCode, HttpStatus, Param, Post, Req, Res } from '@nestjs/common';
+import { Body, Controller, Get, Headers, HttpCode, HttpStatus, Param, ParseUUIDPipe, Post, Req, Res } from '@nestjs/common';
 import { ApiExtraModels, ApiOperation, ApiResponse, ApiTags, getSchemaPath, refs } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
 import { ApiError, Cookies, CurrentUser, Public, type AuthUser } from '@terab/common';
@@ -104,7 +104,7 @@ export class AuthController {
   @ApiResponse(LOGIN_RESPONSE_API_RESPONSE)
   @ApiError('TWO_FA_CHALLENGE_NOT_FOUND')
   async completeTwoFa(
-    @Param('id') id: string,
+    @Param('id', ParseUUIDPipe) id: string,
     @Res({ passthrough: true }) res: Response,
   ): Promise<LoginResponse> {
     const { response, rawRefreshToken, refreshTokenExpMs } = await this.authService.completeTwoFa(id);

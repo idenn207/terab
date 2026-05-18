@@ -10,7 +10,6 @@ NAS에서 동작하는 셀프호스팅 파일 관리 서비스.
 | MQ             | Node 24.x / Nestjs 11 + Redis(BullMQ) |
 | Web            | React 19 + Vite / TypeScript          |
 | Mobile         | Capacitor (Android WebView)           |
-| 계약 레이어    | ts-rest + Zod (@terab/contract)       |
 | DB             | PostgreSQL 16                         |
 | Object Storage | MinIO (S3 호환)                       |
 | 인프라         | Docker Swarm + Nginx                  |
@@ -51,8 +50,6 @@ make stack-down   # 스택 제거
 ## 디렉토리 구조
 
 ```
-packages/
-  contracts/    # API·Web 공유 계약 (ts-rest + Zod) — 세부 컨벤션은 packages/contracts/CLAUDE.md 참조
 services/
   api/          # NestJS 11 (REST API) — 세부 컨벤션은 services/api/CLAUDE.md 참조
   mq/           # MQ 서비스 (BullMQ Worker + FCM) — 별도 NestJS 서비스
@@ -79,7 +76,7 @@ scripts/        # 빌드/배포 자동화 스크립트
 
 ## 코드 컨벤션
 
-> 세부 규칙은 `services/api/CLAUDE.md`, `services/web/CLAUDE.md`, `packages/contracts/CLAUDE.md` 참조.
+> 세부 규칙은 `services/api/CLAUDE.md`, `services/web/CLAUDE.md` 참조.
 
 ### 공통 원칙
 

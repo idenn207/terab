@@ -266,8 +266,6 @@ API·MQ·Web 서비스의 이미지를 `latest`로 업데이트하고 롤링 재
 
 ```
 terab/
-├── packages/
-│   └── contracts/    # API·Web 공유 계약 (ts-rest + Zod)
 ├── services/
 │   ├── api/          # NestJS 백엔드 (Node 24.x)
 │   ├── mq/           # BullMQ Worker + FCM (Node 24.x)

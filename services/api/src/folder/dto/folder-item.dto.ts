@@ -6,7 +6,7 @@ export class FolderItemDto {
 
   name!: string;
 
-  @ApiProperty({ type: String, format: 'uuid' })
+  @ApiProperty({ type: String, format: 'uuid', nullable: true })
   parentId!: string | null;
 
   createdAt!: Date;

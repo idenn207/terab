@@ -6,7 +6,7 @@ export class FileItemDto {
 
   name!: string;
 
-  @ApiProperty({ type: String, format: 'uuid' })
+  @ApiProperty({ type: String, format: 'uuid', nullable: true })
   folderId!: string | null;
 
   size!: number;

@@ -32,8 +32,8 @@ const processQueue = (error: unknown, token: string | null = null) => {
   failedQueue = [];
 };
 
-// Phase 0 호환: 레거시 consumer(userApi, backupCodeApi, PrivateRoute)가 axiosAuth/axiosBasic을 import 중.
-// Phase 9 (cleanup)에서 해당 consumer들을 codegen 기반으로 마이그레이션한 뒤 함께 제거 — axiosInstance 단일화.
+// 레거시 consumer 호환(userApi, backupCodeApi, PrivateRoute) — backup-codes 엔드포인트가 swagger 미노출이라
+// codegen 마이그레이션이 선행 작업(swagger 노출)을 필요로 함. 추후 단일 인스턴스화 follow-up에서 제거.
 export const axiosAuth = axiosInstance;
 export const axiosBasic = axios.create({ baseURL: '/api', withCredentials: true });
 

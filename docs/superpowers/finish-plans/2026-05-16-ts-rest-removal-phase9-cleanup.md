@@ -29,8 +29,10 @@
 - `.github/workflows/deploy.yml` — contracts 관련 step/cache 삭제, matrix context 변경
 - `Makefile` — build-packages target 삭제
 - `CLAUDE.md` (루트) — packages/contracts 줄 삭제
-- `services/api/CLAUDE.md` — ts-rest 컨벤션 삭제 → swagger 컨벤션으로 재작성 (spec §6.A 박제)
+- `services/api/CLAUDE.md` — ts-rest 컨벤션 삭제 → swagger 컨벤션으로 재작성 (spec §6.A 박제), DTO 검증·UUID/ENUM 표현 컨벤션 포함
 - `services/web/CLAUDE.md` — ts-rest 컨벤션 삭제 → hey-api/TanStack 컨벤션 재작성 (spec §6.B 박제)
+- `services/api/src/**/dto/*.dto.ts` (request DTO) — class-validator/class-transformer 누락분 보강 (@IsUUID, @IsEnum, @IsBoolean, @IsInt 등), validator로 표현되는 항목의 중복 `@ApiProperty` 제거
+- `services/api/src/**/dto/*.dto.ts` (response DTO) — UUID/ENUM 명시 패턴 정리 (`@ApiProperty({ type: String, format: 'uuid' })` / `@ApiProperty({ enum: [...] })` 일관 적용)
 - `packages/contracts/CLAUDE.md` — 패키지 디렉토리와 함께 삭제됨
 
 ---
@@ -634,8 +636,42 @@ union 응답은 3종 세트 누락 시 web codegen narrowing이 깨진다.
 - 위치: `src/{domain}/dto/`, 공유는 `src/common/dto/`
 - 파일명 kebab-case + `.dto.ts`, 클래스명 PascalCase + `Dto`
 - 필드 `!: type` (non-null assertion)
-- 단순 필드는 swagger plugin(`nest-cli.json`의 `@nestjs/swagger/plugin`)이 자동 처리. 명시 메타만 `@ApiProperty(...)` 수동
+- 단순 필드는 swagger plugin(`nest-cli.json`의 `"plugins": ["@nestjs/swagger"]`)이 자동 처리. 명시 메타만 `@ApiProperty(...)` 수동
 - Response DTO에는 class-validator 데코레이터 불필요. 민감 필드 `@Exclude()`
+
+### Request DTO 검증 원칙 (필수)
+
+> REST API 입력 검증의 게이트. 모든 request body / query / path는 ValidationPipe(글로벌) + class-validator + class-transformer로 검증된다. validator가 누락된 필드는 **검증 게이트가 무력화**된다 — 보안·계약 양쪽에서 중대 결함.
+
+- 모든 request DTO 필드에 의미에 맞는 class-validator 데코레이터 부착:
+  | 타입 | 필수 validator |
+  |---|---|
+  | UUID 식별자 | `@IsUUID()` (옵션: `'4'`) |
+  | string literal union (`'a' \| 'b'`) | `@IsEnum([...])` 또는 `@IsIn([...])` |
+  | enum 값 | `@IsEnum(MyEnum)` |
+  | 자연어 텍스트 | `@IsString()` + `@MinLength`/`@MaxLength` |
+  | 정수 | `@IsInt()` + `@Min`/`@Max` |
+  | boolean | `@IsBoolean()` |
+  | 이메일 | `@IsEmail()` |
+  | URL | `@IsUrl()` |
+  | optional | 위 데코레이터들 위에 `@IsOptional()` 추가 |
+  | 중첩 객체 | `@ValidateNested()` + `@Type(() => SubDto)` |
+  | 배열 | 항목 validator + `each: true` |
+- **swagger plugin의 자동 합성**: `classValidatorShim: true` (기본값)이므로 validator의 메타데이터가 OpenAPI에 자동 반영된다. 따라서:
+  - validator로 표현되는 항목(`enum`, `format: 'uuid'`, `minLength`/`maxLength`, `minimum`/`maximum`)은 `@ApiProperty(...)` 옵션에서 **중복 작성 금지**
+  - `@ApiProperty()`는 다음 경우에만 명시: description, example, deprecated, `additionalProperties`, 복잡 타입(`Record`, `oneOf`), 타입 추론이 불충분한 경우(예: `type: 'integer'`)
+- transform이 필요한 필드(`@Type(() => Number)` 등)는 class-transformer 데코레이터 명시. 글로벌 ValidationPipe는 `transform: true` 전제
+
+### Response DTO의 UUID / ENUM 표현 (composed decorator 미도입)
+
+> response DTO는 validator를 부착하지 않으므로 plugin이 추출할 메타데이터가 없다. UUID/ENUM 표현을 위해 composed decorator(`@ApiUuidProperty` 등)를 도입하지 않고 **`@ApiProperty` 명시 패턴을 그대로 유지한다** — 추상화 한 겹보다 명시 한 줄이 코드 grep·OpenAPI 추적·신규 기여자 이해도에 유리하다는 판단.
+
+- UUID 필드: `@ApiProperty({ format: 'uuid' })`
+- nullable UUID (`string | null`): `@ApiProperty({ type: String, format: 'uuid', nullable: true })`
+  - `type: String` 명시 필수 — 명시 없이 `format`만 주면 plugin의 union 타입 추론이 `Object`로 fallback되어 OpenAPI에 `type: "object"` 회귀가 발생함
+- string literal union: `@ApiProperty({ enum: ['VALUE_A', 'VALUE_B'] })`
+- nullable enum: `@ApiProperty({ enum: [...], nullable: true })`
+- `Date` 필드: 명시 불필요. plugin이 자동으로 `string / date-time`으로 직렬화
 
 ### Path/Query 검증
 
@@ -643,6 +679,9 @@ union 응답은 3종 세트 누락 시 web codegen narrowing이 깨진다.
 @Param('id', ParseUUIDPipe) id: string
 @Query() query: XxxQueryDto
 \`\`\`
+
+- path UUID 파라미터는 `ParseUUIDPipe` 또는 query DTO 내 `@IsUUID()` 중 하나로 반드시 검증
+- query DTO도 request DTO와 동일한 검증 원칙 적용 (`@IsOptional` + `@Type(() => Number)` 패턴 활용)
 
 ### `@ApiError` 헬퍼
 
@@ -668,6 +707,10 @@ union 응답은 3종 세트 누락 시 web codegen narrowing이 깨진다.
 | `@ApiResponse({ status: 4xx, type: ErrorResponseDto })` 직접 | `@ApiError('KEY')` |
 | `oneOf` 없이 union 응답 type 명시 | `@ApiExtraModels + oneOf + discriminator.mapping` 3종 세트 |
 | `class-validator` 없는 DTO body 검증 | ValidationPipe + class-validator |
+| request DTO에 `@IsUUID`/`@IsEnum` 누락 | 모든 식별자/literal union에 validator 필수 — 검증 게이트 무력화 방지 |
+| validator로 표현 가능한 메타를 `@ApiProperty`에 중복 작성 (`enum`, `format: 'uuid'`, `min`/`max`, `minLength`/`maxLength`) | validator만 부착, plugin이 자동 합성 |
+| response DTO에 `string \| null` UUID인데 `type: String` 누락 | `@ApiProperty({ type: String, format: 'uuid', nullable: true })` — 미명시 시 OpenAPI `type: "object"` 회귀 |
+| response DTO에 UUID 표현용 composed decorator (`@ApiUuidProperty` 등) 도입 | `@ApiProperty({ format: 'uuid' })` 명시 패턴 유지 — 추상화 1겹보다 명시가 grep·OpenAPI 추적·이해도에 유리 |
 ```
 
 - [ ] **Step 4: 모듈 의존 그래프의 contract 언급 삭제**
@@ -848,7 +891,89 @@ Phase 9 Task 9/10에서 CLAUDE.md 안에 `docs/superpowers/finish-specs/2026-05-
 
 ---
 
-## Task 12: 최종 검증
+## Task 12: DTO 검증 정합성 보강 (request 검증 + response 표현 일관성)
+
+> 본 Task는 박제(Task 9) 직전 또는 직후에 실행해 컨벤션과 코드를 동기화한다. 단일 commit으로 묶이지만 변경 범위가 크므로 도메인별로 sub-step을 끊어 진행한다.
+
+**Files:**
+- Modify: `services/api/src/{auth,twofa,device,trusted-device,folder,file,share,invitation,trash,admin,user, ... }/dto/*.dto.ts`
+
+**원칙:** Task 9 박제 섹션의 "Request DTO 검증 원칙" + "Response DTO의 UUID / ENUM 표현"을 그대로 적용한다. 본 Task는 그 두 단락의 정합성을 코드에 반영하는 mechanical 작업이다.
+
+- [ ] **Step 1: request DTO 스캔 — class-validator 누락 식별**
+
+Run: `grep -rln "extends\|class.*Dto " services/api/src --include="*.dto.ts" 2>&1`
+대상 후보: 파일 이름이 `request`/`body`/`query`/`params`/`create`/`update`/`set`/`delete`/`init`/`complete`/`verify`/`approve`/`reject`/`enroll`/`finish`/`login`/`refresh`/`logout` 등으로 끝나는 DTO. (response DTO는 제외)
+
+각 후보 파일에서 다음 패턴이 누락된 곳을 식별:
+- UUID 필드 (`id`, `*Id`, `folderId`, `userId`, `challengeId` 등) → `@IsUUID()` 없음
+- string literal union (`'option1' | 'option2'`) → `@IsEnum([...])` 또는 `@IsIn([...])` 없음
+- enum 필드 → `@IsEnum(Enum)` 없음
+- 모든 string → `@IsString()` 없음
+- 모든 number → `@IsInt()` 또는 `@IsNumber()` 없음
+- 모든 boolean → `@IsBoolean()` 없음
+- nullable/optional → `@IsOptional()` 없음
+- 배열 → `each: true` 누락
+- 중첩 DTO → `@ValidateNested()` + `@Type(() => SubDto)` 누락
+
+- [ ] **Step 2: request DTO에 누락 validator 부착**
+
+식별된 모든 누락 항목 보강. import 추가 (`class-validator`, `class-transformer`).
+
+- [ ] **Step 3: request DTO의 `@ApiProperty` 중복 옵션 제거**
+
+validator로 표현되는 다음 옵션은 `@ApiProperty(...)`에서 삭제 (plugin이 자동 합성):
+- `enum: [...]` → `@IsEnum` / `@IsIn`이 표현
+- `format: 'uuid'` → `@IsUUID`가 표현
+- `minLength`/`maxLength` → `@MinLength`/`@MaxLength`가 표현
+- `minimum`/`maximum` → `@Min`/`@Max`가 표현
+
+`@ApiProperty()`가 옵션이 비게 되면 해당 데코레이터 자체를 제거 (plugin이 처리).
+
+남는 `@ApiProperty(...)` 케이스: `description`, `example`, `deprecated`, `type: 'integer'`, 복잡 타입, `additionalProperties` 등.
+
+- [ ] **Step 4: response DTO의 UUID/ENUM 표현 일관성 정리**
+
+response DTO(파일 이름이 `response`/`item`/`info`/`detail`로 끝남 + return type으로 사용되는 DTO)를 순회하며:
+- UUID 필드: `@ApiProperty({ format: 'uuid' })` 또는 `@ApiProperty({ type: String, format: 'uuid', nullable: true })` 일관 적용
+- string literal union: `@ApiProperty({ enum: ['A', 'B'] })`
+- `Date` 필드의 `@ApiProperty({ format: 'date-time' })`는 plugin이 자동 처리하므로 제거 가능 (현 코드베이스는 이미 정리됨, 회귀 방지 확인)
+- composed decorator 도입 금지 (Task 9 박제 컨벤션과 일치)
+
+- [ ] **Step 5: 빌드 + 타입 검증**
+
+Run: `npm --prefix services/api run build`
+Expected: 성공.
+
+Run: `npm --prefix services/api test`
+Expected: 302/302 통과.
+
+- [ ] **Step 6: OpenAPI schema diff 검증**
+
+dev 서버 기동 후 `/json` 캡처, baseline (Phase 9 진입 시점 = Phase 8 종료 ≈ 30775 bytes 부근)과 diff.
+
+기대 변화:
+- **추가**: validator 보강에 따른 `minLength`/`maxLength`/`minimum`/`format: 'uuid'`/`enum: [...]` 메타데이터 → schema가 더 엄격해짐
+- **유지**: 기존 필드 type/required 동일
+- **회귀 없음**: `type: "object"`로 fallback된 UUID 필드 없음, enum이 사라진 필드 없음
+
+회귀 발견 시 즉시 수정 (대부분 response DTO의 `type: String` 누락이 원인).
+
+- [ ] **Step 7: web codegen 재생성 + 사용처 영향 확인**
+
+Run: `npm --prefix services/web run openapi:codegen`
+Run: `git diff services/web/src/shared/api/generated/`
+
+기대:
+- types.gen.ts에 validator 메타데이터로부터 파생된 좁은 타입(예: literal union, format) 반영
+- 사용처 컴파일 오류 0건 (validator 보강은 OpenAPI의 표현을 좁히지 코드 시그니처를 바꾸지 않음)
+
+Run: `npm --prefix services/web run build && npm --prefix services/web test`
+Expected: 모두 통과.
+
+---
+
+## Task 13: 최종 검증
 
 본 Phase의 가장 중요한 단계 — 모든 변경이 통합되어 동작하는지.
 
@@ -905,7 +1030,7 @@ kill %1
 
 ---
 
-## Task 13: Phase 9 commit
+## Task 14: Phase 9 commit
 
 ```bash
 git status   # 변경 사항 확인
@@ -920,13 +1045,15 @@ git add services/api/package.json services/api/package-lock.json \
         CLAUDE.md \
         services/api/CLAUDE.md \
         services/web/CLAUDE.md \
+        services/api/src \
+        services/web/src/shared/api/generated \
         docs/superpowers/finish-specs/2026-05-16-ts-rest-removal-swagger-migration-design.md \
         docs/superpowers/finish-plans/2026-05-16-ts-rest-removal-*.md
 
 # git rm은 자동으로 stage됨
 # packages/contracts/ 삭제, docs/specs+plans → finish 이동
 
-git commit -m "chore: Phase 9 — packages/contracts 제거 + 인프라/문서 정리"
+git commit -m "chore: Phase 9 — packages/contracts 제거 + DTO 검증 정합성 보강 + 인프라/문서 정리"
 ```
 
 ---
@@ -940,8 +1067,13 @@ git commit -m "chore: Phase 9 — packages/contracts 제거 + 인프라/문서 �
 - [ ] .github/workflows/deploy.yml: contracts step 삭제, matrix context 변경
 - [ ] Makefile: build-packages 삭제, image target 단순화
 - [ ] CLAUDE.md(루트): packages/contracts 줄 삭제
-- [ ] services/api/CLAUDE.md: spec §6.A 패턴 박제
+- [ ] services/api/CLAUDE.md: spec §6.A 패턴 박제 + Request 검증 원칙 + Response UUID/ENUM 표현 컨벤션 포함
 - [ ] services/web/CLAUDE.md: spec §6.B 패턴 박제
+- [ ] request DTO: class-validator/transformer 누락분 보강 (UUID/ENUM/Boolean/Int/Optional/Nested 등) 완료
+- [ ] request DTO: validator로 표현되는 메타의 중복 `@ApiProperty` 옵션 제거 완료
+- [ ] response DTO: UUID/ENUM 표현 일관성 정리 (`type: String` 누락 회귀 없음), composed decorator 미도입
+- [ ] OpenAPI schema diff 검증: validator 메타데이터 추가 외 회귀 없음
+- [ ] web codegen 재생성 + 사용처 영향 0건
 - [ ] spec + plan → finish 디렉토리로 이동
 - [ ] make build / make test / make image 통과
 - [ ] dev 환경 e2e 전체 시나리오 정상
@@ -971,7 +1103,7 @@ ts-rest + Zod 제거, @nestjs/swagger + class-validator (API) + @hey-api/openapi
 - `refactor: Phase 6 — auth 도메인 전환 (LoginResponse oneOf + 쿠키/refresh 흐름 포함)` (commit hash)
 - `refactor: Phase 7 — file 도메인 전환 (upload/download 포함)` (commit hash)
 - `refactor: Phase 8 — trash 도메인 전환` (commit hash)
-- `chore: Phase 9 — packages/contracts 제거 + 인프라/문서 정리` (commit hash)
+- `chore: Phase 9 — packages/contracts 제거 + DTO 검증 정합성 보강 + 인프라/문서 정리` (commit hash)
 
 ## 위험 요소·완화책
 - hey-api 0.x breaking change → `-E` 옵션 정확 버전 핀, 정기 점검(분기 1회)으로 업그레이드 분리

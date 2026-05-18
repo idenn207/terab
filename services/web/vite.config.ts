@@ -21,9 +21,6 @@ export default defineConfig({
   resolve: {
     tsconfigPaths: true,
   },
-  optimizeDeps: {
-    include: ['@terab/contract'],
-  },
   test: {
     globals: true,
     environment: 'jsdom',

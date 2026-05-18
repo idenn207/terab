@@ -61,7 +61,6 @@ NestJS 11 기반 REST API 서버. Controller → Service → Repository 3-tier �
 
 | 패키지 | 실제 경로 | 역할 |
 |---|---|---|
-| `@terab/contract` | `packages/contracts/` | ts-rest 계약 + Zod 스키마 |
 | `@terab/db` | `src/database/` (path alias) | DatabaseService, Schema 타입 |
 | `@terab/common` | `src/common/` (path alias) | Guards, Decorators, Exceptions |
 | `@terab/security` | `src/security/` (path alias) | TokenService |
@@ -120,19 +119,16 @@ FileModule → FolderModule
 
 ### Docker 빌드
 
-`services/api/Dockerfile`을 루트 컨텍스트에서 빌드한다 (`docker build -f services/api/Dockerfile .`).
+`services/api/Dockerfile`을 각 서비스 디렉토리 컨텍스트에서 빌드한다 (`docker build ./services/api`).
 
 | Stage | 역할 |
 |---|---|
-| `contracts-builder` | `packages/contracts` 빌드 (ts-rest 계약 컴파일) |
 | `builder` | API 소스 빌드 (`nest build`) |
 | `runner` | 런타임 이미지 (non-root `appuser`, prod deps만 설치) |
 
-**`@terab/contract` 심링크 문제**: `file:` 경로 의존성은 `npm ci` 후 `node_modules/@terab/contract`가 dangling symlink가 된다. Dockerfile에서 해당 디렉토리를 수동으로 제거하고 contracts-builder의 산출물로 교체하는 처리가 포함되어 있다. 이 처리를 수정하거나 제거하지 않는다.
-
 ```bash
 # 로컬 Docker 이미지 빌드 (루트에서 실행)
-make build-local
+make image
 ```
 
 ### DB 마이그레이션
@@ -145,6 +141,134 @@ npm run db:push       # 마이그레이션 적용 (개발 환경)
 ```
 
 운영 환경 마이그레이션은 `docker-entrypoint.sh`에서 컨테이너 시작 시 자동 적용된다. 운영 배포 전 `drizzle/` 마이그레이션 파일이 커밋되어 있어야 한다.
+
+## Swagger / DTO 컨벤션
+
+> 본 컨벤션은 ts-rest 제거 마이그레이션(2026-05-16) 완료 시점에 박제됨. 원본은 `docs/superpowers/finish-specs/2026-05-16-ts-rest-removal-swagger-migration-design.md` §6.A.
+
+### Controller 데코레이터
+
+- 경로 prefix: `@Controller('domain')` — kebab/단수형 (`'auth'`, `'file'`, `'trusted-device'`)
+- 그룹 태그: `@ApiTags('Domain')` — PascalCase 단수형
+- 인증 기본값: 글로벌 security로 처리. `@Public()` 라우트는 자동 비움 (데코레이터가 `ApiSecurity({})` 합성)
+
+### 메서드 데코레이터 순서 (고정)
+
+```
+@Public() / @RequirePermission()
+@Throttle(...)
+@Post/@Get/@Patch/@Delete
+@HttpCode(...)
+@ApiOperation({ summary: '한글 요약' })
+@ApiExtraModels(...)
+@ApiResponse({ status, type/schema })
+@ApiError('KEY1', 'KEY2')
+```
+
+순서 위반 시 PR review reject.
+
+### HttpCode 명시
+
+| 메서드 | 기본 | 명시 필수 |
+|---|---|---|
+| GET | 200 | 거의 없음 |
+| POST | 201 | **200 응답 시 `@HttpCode(HttpStatus.OK)` 필수** |
+| DELETE | 200 | **204 응답 시 `@HttpCode(HttpStatus.NO_CONTENT)` 필수** |
+
+### 응답 표현 패턴
+
+```ts
+// 단일
+@ApiResponse({ status: HttpStatus.OK, type: UserDto })
+// 배열
+@ApiResponse({ status: HttpStatus.OK, type: UserDto, isArray: true })
+// 빈 응답
+@ApiResponse({ status: HttpStatus.NO_CONTENT })
+// Discriminated union — @ApiExtraModels + oneOf + discriminator.mapping 3종 세트 필수
+```
+
+union 응답은 3종 세트 누락 시 web codegen narrowing이 깨진다.
+
+### DTO 작성
+
+- 위치: `src/{domain}/dto/`, 공유는 `src/common/dto/`
+- 파일명 kebab-case + `.dto.ts`, 클래스명 PascalCase + `Dto`
+- 필드 `!: type` (non-null assertion)
+- 단순 필드는 swagger plugin(`nest-cli.json`의 `"plugins": ["@nestjs/swagger"]`)이 자동 처리. 명시 메타만 `@ApiProperty(...)` 수동
+- Response DTO에는 class-validator 데코레이터 불필요. 민감 필드 `@Exclude()`
+
+### Request DTO 검증 원칙 (필수)
+
+> REST API 입력 검증의 게이트. 모든 request body / query / path는 ValidationPipe(글로벌) + class-validator + class-transformer로 검증된다. validator가 누락된 필드는 **검증 게이트가 무력화**된다 — 보안·계약 양쪽에서 중대 결함.
+
+- 모든 request DTO 필드에 의미에 맞는 class-validator 데코레이터 부착:
+  | 타입 | 필수 validator |
+  |---|---|
+  | UUID 식별자 | `@IsUUID()` (옵션: `'4'`) |
+  | string literal union (`'a' \| 'b'`) | `@IsEnum([...])` 또는 `@IsIn([...])` |
+  | enum 값 | `@IsEnum(MyEnum)` |
+  | 자연어 텍스트 | `@IsString()` + `@MinLength`/`@MaxLength` |
+  | 정수 | `@IsInt()` + `@Min`/`@Max` |
+  | boolean | `@IsBoolean()` |
+  | 이메일 | `@IsEmail()` |
+  | URL | `@IsUrl()` |
+  | optional | 위 데코레이터들 위에 `@IsOptional()` 추가 |
+  | 중첩 객체 | `@ValidateNested()` + `@Type(() => SubDto)` |
+  | 배열 | 항목 validator + `each: true` |
+- **swagger plugin의 자동 합성**: `classValidatorShim: true` (기본값)이므로 validator의 메타데이터가 OpenAPI에 자동 반영된다. 따라서:
+  - validator로 표현되는 항목(`enum`, `format: 'uuid'`, `minLength`/`maxLength`, `minimum`/`maximum`)은 `@ApiProperty(...)` 옵션에서 **중복 작성 금지**
+  - `@ApiProperty()`는 다음 경우에만 명시: description, example, deprecated, `additionalProperties`, 복잡 타입(`Record`, `oneOf`), 타입 추론이 불충분한 경우(예: `type: 'integer'`)
+- transform이 필요한 필드(`@Type(() => Number)` 등)는 class-transformer 데코레이터 명시. 글로벌 ValidationPipe는 `transform: true` 전제
+
+### Response DTO의 UUID / ENUM 표현 (composed decorator 미도입)
+
+> response DTO는 validator를 부착하지 않으므로 plugin이 추출할 메타데이터가 없다. UUID/ENUM 표현을 위해 composed decorator(`@ApiUuidProperty` 등)를 도입하지 않고 **`@ApiProperty` 명시 패턴을 그대로 유지한다** — 추상화 한 겹보다 명시 한 줄이 코드 grep·OpenAPI 추적·신규 기여자 이해도에 유리하다는 판단.
+
+- UUID 필드: `@ApiProperty({ format: 'uuid' })`
+- nullable UUID (`string | null`): `@ApiProperty({ type: String, format: 'uuid', nullable: true })`
+  - `type: String` 명시 필수 — 명시 없이 `format`만 주면 plugin의 union 타입 추론이 `Object`로 fallback되어 OpenAPI에 `type: "object"` 회귀가 발생함
+- string literal union: `@ApiProperty({ enum: ['VALUE_A', 'VALUE_B'] })`
+- nullable enum: `@ApiProperty({ enum: [...], nullable: true })`
+- `Date` 필드: 명시 불필요. plugin이 자동으로 `string / date-time`으로 직렬화
+
+### Path/Query 검증
+
+```ts
+@Param('id', ParseUUIDPipe) id: string
+@Query() query: XxxQueryDto
+```
+
+- path UUID 파라미터는 `ParseUUIDPipe` 또는 query DTO 내 `@IsUUID()` 중 하나로 반드시 검증
+- query DTO도 request DTO와 동일한 검증 원칙 적용 (`@IsOptional` + `@Type(() => Number)` 패턴 활용)
+
+### `@ApiError` 헬퍼
+
+- `@ApiError('KEY1', 'KEY2')`만 사용 — ErrorCode 키 기반
+- 직접 `@ApiResponse({ status: 4xx, type: ErrorResponseDto })` 작성 **금지** (보일러플레이트 + ErrorCode와 drift)
+
+### `@Public()` 사용
+
+- 가드 우회 + OpenAPI security 비움이 자동 합성
+- 부착 시 web `PUBLIC_PATHS` 자동 갱신됨
+
+### OpenAPI 노출
+
+- dev 환경에서만: `SwaggerModule.setup('swagger', app, doc, { jsonDocumentUrl: '/json' })`
+- prod 환경은 `NODE_ENV === 'dev'` 분기 안에서만 활성화
+
+### 금지 패턴
+
+| 금지 | 대체 |
+|---|---|
+| `@ApiProperty()` 단순 필드 명시적 부착 | swagger plugin에 위임 |
+| `@Post()` 후 `@HttpCode` 생략 (200 의도) | `@HttpCode(HttpStatus.OK)` 명시 |
+| `@ApiResponse({ status: 4xx, type: ErrorResponseDto })` 직접 | `@ApiError('KEY')` |
+| `oneOf` 없이 union 응답 type 명시 | `@ApiExtraModels + oneOf + discriminator.mapping` 3종 세트 |
+| `class-validator` 없는 DTO body 검증 | ValidationPipe + class-validator |
+| request DTO에 `@IsUUID`/`@IsEnum` 누락 | 모든 식별자/literal union에 validator 필수 — 검증 게이트 무력화 방지 |
+| validator로 표현 가능한 메타를 `@ApiProperty`에 중복 작성 (`enum`, `format: 'uuid'`, `min`/`max`, `minLength`/`maxLength`) | validator만 부착, plugin이 자동 합성 |
+| response DTO에 `string \| null` UUID인데 `type: String` 누락 | `@ApiProperty({ type: String, format: 'uuid', nullable: true })` — 미명시 시 OpenAPI `type: "object"` 회귀 |
+| response DTO에 UUID 표현용 composed decorator (`@ApiUuidProperty` 등) 도입 | `@ApiProperty({ format: 'uuid' })` 명시 패턴 유지 — 추상화 1겹보다 명시가 grep·OpenAPI 추적·이해도에 유리 |
 
 ## Claude 행동 지침
 

@@ -1,4 +1,4 @@
-import { Body, Controller, Get, HttpCode, HttpStatus, Param, Post } from '@nestjs/common';
+import { Body, Controller, Get, HttpCode, HttpStatus, Param, ParseUUIDPipe, Post } from '@nestjs/common';
 import { ApiExtraModels, ApiOperation, ApiResponse, ApiTags, getSchemaPath, refs } from '@nestjs/swagger';
 import { ApiError, type AuthUser, CurrentUser, Public } from '@terab/common';
 import {
@@ -47,7 +47,7 @@ export class TwoFaController {
     },
   })
   @ApiError('TWO_FA_CHALLENGE_NOT_FOUND')
-  async getStatus(@Param('id') id: string): Promise<ChallengeStatusResponse> {
+  async getStatus(@Param('id', ParseUUIDPipe) id: string): Promise<ChallengeStatusResponse> {
     return this.twoFaService.getStatus(id);
   }
 
@@ -58,7 +58,7 @@ export class TwoFaController {
   @ApiError('TWO_FA_CHALLENGE_NOT_FOUND', 'FORBIDDEN')
   async respond(
     @CurrentUser() user: AuthUser,
-    @Param('id') id: string,
+    @Param('id', ParseUUIDPipe) id: string,
     @Body() body: RespondChallengeBodyDto,
   ): Promise<void> {
     await this.twoFaService.respond(id, user.userId, body.selectedNumber);
@@ -70,7 +70,7 @@ export class TwoFaController {
   @ApiOperation({ summary: '2FA 챌린지 재발송' })
   @ApiResponse({ status: HttpStatus.OK, type: ResendChallengeResponseDto })
   @ApiError('TWO_FA_CHALLENGE_NOT_FOUND')
-  async resend(@Param('id') id: string): Promise<ResendChallengeResponseDto> {
+  async resend(@Param('id', ParseUUIDPipe) id: string): Promise<ResendChallengeResponseDto> {
     return this.twoFaService.resend(id);
   }
 }
