@@ -84,6 +84,37 @@ AuthService
 
 본 작업은 한 번에 처리하기엔 영향 범위가 너무 넓다. 다음과 같이 Phase별 PR로 쪼갠다. **각 Phase는 독립적으로 머지 가능해야** 하며, 각 Phase 종료 시점에 모든 테스트가 통과해야 한다.
 
+### Phase 0 — Owner 부트스트랩을 database/seed로 이동
+
+기존 `AuthService.onModuleInit → initOwnerAccount()` 흐름을 **database seed 단계로 이전**한다. seed 구성은 `seedRbac` 순수 함수 패턴 대신 **@Injectable Seeder 클래스 패턴**으로 통일한다.
+
+**산출물**
+
+- `database/seed/rbac.seeder.ts` — `@Injectable RbacSeeder` 클래스, `seed(db: NodePgDatabase<typeof schema>): Promise<void>` 메서드. **생성자 주입 없음** (순환 의존 회피)
+- `database/seed/owner.seeder.ts` — `@Injectable OwnerSeeder` 신설
+  - 생성자 주입: `ConfigService`, `TokenService` (모두 @Global)
+  - 메서드 시그니처: `seed(db: NodePgDatabase<typeof schema>): Promise<void>`
+  - 동작: `OWNER_PASSWORD` 부재 시 noop / `OWNER_USERNAME`(default `owner`) 기준 존재 검사 / `tokenService.pepperPassword()` + `bcrypt.hash()` 후 users + user_roles insert / UNIQUE 충돌(`23505`) 무시
+- `database/seed/index.ts` — `RbacSeeder`, `OwnerSeeder` re-export
+- `database/database.module.ts` — `providers`에 `RbacSeeder`, `OwnerSeeder` 직접 추가 (`SeedModule` 미신설)
+- `database/database.service.ts` — 생성자에 `RbacSeeder`, `OwnerSeeder` 주입, `seed()` 메서드에서 `seeder.seed(this.db)` 순차 호출 (`RbacSeeder` → `OwnerSeeder` 순서 보장: owner role이 먼저 존재해야 함)
+- `auth.service.ts` — `OnModuleInit` 구현체 + `onModuleInit()` + `initOwnerAccount()` 메서드 제거
+- 관련 e2e fixture 정리 (`OWNER_PASSWORD` 환경변수가 인증 흐름 e2e에 영향 주지 않도록 검증)
+
+> **순환 의존 회피 설계 결정**: Seeder가 `DatabaseService`를 생성자 주입하면 `DatabaseService` → `Seeder` → `DatabaseService` 순환이 발생해 NestJS DI 컨테이너가 부트스트랩을 거부한다. 따라서 Seeder는 stateless `@Injectable`로 두고 `db` 핸들을 메서드 파라미터로 받는다. `ConfigService`/`TokenService`는 db에 의존하지 않으므로 안전하게 생성자 주입.
+
+**회귀**
+
+- DB 신규 부팅 시 owner 계정 생성 확인
+- 기존 owner가 존재할 때 중복 생성·예외 없이 종료 확인
+- 동시 기동 시 UNIQUE 충돌 무시 동작 확인 (기존 로직 보존)
+
+**의도**
+
+- 책임 분리: AuthService는 부트스트랩 책임에서 해방 → Phase C에서 `UserService` 신설 시 owner 책임이 다시 떠오를 일 없음
+- seed가 RBAC + Owner를 함께 보장 → 신규 환경 부팅 시 데이터 일관성 강화
+- seeder 패턴 통일 (`@Injectable` 클래스) → 추후 다른 seed(예: 기본 폴더, 기본 권한 그룹) 추가 시 동일 패턴 재사용
+
 ### Phase A — `session/` 분리
 
 - `session/session.module.ts`, `session.service.ts`, `session.repository.ts` 신설
@@ -106,7 +137,7 @@ AuthService
 - `AuthRepository.findUser*`, `insertUser`, `aggregateUser` → `UserRepository` + `RoleRepository`로 분해
   - 권한 집계는 `RoleService.getPermissionsByUserId(userId)`로 노출
   - 사용자 본문 + 권한을 합친 `UserWithPermissions` 합성은 `AuthService` 내부에서 두 service 호출로 조립
-- `AuthService.initOwnerAccount` → `UserService.ensureOwner(...)`로 이동
+- **Phase 0에서 owner 부트스트랩이 이미 seed로 이전됨** — Phase C에서는 owner 관련 로직 이전 불필요
 - 회귀: register / login / me e2e 통과
 
 ### Phase D — `auth/` 정리 + `AuthRepository` 제거
@@ -125,7 +156,8 @@ AuthService
 | 위험 | 완화 |
 |---|---|
 | Phase 도중 cross-service tx 깨짐 | `ServiceCore.runInTx()`가 nested 호출에서 동일 tx 참여하도록 이미 설계됨 — `register` 같은 다단 호출은 `AuthService`에서 `runInTx()`로 감싼다 |
-| AuthRepository에 묶여있던 owner bootstrap의 `OnModuleInit` 순서 | `UserService.onModuleInit`에 owner bootstrap을 이동, `RoleService` import 후 호출. Module load 순서는 NestJS DI 컨테이너가 보장 |
+| Phase 0 seed 실행 시점이 module init 시점과 다름 | `DatabaseService.onModuleInit` → `migrate()` → `RbacSeeder.seed()` → `OwnerSeeder.seed()` 순서로 직렬 실행. OWNER role 존재가 보장된 뒤 owner 생성하므로 안전 |
+| 기존 `initOwnerAccount`의 UNIQUE(23505) swallow 동작 누락 | `OwnerSeeder.seed()`에서도 동일하게 catch + 23505 swallow 유지 (동시 기동 보호) |
 | 테스트 fixture 위치 변경 | `src/test/fixtures/`에 도메인별 fixture (`user.fixtures.ts`, `role.fixtures.ts`)를 추가하고 기존 `auth.fixtures.ts`는 인증 흐름 전용으로 축소 |
 | 다른 도메인(file·folder·trash 등)이 `AuthRepository` 참조 | grep 확인 결과 외부 참조 없음. 내부에서만 사용 |
 | Phase별 PR 생성 부담 | 각 Phase는 독립 머지 가능. 단일 PR로 묶지 않음 |
@@ -154,6 +186,14 @@ AuthService
 | 모듈 간 순환 의존 없음 | NestJS DI 컨테이너 부팅 성공 |
 
 ## 8. 작업 산출물 체크리스트 (Phase별)
+
+Phase 0 — owner seed 이전:
+- [ ] `RbacSeeder` @Injectable 클래스로 리팩토링 (`seedRbac` 함수 제거)
+- [ ] `OwnerSeeder` @Injectable 클래스 신설 (ConfigService + TokenService 주입)
+- [ ] `DatabaseModule.providers`에 두 Seeder 등록
+- [ ] `DatabaseService.seed()`에서 `seeder.seed(this.db)` 순차 호출
+- [ ] `AuthService`에서 `OnModuleInit` / `initOwnerAccount` 제거
+- [ ] 신규 DB 부팅 + 재부팅 + 동시 기동 회귀 통과
 
 Phase A — session:
 - [ ] `session/` 모듈 신설
