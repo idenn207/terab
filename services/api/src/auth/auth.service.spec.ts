@@ -1,10 +1,8 @@
-import { ConfigService } from '@nestjs/config';
 import { Test } from '@nestjs/testing';
 import { ApiException } from '@terab/common';
 import { DatabaseService, TransactionContext } from '@terab/db';
 import { TokenService } from '@terab/security';
 import {
-  mockConfigService,
   mockDatabaseService,
   mockDbTransaction,
   mockTransactionContext,
@@ -15,9 +13,12 @@ import bcrypt from 'bcryptjs';
 import { DeviceService } from '../device/device.service';
 import { InvitationService } from '../invitation/invitation.service';
 import { TrustedDeviceService } from '../trusted-device/trusted-device.service';
+import { BackupCodeService } from '../backup-code/backup-code.service';
+import { RoleService } from '../role/role.service';
+import { SessionService } from '../session/session.service';
 import { PushChallengePublisher } from '../twofa/push-challenge.publisher';
 import { TwoFaService } from '../twofa/twofa.service';
-import { AuthRepository } from './auth.repository';
+import { UserService } from '../user/user.service';
 import { AuthService } from './auth.service';
 
 jest.mock('bcryptjs', () => ({
@@ -26,19 +27,16 @@ jest.mock('bcryptjs', () => ({
   hash: jest.fn(),
 }));
 
-const mockAuthRepository = {
-  findUserWithPermissionsByUsername: jest.fn(),
-  findUserWithPermissionsById: jest.fn(),
-  findActiveRefreshTokenByHash: jest.fn(),
-  insertRefreshToken: jest.fn(),
-  revokeRefreshTokenById: jest.fn(),
-  findUnusedBackupCodes: jest.fn(),
-  markBackupCodeUsed: jest.fn(),
-  findUserByUsername: jest.fn(),
-  findRoleByName: jest.fn(),
-  insertUser: jest.fn(),
-  insertUserRole: jest.fn(),
-  insertBackupCodes: jest.fn(),
+const mockUserService = {
+  findById: jest.fn(),
+  findByUsername: jest.fn(),
+  create: jest.fn(),
+};
+
+const mockRoleService = {
+  findByName: jest.fn(),
+  assignUserRole: jest.fn(),
+  getPermissionsByUserId: jest.fn(),
 };
 
 const mockTokenService = {
@@ -71,6 +69,18 @@ const mockPushChallengePublisher = {
   publish: jest.fn(),
 };
 
+const mockSessionService = {
+  issueForUser: jest.fn(),
+  rotate: jest.fn(),
+  revokeByRawToken: jest.fn(),
+};
+
+const mockBackupCodeService = {
+  generateForUser: jest.fn(),
+  regenerateForUser: jest.fn(),
+  consume: jest.fn(),
+};
+
 describe('AuthService', () => {
   let service: AuthService;
 
@@ -80,21 +90,22 @@ describe('AuthService', () => {
         AuthService,
         { provide: DatabaseService, useValue: mockDatabaseService },
         { provide: TransactionContext, useValue: mockTransactionContext },
-        { provide: AuthRepository, useValue: mockAuthRepository },
-        { provide: ConfigService, useValue: mockConfigService },
+        { provide: UserService, useValue: mockUserService },
+        { provide: RoleService, useValue: mockRoleService },
         { provide: TokenService, useValue: mockTokenService },
         { provide: DeviceService, useValue: mockDeviceService },
         { provide: TwoFaService, useValue: mockTwoFaService },
         { provide: TrustedDeviceService, useValue: mockTrustedDeviceService },
         { provide: InvitationService, useValue: mockInvitationService },
         { provide: PushChallengePublisher, useValue: mockPushChallengePublisher },
+        { provide: SessionService, useValue: mockSessionService },
+        { provide: BackupCodeService, useValue: mockBackupCodeService },
       ],
     }).compile();
 
     service = module.get(AuthService);
     jest.clearAllMocks();
     setupMockDbTransactionChain();
-    mockAuthRepository.insertRefreshToken.mockResolvedValue(undefined);
     mockDeviceService.findPushTokensByUserId.mockResolvedValue([]);
     mockInvitationService.validateOrThrow.mockResolvedValue({ token: 'valid-token' });
     mockTokenService.generateAccessToken.mockReturnValue('mock.access.token');
@@ -103,6 +114,40 @@ describe('AuthService', () => {
       tokenHash: 'mock-token-hash',
       expiresAt: new Date(),
     });
+    mockSessionService.issueForUser.mockResolvedValue({
+      rawRefreshToken: 'mock-raw-refresh-token',
+      refreshTokenExpMs: 86400000,
+    });
+    mockSessionService.rotate.mockResolvedValue({
+      userId: 'rotated-user-id',
+      rawRefreshToken: 'rotated-raw-refresh-token',
+      refreshTokenExpMs: 86400000,
+    });
+    mockSessionService.revokeByRawToken.mockResolvedValue(undefined);
+    mockBackupCodeService.generateForUser.mockResolvedValue([
+      'CODE-0001',
+      'CODE-0002',
+      'CODE-0003',
+      'CODE-0004',
+      'CODE-0005',
+      'CODE-0006',
+      'CODE-0007',
+      'CODE-0008',
+    ]);
+    mockBackupCodeService.regenerateForUser.mockResolvedValue([
+      'NEW-0001',
+      'NEW-0002',
+      'NEW-0003',
+      'NEW-0004',
+      'NEW-0005',
+      'NEW-0006',
+      'NEW-0007',
+      'NEW-0008',
+    ]);
+    mockBackupCodeService.consume.mockResolvedValue(undefined);
+    mockRoleService.getPermissionsByUserId.mockResolvedValue(mockUser.permissions);
+    mockRoleService.assignUserRole.mockResolvedValue(undefined);
+    mockUserService.create.mockResolvedValue({ id: 'new-user-1' });
   });
 
   describe('register', () => {
@@ -117,31 +162,30 @@ describe('AuthService', () => {
       mockInvitationService.validateOrThrow.mockRejectedValue(new ApiException('INVITATION_NOT_FOUND'));
 
       await expect(service.register(registerDto)).rejects.toMatchObject({ code: 'INVITATION_NOT_FOUND' });
-      expect(mockAuthRepository.insertUser).not.toHaveBeenCalled();
+      expect(mockUserService.create).not.toHaveBeenCalled();
     });
 
     it('USER role이 없으면 ROLE_NOT_FOUND 예외를 던진다', async () => {
-      mockAuthRepository.findRoleByName.mockResolvedValue(null);
+      mockRoleService.findByName.mockResolvedValue(null);
 
       await expect(service.register(registerDto)).rejects.toMatchObject({ code: 'ROLE_NOT_FOUND' });
-      expect(mockAuthRepository.insertUser).not.toHaveBeenCalled();
+      expect(mockUserService.create).not.toHaveBeenCalled();
     });
 
     it('중복 username이면 USERNAME_TAKEN 예외를 던진다', async () => {
-      mockAuthRepository.findRoleByName.mockResolvedValue({ id: 'role-id' });
+      mockRoleService.findByName.mockResolvedValue({ id: 'role-id' });
       mockTokenService.pepperPassword.mockReturnValue('peppered');
-      mockAuthRepository.insertUser.mockRejectedValue({ code: '23505' });
+      mockUserService.create.mockRejectedValue({ code: '23505' });
       (bcrypt.hash as jest.Mock).mockResolvedValue('hashed');
 
       await expect(service.register(registerDto)).rejects.toMatchObject({ code: 'USERNAME_TAKEN' });
     });
 
     it('invitation이 이미 사용되었으면 INVITATION_ALREADY_USED 예외를 던진다', async () => {
-      mockAuthRepository.findRoleByName.mockResolvedValue({ id: 'role-id' });
+      mockRoleService.findByName.mockResolvedValue({ id: 'role-id' });
       mockTokenService.pepperPassword.mockReturnValue('peppered');
-      mockAuthRepository.insertUser.mockResolvedValue({ id: 'new-user-1' });
-      mockAuthRepository.insertUserRole.mockResolvedValue(undefined);
-      mockAuthRepository.insertBackupCodes.mockResolvedValue(undefined);
+      mockUserService.create.mockResolvedValue({ id: 'new-user-1' });
+      mockRoleService.assignUserRole.mockResolvedValue(undefined);
       mockInvitationService.consume.mockRejectedValue(new ApiException('INVITATION_ALREADY_USED'));
       (bcrypt.hash as jest.Mock).mockResolvedValue('hashed');
 
@@ -149,48 +193,46 @@ describe('AuthService', () => {
     });
 
     it('가입 직후 사용자 조회 실패 시 REGISTRATION_FAILED 예외를 던진다', async () => {
-      mockAuthRepository.findRoleByName.mockResolvedValue({ id: 'role-id' });
+      mockRoleService.findByName.mockResolvedValue({ id: 'role-id' });
       mockTokenService.pepperPassword.mockReturnValue('peppered');
-      mockAuthRepository.insertUser.mockResolvedValue({ id: 'new-user-1' });
-      mockAuthRepository.insertUserRole.mockResolvedValue(undefined);
-      mockAuthRepository.insertBackupCodes.mockResolvedValue(undefined);
+      mockUserService.create.mockResolvedValue({ id: 'new-user-1' });
+      mockRoleService.assignUserRole.mockResolvedValue(undefined);
       mockInvitationService.consume.mockResolvedValue(undefined);
-      mockAuthRepository.findUserWithPermissionsById.mockResolvedValue(null);
+      mockUserService.findById.mockResolvedValue(null);
       (bcrypt.hash as jest.Mock).mockResolvedValue('hashed');
 
       await expect(service.register(registerDto)).rejects.toMatchObject({ code: 'REGISTRATION_FAILED' });
     });
 
-    it('성공 시 insertUser → insertUserRole → insertBackupCodes → invitationService.consume 순서로 호출한다', async () => {
-      mockAuthRepository.findRoleByName.mockResolvedValue({ id: 'role-id' });
+    it('성공 시 insertUser → insertUserRole → backupCodeService.generateForUser → invitationService.consume 순서로 호출한다', async () => {
+      mockRoleService.findByName.mockResolvedValue({ id: 'role-id' });
       mockTokenService.pepperPassword.mockReturnValue('peppered');
-      mockAuthRepository.insertUser.mockResolvedValue({ id: 'new-user-1' });
-      mockAuthRepository.insertUserRole.mockResolvedValue(undefined);
-      mockAuthRepository.insertBackupCodes.mockResolvedValue(undefined);
+      mockUserService.create.mockResolvedValue({ id: 'new-user-1' });
+      mockRoleService.assignUserRole.mockResolvedValue(undefined);
       mockInvitationService.consume.mockResolvedValue(undefined);
-      mockAuthRepository.findUserWithPermissionsById.mockResolvedValue(mockUser);
+      mockUserService.findById.mockResolvedValue(mockUser);
       (bcrypt.hash as jest.Mock).mockResolvedValue('hashed');
 
       await service.register(registerDto);
 
       const order = [
-        mockAuthRepository.insertUser.mock.invocationCallOrder[0],
-        mockAuthRepository.insertUserRole.mock.invocationCallOrder[0],
-        mockAuthRepository.insertBackupCodes.mock.invocationCallOrder[0],
+        mockUserService.create.mock.invocationCallOrder[0],
+        mockRoleService.assignUserRole.mock.invocationCallOrder[0],
+        mockBackupCodeService.generateForUser.mock.invocationCallOrder[0],
         mockInvitationService.consume.mock.invocationCallOrder[0],
       ];
       expect(order).toEqual([...order].sort((a, b) => a - b));
+      expect(mockBackupCodeService.generateForUser).toHaveBeenCalledWith('new-user-1');
       expect(mockInvitationService.consume).toHaveBeenCalledWith(registerDto.token, 'new-user-1');
     });
 
     it('성공 시 accessToken + user + backupCodes 8개를 반환한다', async () => {
-      mockAuthRepository.findRoleByName.mockResolvedValue({ id: 'role-id' });
+      mockRoleService.findByName.mockResolvedValue({ id: 'role-id' });
       mockTokenService.pepperPassword.mockReturnValue('peppered');
-      mockAuthRepository.insertUser.mockResolvedValue({ id: 'new-user-1' });
-      mockAuthRepository.insertUserRole.mockResolvedValue(undefined);
-      mockAuthRepository.insertBackupCodes.mockResolvedValue(undefined);
+      mockUserService.create.mockResolvedValue({ id: 'new-user-1' });
+      mockRoleService.assignUserRole.mockResolvedValue(undefined);
       mockInvitationService.consume.mockResolvedValue(undefined);
-      mockAuthRepository.findUserWithPermissionsById.mockResolvedValue(mockUser);
+      mockUserService.findById.mockResolvedValue(mockUser);
       (bcrypt.hash as jest.Mock).mockResolvedValue('hashed');
 
       const result = await service.register(registerDto);
@@ -201,29 +243,28 @@ describe('AuthService', () => {
     });
 
     it('성공 시 user 생성 + invitation consume이 트랜잭션 안에서 수행된다', async () => {
-      mockAuthRepository.findRoleByName.mockResolvedValue({ id: 'role-id' });
+      mockRoleService.findByName.mockResolvedValue({ id: 'role-id' });
       mockTokenService.pepperPassword.mockReturnValue('peppered');
-      mockAuthRepository.insertUser.mockResolvedValue({ id: 'new-user-1' });
-      mockAuthRepository.insertUserRole.mockResolvedValue(undefined);
-      mockAuthRepository.insertBackupCodes.mockResolvedValue(undefined);
+      mockUserService.create.mockResolvedValue({ id: 'new-user-1' });
+      mockRoleService.assignUserRole.mockResolvedValue(undefined);
       mockInvitationService.consume.mockResolvedValue(undefined);
-      mockAuthRepository.findUserWithPermissionsById.mockResolvedValue(mockUser);
+      mockUserService.findById.mockResolvedValue(mockUser);
       (bcrypt.hash as jest.Mock).mockResolvedValue('hashed');
 
       await service.register(registerDto);
 
       expect(mockDbTransaction).toHaveBeenCalled();
       const txOrder = mockDbTransaction.mock.invocationCallOrder[0];
-      expect(mockAuthRepository.insertUser.mock.invocationCallOrder[0]).toBeGreaterThan(txOrder);
-      expect(mockAuthRepository.insertUserRole.mock.invocationCallOrder[0]).toBeGreaterThan(txOrder);
-      expect(mockAuthRepository.insertBackupCodes.mock.invocationCallOrder[0]).toBeGreaterThan(txOrder);
+      expect(mockUserService.create.mock.invocationCallOrder[0]).toBeGreaterThan(txOrder);
+      expect(mockRoleService.assignUserRole.mock.invocationCallOrder[0]).toBeGreaterThan(txOrder);
+      expect(mockBackupCodeService.generateForUser.mock.invocationCallOrder[0]).toBeGreaterThan(txOrder);
       expect(mockInvitationService.consume.mock.invocationCallOrder[0]).toBeGreaterThan(txOrder);
     });
   });
 
   describe('login', () => {
     it('비밀번호 불일치 시 ApiException(INVALID_CREDENTIALS)을 던진다', async () => {
-      mockAuthRepository.findUserWithPermissionsByUsername.mockResolvedValue(mockUser);
+      mockUserService.findByUsername.mockResolvedValue(mockUser);
       (bcrypt.compare as jest.Mock).mockResolvedValue(false);
 
       await expect(service.login({ username: 'user1', password: 'wrong' }, undefined, undefined)).rejects.toThrow(
@@ -232,7 +273,7 @@ describe('AuthService', () => {
     });
 
     it('비활성 계정은 ApiException(ACCOUNT_DISABLED)을 던진다', async () => {
-      mockAuthRepository.findUserWithPermissionsByUsername.mockResolvedValue({ ...mockUser, active: false });
+      mockUserService.findByUsername.mockResolvedValue({ ...mockUser, active: false });
       (bcrypt.compare as jest.Mock).mockResolvedValue(true);
 
       await expect(service.login({ username: 'user1', password: 'any' }, undefined, undefined)).rejects.toThrow(
@@ -241,7 +282,7 @@ describe('AuthService', () => {
     });
 
     it('존재하지 않는 사용자는 ApiException(INVALID_CREDENTIALS)을 던진다', async () => {
-      mockAuthRepository.findUserWithPermissionsByUsername.mockResolvedValue(null);
+      mockUserService.findByUsername.mockResolvedValue(null);
 
       await expect(service.login({ username: 'ghost', password: 'any' }, undefined, undefined)).rejects.toThrow(
         ApiException,
@@ -249,7 +290,7 @@ describe('AuthService', () => {
     });
 
     it('인증 성공 시 accessToken과 rawRefreshToken을 반환하고 TokenService를 호출한다', async () => {
-      mockAuthRepository.findUserWithPermissionsByUsername.mockResolvedValue(mockUser);
+      mockUserService.findByUsername.mockResolvedValue(mockUser);
       (bcrypt.compare as jest.Mock).mockResolvedValue(true);
 
       const result = await service.login({ username: 'user1', password: 'correct' }, undefined, undefined);
@@ -262,12 +303,11 @@ describe('AuthService', () => {
         mockUser.username,
         mockUser.permissions,
       );
-      expect(mockTokenService.issueRefreshToken).toHaveBeenCalledTimes(1);
-      expect(mockAuthRepository.insertRefreshToken).toHaveBeenCalledTimes(1);
+      expect(mockSessionService.issueForUser).toHaveBeenCalledWith(mockUser.id);
     });
 
     it('디바이스가 없으면 즉시 AUTHENTICATED를 반환한다', async () => {
-      mockAuthRepository.findUserWithPermissionsByUsername.mockResolvedValue(mockUser);
+      mockUserService.findByUsername.mockResolvedValue(mockUser);
       (bcrypt.compare as jest.Mock).mockResolvedValue(true);
       mockTrustedDeviceService.verify.mockResolvedValue(false);
       mockDeviceService.findPushTokensByUserId.mockResolvedValue([]);
@@ -278,7 +318,7 @@ describe('AuthService', () => {
     });
 
     it('신뢰기기 토큰이 유효하면 2FA 없이 AUTHENTICATED를 반환한다', async () => {
-      mockAuthRepository.findUserWithPermissionsByUsername.mockResolvedValue(mockUser);
+      mockUserService.findByUsername.mockResolvedValue(mockUser);
       (bcrypt.compare as jest.Mock).mockResolvedValue(true);
       mockTrustedDeviceService.verify.mockResolvedValue(true);
 
@@ -289,7 +329,7 @@ describe('AuthService', () => {
     });
 
     it('디바이스가 있으면 2FA_REQUIRED를 반환한다', async () => {
-      mockAuthRepository.findUserWithPermissionsByUsername.mockResolvedValue(mockUser);
+      mockUserService.findByUsername.mockResolvedValue(mockUser);
       (bcrypt.compare as jest.Mock).mockResolvedValue(true);
       mockTrustedDeviceService.verify.mockResolvedValue(false);
       mockDeviceService.findPushTokensByUserId.mockResolvedValue(['push-token-abc']);
@@ -308,7 +348,7 @@ describe('AuthService', () => {
     });
 
     it('신뢰기기 토큰이 무효하고 디바이스가 있으면 2FA_REQUIRED를 반환한다', async () => {
-      mockAuthRepository.findUserWithPermissionsByUsername.mockResolvedValue(mockUser);
+      mockUserService.findByUsername.mockResolvedValue(mockUser);
       (bcrypt.compare as jest.Mock).mockResolvedValue(true);
       mockTrustedDeviceService.verify.mockResolvedValue(false);
       mockDeviceService.findPushTokensByUserId.mockResolvedValue(['push-token-abc']);
@@ -326,78 +366,46 @@ describe('AuthService', () => {
   });
 
   describe('regenerateBackupCodes', () => {
-    it('userId가 존재하지 않으면 INVALID_CREDENTIALS 예외를 던지고 insert 호출이 발생하지 않는다', async () => {
-      mockAuthRepository.findUserWithPermissionsById.mockResolvedValue(null);
+    it('userId가 존재하지 않으면 INVALID_CREDENTIALS 예외를 던지고 재발급이 일어나지 않는다', async () => {
+      mockUserService.findById.mockResolvedValue(null);
 
       await expect(service.regenerateBackupCodes('ghost-id', 'pw')).rejects.toMatchObject({
         code: 'INVALID_CREDENTIALS',
       });
-      expect(mockAuthRepository.markBackupCodeUsed).not.toHaveBeenCalled();
-      expect(mockAuthRepository.insertBackupCodes).not.toHaveBeenCalled();
+      expect(mockBackupCodeService.regenerateForUser).not.toHaveBeenCalled();
     });
 
-    it('비밀번호가 일치하지 않으면 INVALID_CREDENTIALS 예외를 던지고 폐기·재발급이 일어나지 않는다', async () => {
-      mockAuthRepository.findUserWithPermissionsById.mockResolvedValue(mockUser);
+    it('비밀번호가 일치하지 않으면 INVALID_CREDENTIALS 예외를 던지고 재발급이 일어나지 않는다', async () => {
+      mockUserService.findById.mockResolvedValue(mockUser);
       mockTokenService.pepperPassword.mockReturnValue('peppered');
       (bcrypt.compare as jest.Mock).mockResolvedValue(false);
 
       await expect(service.regenerateBackupCodes(mockUser.id, 'wrong')).rejects.toMatchObject({
         code: 'INVALID_CREDENTIALS',
       });
-      expect(mockAuthRepository.markBackupCodeUsed).not.toHaveBeenCalled();
-      expect(mockAuthRepository.insertBackupCodes).not.toHaveBeenCalled();
+      expect(mockBackupCodeService.regenerateForUser).not.toHaveBeenCalled();
     });
 
     it('비활성 계정이면 ACCOUNT_DISABLED 예외를 던진다', async () => {
-      mockAuthRepository.findUserWithPermissionsById.mockResolvedValue({ ...mockUser, active: false });
+      mockUserService.findById.mockResolvedValue({ ...mockUser, active: false });
       mockTokenService.pepperPassword.mockReturnValue('peppered');
       (bcrypt.compare as jest.Mock).mockResolvedValue(true);
 
       await expect(service.regenerateBackupCodes(mockUser.id, 'pw')).rejects.toMatchObject({
         code: 'ACCOUNT_DISABLED',
       });
+      expect(mockBackupCodeService.regenerateForUser).not.toHaveBeenCalled();
     });
 
-    it('성공 시 기존 unused 코드를 각각 markBackupCodeUsed로 폐기하고 insertBackupCodes로 8개 평문을 반환한다', async () => {
-      mockAuthRepository.findUserWithPermissionsById.mockResolvedValue(mockUser);
+    it('성공 시 BackupCodeService.regenerateForUser에 위임하고 결과를 그대로 반환한다', async () => {
+      mockUserService.findById.mockResolvedValue(mockUser);
       mockTokenService.pepperPassword.mockReturnValue('peppered');
       (bcrypt.compare as jest.Mock).mockResolvedValue(true);
-      (bcrypt.hash as jest.Mock).mockResolvedValue('hashed');
-      mockAuthRepository.findUnusedBackupCodes.mockResolvedValue([
-        { id: 'bc-1', codeHash: 'h1' },
-        { id: 'bc-2', codeHash: 'h2' },
-        { id: 'bc-3', codeHash: 'h3' },
-      ]);
-      mockAuthRepository.markBackupCodeUsed.mockResolvedValue(undefined);
-      mockAuthRepository.insertBackupCodes.mockResolvedValue(undefined);
 
       const result = await service.regenerateBackupCodes(mockUser.id, 'pw');
 
+      expect(mockBackupCodeService.regenerateForUser).toHaveBeenCalledWith(mockUser.id);
       expect(result).toHaveLength(8);
-      expect(mockAuthRepository.markBackupCodeUsed).toHaveBeenCalledTimes(3);
-      expect(mockAuthRepository.markBackupCodeUsed).toHaveBeenCalledWith('bc-1', expect.any(Date));
-      expect(mockAuthRepository.markBackupCodeUsed).toHaveBeenCalledWith('bc-2', expect.any(Date));
-      expect(mockAuthRepository.markBackupCodeUsed).toHaveBeenCalledWith('bc-3', expect.any(Date));
-      expect(mockAuthRepository.insertBackupCodes).toHaveBeenCalledTimes(1);
-      const [, hashes] = mockAuthRepository.insertBackupCodes.mock.calls[0];
-      expect(hashes).toHaveLength(8);
-    });
-
-    it('성공 시 폐기 + 재발급이 동일 트랜잭션 안에서 수행된다 (tx 시작 이후 호출됨)', async () => {
-      mockAuthRepository.findUserWithPermissionsById.mockResolvedValue(mockUser);
-      mockTokenService.pepperPassword.mockReturnValue('peppered');
-      (bcrypt.compare as jest.Mock).mockResolvedValue(true);
-      (bcrypt.hash as jest.Mock).mockResolvedValue('hashed');
-      mockAuthRepository.findUnusedBackupCodes.mockResolvedValue([{ id: 'bc-1', codeHash: 'h1' }]);
-      mockAuthRepository.markBackupCodeUsed.mockResolvedValue(undefined);
-      mockAuthRepository.insertBackupCodes.mockResolvedValue(undefined);
-
-      await service.regenerateBackupCodes(mockUser.id, 'pw');
-
-      expect(mockDbTransaction).toHaveBeenCalled();
-      const txOrder = mockDbTransaction.mock.invocationCallOrder[0];
-      expect(mockAuthRepository.markBackupCodeUsed.mock.invocationCallOrder[0]).toBeGreaterThan(txOrder);
-      expect(mockAuthRepository.insertBackupCodes.mock.invocationCallOrder[0]).toBeGreaterThan(txOrder);
     });
   });
 
@@ -411,7 +419,7 @@ describe('AuthService', () => {
 
     it('APPROVED 챌린지 완료 후 AUTHENTICATED 응답과 토큰을 반환한다', async () => {
       mockTwoFaService.claimApprovedChallenge.mockResolvedValue('user-id');
-      mockAuthRepository.findUserWithPermissionsById.mockResolvedValue(mockUser);
+      mockUserService.findById.mockResolvedValue(mockUser);
 
       const result = await service.completeTwoFa('challenge-id');
 
@@ -423,7 +431,7 @@ describe('AuthService', () => {
     it('userId에 해당하는 사용자가 없으면 ApiException을 던진다', async () => {
       const { ApiException } = await import('@terab/common');
       mockTwoFaService.claimApprovedChallenge.mockResolvedValue('ghost-user-id');
-      mockAuthRepository.findUserWithPermissionsById.mockResolvedValue(null);
+      mockUserService.findById.mockResolvedValue(null);
 
       await expect(service.completeTwoFa('challenge-id')).rejects.toThrow(ApiException);
     });

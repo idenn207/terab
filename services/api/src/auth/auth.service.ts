@@ -1,19 +1,21 @@
-import { Injectable, OnModuleInit } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
+import { Injectable } from '@nestjs/common';
 import { ApiException } from '@terab/common';
 import { DatabaseService, ServiceCore, TransactionContext } from '@terab/db';
 import { LogReplay } from '@terab/logger';
 import { TokenService } from '@terab/security';
 import bcrypt from 'bcryptjs';
-import { randomBytes } from 'node:crypto';
 import { UserDto } from '../common/dto';
+import { BackupCodeService } from '../backup-code/backup-code.service';
 import { DeviceService } from '../device/device.service';
 import { InvitationService } from '../invitation/invitation.service';
+import { RoleService } from '../role/role.service';
+import { SessionService } from '../session/session.service';
 import { TrustedDeviceService } from '../trusted-device/trusted-device.service';
 import { PushChallengePublisher } from '../twofa/push-challenge.publisher';
 import { TwoFaService } from '../twofa/twofa.service';
-import { AuthRepository, UserWithPermissions } from './auth.repository';
+import { UserService } from '../user/user.service';
 import { BackupLoginBodyDto, LoginBodyDto, LoginResponse, RegisterBodyDto, RegisterResponseDto } from './dto';
+import { UserWithPermissions } from './types/user-with-permissions.type';
 
 interface AuthTokens {
   accessToken: string;
@@ -22,26 +24,24 @@ interface AuthTokens {
 }
 
 @Injectable()
-export class AuthService extends ServiceCore implements OnModuleInit {
+export class AuthService extends ServiceCore {
   protected readonly BCRYPT_ROUNDS = 10;
 
   constructor(
     database: DatabaseService,
     txContext: TransactionContext,
     private readonly pushChallengePublisher: PushChallengePublisher,
-    private readonly configService: ConfigService,
     private readonly tokenService: TokenService,
     private readonly deviceService: DeviceService,
     private readonly twoFaService: TwoFaService,
     private readonly trustedDeviceService: TrustedDeviceService,
     private readonly invitationService: InvitationService,
-    private readonly authRepository: AuthRepository,
+    private readonly sessionService: SessionService,
+    private readonly backupCodeService: BackupCodeService,
+    private readonly userService: UserService,
+    private readonly roleService: RoleService,
   ) {
     super(database, txContext);
-  }
-
-  async onModuleInit(): Promise<void> {
-    await this.initOwnerAccount();
   }
 
   // ─── Register ────────────────────────────────────────────────────────
@@ -52,18 +52,16 @@ export class AuthService extends ServiceCore implements OnModuleInit {
   ): Promise<RegisterResponseDto & Pick<AuthTokens, 'rawRefreshToken' | 'refreshTokenExpMs'>> {
     await this.invitationService.validateOrThrow(data.token);
 
-    const userRole = await this.authRepository.findRoleByName('USER');
+    const userRole = await this.roleService.findByName('USER');
     if (!userRole) throw new ApiException('ROLE_NOT_FOUND');
 
     const pepperedPassword = this.tokenService.pepperPassword(data.password);
     const hashedPassword = await bcrypt.hash(pepperedPassword, this.BCRYPT_ROUNDS);
 
-    const rawCodes = this.generateBackupCodes();
-    const codeHashes = await Promise.all(rawCodes.map((code) => bcrypt.hash(code, this.BCRYPT_ROUNDS)));
-
+    let rawCodes!: string[];
     const newUser = await this.runInTx(async () => {
-      const inserted = await this.authRepository
-        .insertUser({
+      const inserted = await this.userService
+        .create({
           username: data.username,
           nickname: data.nickname,
           password: hashedPassword,
@@ -72,13 +70,13 @@ export class AuthService extends ServiceCore implements OnModuleInit {
           if (err.code === '23505') throw new ApiException('USERNAME_TAKEN');
           throw err;
         });
-      await this.authRepository.insertUserRole(inserted.id, userRole.id);
-      await this.authRepository.insertBackupCodes(inserted.id, codeHashes);
+      await this.roleService.assignUserRole(inserted.id, userRole.id);
+      rawCodes = await this.backupCodeService.generateForUser(inserted.id);
       await this.invitationService.consume(data.token, inserted.id);
       return inserted;
     });
 
-    const userWithPermissions = await this.authRepository.findUserWithPermissionsById(newUser.id);
+    const userWithPermissions = await this.findUserWithPermissionsById(newUser.id);
     if (!userWithPermissions) throw new ApiException('REGISTRATION_FAILED');
 
     const tokens = await this.issueTokenPair(userWithPermissions);
@@ -108,7 +106,7 @@ export class AuthService extends ServiceCore implements OnModuleInit {
       response: LoginResponse;
     } & Partial<Pick<AuthTokens, 'rawRefreshToken' | 'refreshTokenExpMs'>>
   > {
-    const user = await this.authRepository.findUserWithPermissionsByUsername(data.username);
+    const user = await this.findUserWithPermissionsByUsername(data.username);
     if (!user) throw new ApiException('INVALID_CREDENTIALS');
     await this.validateCredentials(user, data.password);
 
@@ -179,7 +177,7 @@ export class AuthService extends ServiceCore implements OnModuleInit {
     } & Pick<AuthTokens, 'rawRefreshToken' | 'refreshTokenExpMs'>
   > {
     const userId = await this.twoFaService.claimApprovedChallenge(challengeId);
-    const user = await this.authRepository.findUserWithPermissionsById(userId);
+    const user = await this.findUserWithPermissionsById(userId);
     if (!user) throw new ApiException('TWO_FA_CHALLENGE_NOT_FOUND');
     const tokens = await this.issueTokenPair(user);
     return {
@@ -202,10 +200,10 @@ export class AuthService extends ServiceCore implements OnModuleInit {
       response: LoginResponse;
     } & Pick<AuthTokens, 'rawRefreshToken' | 'refreshTokenExpMs'>
   > {
-    const user = await this.authRepository.findUserWithPermissionsByUsername(data.username);
+    const user = await this.findUserWithPermissionsByUsername(data.username);
     if (!user) throw new ApiException('INVALID_CREDENTIALS');
     await this.validateCredentials(user, data.password);
-    await this.verifyAndConsumeBackupCode(user.id, data.backupCode);
+    await this.backupCodeService.consume(user.id, data.backupCode);
 
     const tokens = await this.issueTokenPair(user);
     return {
@@ -233,34 +231,24 @@ export class AuthService extends ServiceCore implements OnModuleInit {
   > {
     if (!rawRefreshToken) throw new ApiException('REFRESH_TOKEN_INVALID');
 
-    const now = new Date();
-    const tokenHash = this.tokenService.hashToken(rawRefreshToken);
-    // UUID 기반 토큰은 userId 클레임이 없으므로 family invalidation 불가
-    // TODO: RT를 JWT로 변경하면 subject에서 userId 추출 후 전체 폐기 가능
-    const matched = await this.authRepository.findActiveRefreshTokenByHash(tokenHash, now);
+    const rotated = await this.sessionService.rotate(rawRefreshToken);
 
-    if (!matched) {
-      throw new ApiException('REFRESH_TOKEN_INVALID');
-    }
-
-    await this.authRepository.revokeRefreshTokenById(matched.id, now);
-
-    const user = await this.authRepository.findUserWithPermissionsById(matched.userId);
+    const user = await this.findUserWithPermissionsById(rotated.userId);
     if (!user) throw new ApiException('REFRESH_TOKEN_INVALID');
 
-    const tokens = await this.issueTokenPair(user);
+    const accessToken = this.tokenService.generateAccessToken(user.id, user.username, user.permissions);
     return {
       response: {
         status: 'AUTHENTICATED',
-        accessToken: tokens.accessToken,
+        accessToken,
         user: {
           id: user.id,
           username: user.username,
           nickname: user.nickname,
         },
       },
-      rawRefreshToken: tokens.rawRefreshToken,
-      refreshTokenExpMs: tokens.refreshTokenExpMs,
+      rawRefreshToken: rotated.rawRefreshToken,
+      refreshTokenExpMs: rotated.refreshTokenExpMs,
     };
   }
 
@@ -269,23 +257,47 @@ export class AuthService extends ServiceCore implements OnModuleInit {
   @LogReplay()
   async logout(rawRefreshToken: string | undefined): Promise<void> {
     if (!rawRefreshToken) return;
-    const now = new Date();
-    const tokenHash = this.tokenService.hashToken(rawRefreshToken);
-    const matched = await this.authRepository.findActiveRefreshTokenByHash(tokenHash, now);
-    if (matched) {
-      await this.authRepository.revokeRefreshTokenById(matched.id, now);
-    }
+    await this.sessionService.revokeByRawToken(rawRefreshToken);
   }
 
   // ─── Me ──────────────────────────────────────────────────────────────
 
   async getCurrentUser(userId: string): Promise<UserDto> {
-    const user = await this.authRepository.findUserWithPermissionsById(userId);
+    const user = await this.findUserWithPermissionsById(userId);
     if (!user) throw new ApiException('INVALID_CREDENTIALS');
     return {
       id: user.id,
       username: user.username,
       nickname: user.nickname,
+    };
+  }
+
+  // ─── 사용자+권한 합성 ────────────────────────────────────────────────
+  private async findUserWithPermissionsById(id: string): Promise<UserWithPermissions | null> {
+    const user = await this.userService.findById(id);
+    if (!user) return null;
+    const permissions = await this.roleService.getPermissionsByUserId(user.id);
+    return {
+      id: user.id,
+      username: user.username,
+      nickname: user.nickname,
+      password: user.password,
+      active: user.active,
+      permissions,
+    };
+  }
+
+  private async findUserWithPermissionsByUsername(username: string): Promise<UserWithPermissions | null> {
+    const user = await this.userService.findByUsername(username);
+    if (!user) return null;
+    const permissions = await this.roleService.getPermissionsByUserId(user.id);
+    return {
+      id: user.id,
+      username: user.username,
+      nickname: user.nickname,
+      password: user.password,
+      active: user.active,
+      permissions,
     };
   }
 
@@ -301,9 +313,7 @@ export class AuthService extends ServiceCore implements OnModuleInit {
 
   private async issueTokenPair(user: UserWithPermissions): Promise<AuthTokens> {
     const accessToken = this.tokenService.generateAccessToken(user.id, user.username, user.permissions);
-    const { rawRefreshToken, tokenHash, expiresAt } = this.tokenService.issueRefreshToken();
-    const refreshTokenExpMs = this.tokenService.refreshExpMs;
-    await this.authRepository.insertRefreshToken({ userId: user.id, tokenHash: tokenHash, expiresAt: expiresAt });
+    const { rawRefreshToken, refreshTokenExpMs } = await this.sessionService.issueForUser(user.id);
     return {
       accessToken,
       rawRefreshToken,
@@ -315,71 +325,9 @@ export class AuthService extends ServiceCore implements OnModuleInit {
 
   @LogReplay()
   async regenerateBackupCodes(userId: string, currentPassword: string): Promise<string[]> {
-    const user = await this.authRepository.findUserWithPermissionsById(userId);
+    const user = await this.findUserWithPermissionsById(userId);
     if (!user) throw new ApiException('INVALID_CREDENTIALS');
     await this.validateCredentials(user, currentPassword);
-
-    const rawCodes = this.generateBackupCodes();
-    const codeHashes = await Promise.all(rawCodes.map((code) => bcrypt.hash(code, this.BCRYPT_ROUNDS)));
-
-    await this.runInTx(async () => {
-      const now = new Date();
-      const unused = await this.authRepository.findUnusedBackupCodes(userId);
-      await Promise.all(unused.map((c) => this.authRepository.markBackupCodeUsed(c.id, now)));
-      await this.authRepository.insertBackupCodes(userId, codeHashes);
-    });
-
-    return rawCodes;
-  }
-
-  private async verifyAndConsumeBackupCode(userId: string, inputCode: string): Promise<void> {
-    const codes = await this.authRepository.findUnusedBackupCodes(userId);
-    // 타이밍 오라클 방지 — 매칭 여부와 무관하게 모든 코드를 순회
-    let matchedId: string | null = null;
-    for (const code of codes) {
-      const match = await bcrypt.compare(inputCode, code.codeHash);
-      if (match && matchedId === null) {
-        matchedId = code.id;
-      }
-    }
-    if (matchedId === null) throw new ApiException('BACKUP_CODE_INVALID');
-    await this.authRepository.markBackupCodeUsed(matchedId, new Date());
-  }
-
-  private generateBackupCodes(): string[] {
-    return Array.from({ length: 8 }, () => {
-      const buf = randomBytes(4);
-      const hex = buf.toString('hex').toUpperCase();
-      return `${hex.slice(0, 4)}-${hex.slice(4)}`;
-    });
-  }
-
-  // ─── Owner 계정 초기화 ───────────────────────────────────────────────
-
-  private async initOwnerAccount(): Promise<void> {
-    const ownerPassword = this.configService.get<string>('OWNER_PASSWORD');
-    if (!ownerPassword) return;
-
-    const ownerUsername = this.configService.get<string>('OWNER_USERNAME') ?? 'owner';
-    const ownerNickname = this.configService.get<string>('OWNER_NICKNAME') ?? 'Owner';
-
-    const existing = await this.authRepository.findUserByUsername(ownerUsername);
-    if (existing) return;
-
-    const ownerRole = await this.authRepository.findRoleByName('OWNER');
-    if (!ownerRole) throw new Error('OWNER role 없음 — 마이그레이션 실행 여부를 확인하세요');
-
-    const hashedPassword = await bcrypt.hash(this.tokenService.pepperPassword(ownerPassword), this.BCRYPT_ROUNDS);
-    try {
-      const newUser = await this.authRepository.insertUser({
-        username: ownerUsername,
-        nickname: ownerNickname,
-        password: hashedPassword,
-      });
-      await this.authRepository.insertUserRole(newUser.id, ownerRole.id);
-    } catch (err) {
-      if ((err as { code?: string }).code !== '23505') throw err;
-      // 동시 기동 시 UNIQUE 충돌 무시 (다른 인스턴스가 먼저 생성)
-    }
+    return this.backupCodeService.regenerateForUser(userId);
   }
 }
