@@ -126,9 +126,44 @@ body: { ... }
 
 ## 7. 작업 산출물 체크리스트
 
-- [ ] 진단 노트(§3.4 형식) — PR description 또는 별도 메모
-- [ ] root cause를 반영한 코드 수정 — auth 도메인 한정
-- [ ] 임시 디버그 로그 제거 확인
-- [ ] e2e 회귀 테스트 3건 추가 — `services/api/test/`
-- [ ] 기존 단위 테스트 통과(`npm test --prefix services/api`)
-- [ ] e2e 테스트 통과(`npm run test:e2e --prefix services/api`)
+- [x] 진단 노트(§3.4 형식) — §8 Resolution 참조
+- [x] root cause를 반영한 코드 수정 — **불필요** (코드 결함 없음)
+- [x] 임시 디버그 로그 제거 확인 — 디버그 로그 삽입 단계 진입 전 종결
+- [ ] e2e 회귀 테스트 3건 추가 — **Skip** (버그가 존재하지 않으므로 동일 시나리오 재현형 e2e는 과포장)
+- [x] 기존 단위 테스트 통과 — 기존 통과 상태 유지(코드 무변경)
+- [x] e2e 테스트 통과 — 기존 통과 상태 유지(코드 무변경)
+
+## 8. Resolution
+
+**결론: 재현 불가 — 환경 이슈로 종결.**
+
+진단 §3.1·§3.2를 실제 환경에서 실행한 결과:
+
+```
+[T1 (login 응답) payload]
+sub: 8d337f8f-667b-4070-b3b1-1c956e120818
+username: owner
+permissions: [file:write, user:read, system:monitor, storage:read, file:delete,
+              system:config, file:read, share:manage, user:invite, audit:read,
+              storage:manage, user:manage, user:role, share:create]
+iat: 1779161089
+exp: 1779161989   # Δ = 900s = 15분, 정상
+
+[/auth/me with Bearer T1]
+HTTP 200
+body: { id, username: "owner", nickname: "Owner" }
+
+[추가 검증: /trusted-device, /devices, /trash with Bearer T1]
+모두 HTTP 200
+```
+
+owner 계정으로는 어느 라우트에서도 401이 발생하지 않았다. 사용자가 직접 재차 검증한 결과 **Postman 측에서 Bearer 토큰이 저장되지 않은 환경적 사고**가 원인으로 확인되었고, API 자체는 정상 동작한다.
+
+### 후속 조치
+
+- 추가 코드 수정 없음
+- 회귀 테스트 추가 없음 — 동일 시나리오의 e2e는 "코드 결함 없는 상태"를 재확인할 뿐이라 비용 대비 가치 부족. 만약 향후 인증 e2e 커버리지를 일괄 보강할 필요가 생기면 별도 spec으로 처리
+
+### 메모
+
+systematic-debugging Phase 1("재현 먼저, 가설 다음")이 본 spec의 가치를 입증한 케이스다. 정적 분석으로 후보가 모두 부정되었을 때 추측으로 코드를 건드리지 않고 진단 절차로 넘긴 결과, 존재하지 않는 버그를 "수정"하는 일을 피했다.
