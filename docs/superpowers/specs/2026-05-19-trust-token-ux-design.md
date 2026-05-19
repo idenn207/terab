@@ -42,17 +42,18 @@
 
 **권장: 사용자당 최대 10대 — 초과 시 가장 오래된 trust 자동 폐기.** 모바일·노트북·데스크탑·태블릿을 고려하면 10대는 충분히 여유롭고, 동시에 lost device 누적도 방지된다.
 
-## 3. 결정 필요 항목 (사용자 확인)
+## 3. 결정 사항 (2026-05-19 확정)
 
-본 spec을 implementation으로 전환하기 전 다음 결정이 필요하다.
-
-| 항목 | 권장 |
+| 항목 | 결정 |
 |---|---|
-| 트리거 시점 | B. 명시적 선택 (체크박스) |
-| 기간 | 30일 유지 |
-| 동시 신뢰기기 수 제한 | 10대, 초과 시 가장 오래된 trust 자동 폐기 |
-| 비밀번호 변경 시 모든 trust 폐기 | Yes — 표준 보안 관행 |
-| 본 spec 종료 후 잔여 작업 (UI 디자인) | 별도 frontend-design 단계로 deferred |
+| 트리거 시점 | **B. 명시적 선택 (체크박스)** — 2FA 완료 화면에서 "이 기기를 30일간 신뢰" 체크 시에만 `POST /trusted-device` |
+| 기간 | **30일 유지** (sliding window — §9.3 참조) |
+| 동시 신뢰기기 수 제한 | **10대**, 초과 시 가장 오래된 trust 자동 폐기 |
+| sliding expiry | **도입** — verify 성공 시 expiresAt 갱신 |
+| sliding hard cap | **90일** (`createdAt + 90일` 절대 상한) |
+| fallback 2FA strategy (TOTP/Passkey 등) | **별도 spec으로 분리** (`auth-2fa-fallback-strategies-design`) — 본 spec scope 외 |
+| 비밀번호 변경 시 모든 trust 폐기 | 표준 보안 관행이나, 비밀번호 변경 endpoint 자체가 미구현 — 별도 spec |
+| 신뢰기기 목록 UI 디자인 | 별도 frontend-design 단계로 deferred |
 
 ## 4. 변경 범위 (B 옵션 채택 가정)
 
@@ -66,29 +67,51 @@
 
 ### 4.2 Service
 
-`TrustedDeviceService`에 동시 신뢰기기 수 제한 로직 추가:
+`TrustedDeviceService`에 다음을 추가:
 
 ```ts
+private readonly MAX_TRUST_PER_USER = 10;
+private readonly TRUST_ABSOLUTE_MAX_MS = 90 * 24 * 60 * 60 * 1000; // hard cap
+
+@LogReplay()
 async register(userId, userAgent): Promise<string> {
+  const rawToken = ...;
   await this.runInTx(async () => {
-    await this.trimExcessDevices(userId); // 새로 등록 전 가장 오래된 trust 폐기
-    // 기존 insert 로직
+    await this.trimExcessDevices(userId);  // 새로 등록 전 oldest trim
+    await this.trustedDeviceRepository.insert(...);
   });
   return rawToken;
 }
 
 private async trimExcessDevices(userId: string): Promise<void> {
-  const MAX_TRUST_PER_USER = 10;
-  // 현재 활성 trust 개수 조회 → MAX 초과 시 expiresAt asc로 (count - MAX + 1)개 삭제
+  const now = new Date();
+  const active = await this.repo.countActiveByUserId(userId, now);
+  const overflow = active - (this.MAX_TRUST_PER_USER - 1); // 신규 1대 분 자리 확보
+  if (overflow > 0) await this.repo.deleteOldestByUserId(userId, overflow);
 }
 ```
 
 ### 4.3 Repository
 
-- `TrustedDeviceRepository.countByUserId(userId): Promise<number>`
-- `TrustedDeviceRepository.deleteOldestByUserId(userId, count): Promise<void>`
+- `TrustedDeviceRepository.countActiveByUserId(userId, now): Promise<number>` — 만료되지 않은 trust 개수
+- `TrustedDeviceRepository.deleteOldestByUserId(userId, count): Promise<void>` — `createdAt` asc로 N개 삭제
+- `TrustedDeviceRepository.refreshExpiresAt(id, expiresAt): Promise<void>` — sliding 갱신용
 
-### 4.4 Web
+### 4.4 verify sliding + hard cap
+
+`TrustedDeviceService.verify`가 검증 성공 시 다음을 수행한다.
+
+```
+candidateExpiresAt = now + TRUST_DURATION_MS
+hardCapAt          = createdAt + TRUST_ABSOLUTE_MAX_MS
+newExpiresAt       = min(candidateExpiresAt, hardCapAt)
+if newExpiresAt > 현재 expiresAt: refreshExpiresAt(id, newExpiresAt)
+```
+
+- hard cap에 도달한 trust는 더 이상 연장되지 않고, 만료 시 자연히 폐기되어 사용자는 다시 등록 절차를 거친다 (rolling exposure 차단)
+- `verify`는 read-only 의미였으나 본 변경으로 write side-effect가 생긴다 → 호출처(`twofa.service.ts`의 verify caller)에서 tx에 포함되지 않더라도 update 1건이라 별도 tx 래퍼 불필요
+
+### 4.5 Web
 
 - 2FA 완료 화면 (`features/login-by-2fa/ui/`)에 "이 기기를 30일간 신뢰" 체크박스 추가
 - 체크 + 2FA complete 성공 시 `POST /trusted-device` 호출
@@ -114,7 +137,7 @@ private async trimExcessDevices(userId: string): Promise<void> {
 
 ## 9. 후속 결함 — trust 만료 데드락 & 2FA fallback 부재
 
-bug 3 spec 종결 시점에 식별된 정책 결함. 본 spec 또는 별도 spec(`auth-2fa-fallback-strategies-design.md`)으로 다뤄야 한다. **implementation 전 사용자 결정 필요.**
+bug 3 spec 종결 시점에 식별된 정책 결함. **결정 사항**: §9.3 sliding expiry + 90일 cap은 본 spec에서 함께 구현하고, §9.2 fallback strategy(TOTP/Passkey)는 별도 spec으로 분리한다.
 
 ### 9.1 trust 만료 데드락
 
@@ -143,22 +166,22 @@ push 외에 다음 인증 strategy 부재 — 사용자 결정 필요:
 - 변경 범위: `TrustedDeviceService.verify` 안에서 verify 성공 직후 `repository.refreshExpiresAt(id, newExpiresAt)` 호출. 1줄.
 - 트레이드오프: rolling exposure(영영 만료 안 됨) → 절대 최대 기간 cap이 필요할 수도 있음(예: `absoluteExpiresAt = createdAt + 90일`로 hard cap)
 
-### 9.4 사용자 결정 항목 (요약)
+### 9.4 결정 사항 (2026-05-19 확정)
 
-| 항목 | 옵션 |
+| 항목 | 결정 |
 |---|---|
-| fallback strategy 우선순위 | A. TOTP만 우선 / B. TOTP + Passkey / C. 전부 |
-| TOTP 도입 시점 | 본 spec과 함께 / 별도 spec |
-| sliding expiry 도입 | yes (간단) / no |
-| sliding expiry hard cap | 없음 / 90일 / 180일 |
-
-위 결정 후 별도 spec(`auth-2fa-fallback-strategies-design.md`)으로 분리하거나 본 spec §4에 추가 구현 항목으로 합친다.
+| sliding expiry 도입 | **Yes** — `verify` 성공 시 `expiresAt = now + TRUST_DURATION_MS`로 갱신 |
+| sliding hard cap | **90일** — `createdAt + 90일`을 초과해 갱신하지 않음 |
+| fallback strategy (TOTP/Passkey) | **본 spec 외 — 별도 spec으로 분리** (`auth-2fa-fallback-strategies-design`) |
 
 ## 8. 작업 산출물 체크리스트
 
-- [ ] §3 결정 항목에 대한 사용자 확인 — implementation 전 필수
-- [ ] `TrustedDeviceRepository`에 `countByUserId`, `deleteOldestByUserId` 추가
-- [ ] `TrustedDeviceService.register`에 trim 로직 추가
-- [ ] web 2FA 완료 화면에 체크박스 추가 및 mutation 연결
-- [ ] 단위 테스트 + e2e 테스트 추가
-- [ ] 기존 테스트 통과
+- [x] §3 결정 항목에 대한 사용자 확인 (2026-05-19 확정)
+- [x] `TrustedDeviceRepository`에 `countActiveByUserId`, `deleteOldestByUserId`, `refreshExpiresAt` 추가
+- [x] `TrustedDeviceService.register`에 trim 로직 + 상수(`MAX_TRUST_PER_USER=10`, `TRUST_ABSOLUTE_MAX_MS=90일`) 추가
+- [x] `TrustedDeviceService.verify`에 sliding expiry + hard cap 추가
+- [x] web 2FA 완료 화면 — `TwoFactorWaiting` + `useTwoFactorPolling.onAuthenticated`로 이미 wired (코드 변경 불필요)
+- [x] 단위 테스트 추가 (Repository 7 + Service register 4 + Service sliding 4 = 15 신규, 전체 324/324 GREEN)
+- [x] e2e 테스트 추가 (`test/trusted-device.e2e-spec.ts`, 5/5 GREEN — trim/sliding/cap 4 시나리오)
+- [x] 기존 테스트 통과
+- [ ] fallback strategy(`auth-2fa-fallback-strategies-design`) 별도 spec 작성 — 본 spec 외
