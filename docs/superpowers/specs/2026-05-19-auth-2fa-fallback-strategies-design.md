@@ -55,18 +55,16 @@ trust-token-ux의 sliding expiry + 90일 cap이 만료 빈도를 줄여주지만
 | Backup Code (기존) | 자체 구현 | 이미 부분 구현 — 통합 인터페이스에 흡수, regenerate은 별도 spec에서 처리 완료 |
 | Email magic link | 자체 구현 | SMTP 인프라 부재 — 본 spec 외 |
 
-## 3. 결정 필요 항목 (사용자 확인)
+## 3. 결정 사항 (2026-05-19 확정)
 
-본 spec을 implementation으로 전환하기 전 다음 결정이 필요하다.
-
-| 항목 | 옵션 | 권장 |
-|---|---|---|
-| 도입 strategy 범위 | A. TOTP만 / B. TOTP + Passkey / C. TOTP + Passkey + email | **B (TOTP + Passkey)** — email은 SMTP 인프라 부재 |
-| 구현 단계 분할 | 한 spec / strategy 별 분리 | **strategy 별 분리 (Phase 1: TOTP, Phase 2: Passkey)** — TOTP가 PoC 가치 큼, Passkey는 attestation·platform 복잡 |
-| backup code 강제 보관 | 모든 사용자 강제 / 선택 / 권장 알림 | **권장 알림** — 첫 strategy 등록 시 "backup code도 발급하는 게 좋습니다" 모달 |
-| 최소 strategy 수 정책 | 0개 허용 / 항상 1개 이상 / push 외 1개 이상 | **항상 push 외 1개 이상** (락아웃 차단 목적) |
-| 등록된 strategy 노출 | 마스킹(`TOTP enabled`) / 상세 (생성일·last used) | **상세** — 사용자 본인 화면이라 PII 위험 낮음 |
-| challenge 응답 UX | strategy 선택 후 진입 / 자동 fallback (push 타임아웃 → TOTP) | **선택 후 진입** — 자동 fallback은 의도하지 않은 strategy 노출 가능성 |
+| 항목 | 결정 |
+|---|---|
+| 도입 strategy 범위 | **TOTP + Passkey** — email은 SMTP 인프라 부재로 제외, SMS는 spoofing 위험으로 제외 |
+| 구현 단계 분할 | **strategy 별 분리** — Phase 0(refactor) → Phase 1(TOTP) → Phase 2(Passkey). 각 Phase 독립 머지 가능 |
+| backup code 보관 유도 | **권장 알림** — 첫 strategy 등록 완료 화면에서 "backup code도 소지하세요" 모달, 강제는 아님 |
+| 최소 strategy 수 | **push 외 1개 이상 강제** — push만 단독 보유 금지(락아웃 구조적 차단). 마지막 push 외 strategy 제거 시 `TWOFA_LAST_STRATEGY_CANNOT_REMOVE` |
+| 등록된 strategy 노출 | **상세** — `type`, `createdAt`, `lastUsedAt` 포함. 본인 계정 설정 화면이라 PII 위험 낮음 |
+| challenge 응답 UX | **명시적 선택 후 진입** — default는 push 화면, '다른 방법으로' 버튼 → strategy 선택 리스트. 자동 fallback 없음 |
 
 ## 4. 아키텍처
 
@@ -211,9 +209,10 @@ two_fa_passkey(
 
 ## 9. 작업 산출물 체크리스트
 
-- [ ] §3 결정 항목에 대한 사용자 확인 — implementation 전 필수
-- [ ] Phase 0: `TwoFaStrategy` 인터페이스 + Registry + 기존 push·backup 이관 (회귀 없음)
+- [x] §3 결정 항목에 대한 사용자 확인 (2026-05-19 확정)
+- [ ] Phase 0: `TwoFaStrategy` 인터페이스 + Registry + 기존 push·backup 이관 (회귀 없음) — 별도 spec으로 분리해 진행 권장
 - [ ] Phase 1: TOTP — 스키마·service·controller·web UI·단위·e2e
-- [ ] Phase 2: Passkey — 스키마·service·controller·web UI·단위·e2e (Capacitor 호환 확인 후)
-- [ ] ErrorCode 5종 추가
-- [ ] 보안 설정 페이지 (Web frontend-design 단계)
+- [ ] Phase 2: Passkey — 스키마·service·controller·web UI·단위·e2e (Capacitor 호환 PoC 후)
+- [ ] ErrorCode 5종 추가 (`TWOFA_STRATEGY_NOT_FOUND`, `TWOFA_TOTP_INVALID_CODE`, `TWOFA_TOTP_LOCKED`, `TWOFA_PASSKEY_VERIFICATION_FAILED`, `TWOFA_LAST_STRATEGY_CANNOT_REMOVE`)
+- [ ] 보안 설정 페이지 (Web frontend-design 단계 — strategy 상세 노출, 등록/해제 mutation)
+- [ ] 첫 strategy 등록 완료 화면에 backup code 보관 권장 모달
