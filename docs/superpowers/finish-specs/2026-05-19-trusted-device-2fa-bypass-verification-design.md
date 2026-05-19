@@ -121,10 +121,36 @@ Response body: { status: "?" }
 
 ## 8. 작업 산출물 체크리스트
 
-- [ ] §3 재현 절차 실행 + 단계별 응답 기록
-- [ ] 결론: "정상 동작 확인" 또는 "버그 확정 + root cause"
-- [ ] 버그 확정 시: 코드 수정 — auth/trusted-device 도메인 한정
-- [ ] 버그 확정 시: 임시 디버그 로그 제거 확인
-- [ ] 버그 확정 시: e2e 회귀 테스트 1건 추가
-- [ ] 단위 테스트 통과
-- [ ] e2e 테스트 통과
+- [x] §3 재현 절차 실행 + 단계별 응답 기록
+- [x] 결론: **정상 동작 확인** (서버 코드 결함 없음)
+- [x] 버그 확정 아님 — 코드 수정·디버그 로그 제거·회귀 테스트 모두 불필요
+
+## 9. Resolution (2026-05-19 종결)
+
+§3 재현 절차를 끝까지 실행한 결과:
+
+| 단계 | 응답 |
+|---|---|
+| A. owner login (clean state) | `AUTHENTICATED` + T_OWNER 수령 |
+| B. `POST /devices` (T_OWNER) | `HTTP 204` |
+| C. 2nd login (cookie 없음) | `2FA_REQUIRED` + challengeId |
+| D. DB `correct_num` 조회 | 정답 확보 |
+| E. `POST /auth/2fa/challenge/:id/respond` (T_OWNER) | `HTTP 204` |
+| F. `POST /auth/2fa/challenge/:id/complete` | `AUTHENTICATED` + T_2FA |
+| G. `POST /trusted-device` | `Set-Cookie: trustToken=...; Secure; SameSite=Strict` + DB row 확인 |
+| **H1. login (cookie 미동봉)** | `2FA_REQUIRED` (정상) |
+| **H2. login (trustToken cookie 강제 동봉)** | **`AUTHENTICATED`** ← 우회 분기 정상 동작 |
+
+**Root cause** (사용자 보고 현상): 서버 측 코드 결함 아님. `Set-Cookie`의 `Secure` 플래그 때문에 dev HTTP(`localhost:3000`) 환경에서 curl·Postman 같은 도구가 cookie를 저장하지 않는다(RFC 6265 표준 동작). 브라우저(Chrome·Firefox)는 `localhost`를 secure-origin 예외로 처리해 저장하므로 web에서는 정상 동작한다.
+
+**추가 작업 없음**. 본 spec은 종결. 코드 수정·테스트 추가 없음.
+
+## 10. 종결 시점에 식별된 후속 결함
+
+검증 과정에서 trustToken 정책 자체의 결함이 식별됨 — 본 spec 범위 외, 별도로 트래킹:
+
+1. **trust 만료 후 데드락**: `TRUST_DURATION_MS = 30일`이 지나면 다시 2FA가 요구되는데, push 2FA는 "이미 로그인된 다른 device가 응답"하는 구조다. 마지막 신뢰기기의 trust가 만료된 사용자는 응답할 device가 없어 **영구 락아웃**.
+2. **fallback 2FA 부재**: TOTP·passkey(WebAuthn/FIDO2)·backup-code 기반 추가 인증 strategy가 없다. 백업 코드는 "최후의 수단"으로만 존재하고 strategy 추상화는 없음.
+3. **sliding expiry 부재**: 활성 사용자도 단순 30일 만료. 매 사용 시 expiresAt 갱신(sliding window)이 없어 정상 사용 중에도 강제 재인증 발생.
+
+→ 후속 spec 작성 필요 (auth 2FA strategy 패턴 + sliding expiry). `2026-05-19-trust-token-ux-design.md`에 trigger UX와 함께 다룰지, 별도 spec(`auth-2fa-fallback-strategies-design.md`)으로 분리할지는 implementation 진입 직전에 결정.

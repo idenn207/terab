@@ -110,7 +110,49 @@ private async trimExcessDevices(userId: string): Promise<void> {
 
 ## 7. 종속
 
-본 spec은 `2026-05-19-trusted-device-2fa-bypass-verification-design.md`이 "정상 동작 확인 또는 fix 완료" 상태가 된 뒤에 진행한다. 우회 자체가 깨져 있으면 UX 고도화 의미가 없다.
+본 spec은 `finish-specs/2026-05-19-trusted-device-2fa-bypass-verification-design.md`(종결됨, 서버 로직 정상 확인)에서 식별된 후속 결함 §9·§10과 연결된다. 본 spec(trigger UX) implementation 전에 §9의 결정 사항을 함께 다뤄야 한다.
+
+## 9. 후속 결함 — trust 만료 데드락 & 2FA fallback 부재
+
+bug 3 spec 종결 시점에 식별된 정책 결함. 본 spec 또는 별도 spec(`auth-2fa-fallback-strategies-design.md`)으로 다뤄야 한다. **implementation 전 사용자 결정 필요.**
+
+### 9.1 trust 만료 데드락
+
+- `TRUST_DURATION_MS = 30일`이 지나면 다시 2FA 요구
+- 현재 2FA는 push 방식뿐 — "이미 로그인된 다른 device가 응답"하는 구조
+- 마지막 신뢰기기의 trust가 만료된 사용자는 **응답할 device가 없어 영구 락아웃**
+- 백업 코드 로그인(`POST /auth/login/backup`)은 존재하지만 사용자가 코드 보관 안 했으면 마찬가지 락아웃
+
+### 9.2 fallback 2FA strategy 부재
+
+push 외에 다음 인증 strategy 부재 — 사용자 결정 필요:
+
+| Strategy | 설명 | 우선순위 |
+|---|---|---|
+| TOTP (RFC 6238) | Google Authenticator·1Password 같은 OTP 앱 기반 6자리 코드 | 표준·검증된 보안. 1순위 권장 |
+| Passkey / WebAuthn (FIDO2) | platform authenticator(지문·Face ID·Windows Hello)·hardware key | UX 최상·강한 보안. 2순위 |
+| Backup code (이미 부분 구현) | 일회용 8자리 8개. login만 있고 재발급 spec은 별도(누락 4) | "최후의 수단" — fallback의 fallback |
+| Email magic link | 이메일 인증 링크 | 별도 SMTP 인프라 필요. 본 NAS 구성에는 부적합 가능성 |
+
+추상화 방향: `TwoFaStrategy` 인터페이스 + 각 구현체. 사용자는 본인 계정에 등록된 strategy 목록 중 선택해 2FA challenge 응답.
+
+### 9.3 sliding expiry
+
+- 현재 trustToken은 등록 시점 + 30일 고정. 매일 활성 사용자라도 30일 후 강제 재인증
+- **sliding window**: 매 verify 성공 시 `expiresAt`을 `now() + TRUST_DURATION_MS`로 갱신 — 30일간 무사용 시에만 만료
+- 변경 범위: `TrustedDeviceService.verify` 안에서 verify 성공 직후 `repository.refreshExpiresAt(id, newExpiresAt)` 호출. 1줄.
+- 트레이드오프: rolling exposure(영영 만료 안 됨) → 절대 최대 기간 cap이 필요할 수도 있음(예: `absoluteExpiresAt = createdAt + 90일`로 hard cap)
+
+### 9.4 사용자 결정 항목 (요약)
+
+| 항목 | 옵션 |
+|---|---|
+| fallback strategy 우선순위 | A. TOTP만 우선 / B. TOTP + Passkey / C. 전부 |
+| TOTP 도입 시점 | 본 spec과 함께 / 별도 spec |
+| sliding expiry 도입 | yes (간단) / no |
+| sliding expiry hard cap | 없음 / 90일 / 180일 |
+
+위 결정 후 별도 spec(`auth-2fa-fallback-strategies-design.md`)으로 분리하거나 본 spec §4에 추가 구현 항목으로 합친다.
 
 ## 8. 작업 산출물 체크리스트
 
