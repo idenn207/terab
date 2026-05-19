@@ -42,6 +42,7 @@ describe('AuthController', () => {
             refresh: jest.fn(),
             logout: jest.fn(),
             getCurrentUser: jest.fn(),
+            regenerateBackupCodes: jest.fn(),
           },
         },
       ],
@@ -252,6 +253,28 @@ describe('AuthController', () => {
 
       expect(service.getCurrentUser).toHaveBeenCalledWith(mockAuthUser.userId);
       expect(result).toEqual(userInfo);
+    });
+  });
+
+  describe('regenerateBackupCodes', () => {
+    const body = { currentPassword: 'pw' };
+
+    it('INVALID_CREDENTIALS가 발생하면 그대로 전파한다', async () => {
+      service.regenerateBackupCodes.mockRejectedValue(new ApiException('INVALID_CREDENTIALS'));
+
+      await expect(controller.regenerateBackupCodes(mockAuthUser, body)).rejects.toMatchObject({
+        code: 'INVALID_CREDENTIALS',
+      });
+    });
+
+    it('성공 시 service.regenerateBackupCodes(userId, currentPassword) 호출 + backupCodes 응답을 반환한다', async () => {
+      const codes = Array.from({ length: 8 }, (_, i) => `CODE-${i.toString().padStart(4, '0')}`);
+      service.regenerateBackupCodes.mockResolvedValue(codes);
+
+      const result = await controller.regenerateBackupCodes(mockAuthUser, body);
+
+      expect(service.regenerateBackupCodes).toHaveBeenCalledWith(mockAuthUser.userId, body.currentPassword);
+      expect(result).toEqual({ backupCodes: codes });
     });
   });
 });

@@ -80,22 +80,24 @@ async regenerateBackupCodes(
 
 ### 3.3 Service
 
-`AuthService.regenerateBackupCodes(userId, currentPassword)`:
+`AuthService.regenerateBackupCodes(userId, currentPassword)` — 기존 building block만 재사용. 신규 repo 메서드 추가 없음.
 
 ```ts
 async regenerateBackupCodes(userId: string, currentPassword: string): Promise<string[]> {
   const user = await this.authRepository.findUserWithPermissionsById(userId);
   if (!user) throw new ApiException('INVALID_CREDENTIALS');
-  await this.validateCredentials(user, currentPassword); // 기존 메서드 재사용
+  await this.validateCredentials(user, currentPassword); // 기존 재사용
 
-  const rawCodes = this.generateBackupCodes();              // 기존 private 메서드 재사용
+  const rawCodes = this.generateBackupCodes();              // 기존 재사용
   const codeHashes = await Promise.all(
     rawCodes.map((code) => bcrypt.hash(code, this.BCRYPT_ROUNDS)),
   );
 
   await this.runInTx(async () => {
-    await this.authRepository.invalidateAllBackupCodes(userId, new Date());
-    await this.authRepository.insertBackupCodes(userId, codeHashes);
+    const now = new Date();
+    const unused = await this.authRepository.findUnusedBackupCodes(userId); // 기존 재사용
+    await Promise.all(unused.map((c) => this.authRepository.markBackupCodeUsed(c.id, now))); // 기존 재사용
+    await this.authRepository.insertBackupCodes(userId, codeHashes);         // 기존 재사용
   });
   return rawCodes;
 }
@@ -103,16 +105,7 @@ async regenerateBackupCodes(userId: string, currentPassword: string): Promise<st
 
 ### 3.4 Repository
 
-`AuthRepository`에 신규 메서드:
-
-```ts
-async invalidateAllBackupCodes(userId: string, usedAt: Date): Promise<void> {
-  await this.conn
-    .update(backupCodes)
-    .set({ usedAt })
-    .where(and(eq(backupCodes.userId, userId), isNull(backupCodes.usedAt)));
-}
-```
+**신규 메서드 추가 없음**. 폐기는 기존 `findUnusedBackupCodes` + `markBackupCodeUsed` 조합으로 구현 (max 8개라 round-trip 비용 무시 가능). 책임이 같은 코드가 이미 존재할 때 reuse 우선이라는 정책에 따른 결정.
 
 ### 3.5 ErrorCode
 
@@ -127,10 +120,9 @@ async invalidateAllBackupCodes(userId: string, usedAt: Date): Promise<void> {
 - 정상: `invalidateAllBackupCodes` 호출 + `insertBackupCodes` 호출 + 8개 코드 반환
 - 트랜잭션 검증: 두 호출이 동일 tx에서 일어남
 
-### 4.2 단위 (AuthRepository.invalidateAllBackupCodes)
+### 4.2 단위 (Repository)
 
-- userId에 해당하는 unused code가 모두 `usedAt`로 마킹됨
-- 이미 used인 code는 영향 없음
+신규 메서드 없음 — 기존 `findUnusedBackupCodes` / `markBackupCodeUsed` spec 그대로.
 
 ### 4.3 e2e
 
@@ -149,10 +141,9 @@ async invalidateAllBackupCodes(userId: string, usedAt: Date): Promise<void> {
 
 ## 7. 작업 산출물 체크리스트
 
-- [ ] DTO 2개 추가 (`backup-code-regenerate-body.dto.ts`, `backup-code-regenerate-response.dto.ts`) + `dto/index.ts` re-export
-- [ ] `AuthRepository.invalidateAllBackupCodes` 추가 + spec
-- [ ] `AuthService.regenerateBackupCodes` 추가 + spec
-- [ ] `AuthController.regenerateBackupCodes` 추가 + spec
+- [x] DTO 2개 추가 (`backup-code-regenerate-body.dto.ts`, `backup-code-regenerate-response.dto.ts`) + `dto/index.ts` re-export
+- [x] `AuthService.regenerateBackupCodes` 추가 + spec (신규 repo 메서드 없음 — 기존 building block 재사용)
+- [x] `AuthController.regenerateBackupCodes` 추가 + spec
 - [ ] e2e 테스트 추가
-- [ ] 기존 테스트 통과
+- [x] 기존 테스트 통과 (단위 309/309)
 - [ ] web 측 mutation wrapper + UI는 본 spec 외 (frontend-design 단계)

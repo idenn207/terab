@@ -317,6 +317,27 @@ export class AuthService extends ServiceCore implements OnModuleInit {
     };
   }
 
+  // ─── Backup Code 재발급 ──────────────────────────────────────────────
+
+  @LogReplay()
+  async regenerateBackupCodes(userId: string, currentPassword: string): Promise<string[]> {
+    const user = await this.authRepository.findUserWithPermissionsById(userId);
+    if (!user) throw new ApiException('INVALID_CREDENTIALS');
+    await this.validateCredentials(user, currentPassword);
+
+    const rawCodes = this.generateBackupCodes();
+    const codeHashes = await Promise.all(rawCodes.map((code) => bcrypt.hash(code, this.BCRYPT_ROUNDS)));
+
+    await this.runInTx(async () => {
+      const now = new Date();
+      const unused = await this.authRepository.findUnusedBackupCodes(userId);
+      await Promise.all(unused.map((c) => this.authRepository.markBackupCodeUsed(c.id, now)));
+      await this.authRepository.insertBackupCodes(userId, codeHashes);
+    });
+
+    return rawCodes;
+  }
+
   private async verifyAndConsumeBackupCode(userId: string, inputCode: string): Promise<void> {
     const codes = await this.authRepository.findUnusedBackupCodes(userId);
     // 타이밍 오라클 방지 — 매칭 여부와 무관하게 모든 코드를 순회

@@ -6,6 +6,8 @@ import type { Request, Response } from 'express';
 import { AuthService } from './auth.service';
 import {
   AuthenticatedResponseDto,
+  BackupCodeRegenerateBodyDto,
+  BackupCodeRegenerateResponseDto,
   BackupLoginBodyDto,
   LoginBodyDto,
   type LoginResponse,
@@ -147,6 +149,20 @@ export class AuthController {
   @ApiError('INVALID_CREDENTIALS')
   async me(@CurrentUser() user: AuthUser): Promise<UserDto> {
     return this.authService.getCurrentUser(user.userId);
+  }
+
+  @Throttle({ default: { ttl: 60000, limit: 3 } })
+  @Post('backup-codes/regenerate')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Backup Code 재발급 — 기존 unused 폐기 후 8개 신규 발급' })
+  @ApiResponse({ status: HttpStatus.OK, type: BackupCodeRegenerateResponseDto })
+  @ApiError('INVALID_CREDENTIALS')
+  async regenerateBackupCodes(
+    @CurrentUser() user: AuthUser,
+    @Body() body: BackupCodeRegenerateBodyDto,
+  ): Promise<BackupCodeRegenerateResponseDto> {
+    const backupCodes = await this.authService.regenerateBackupCodes(user.userId, body.currentPassword);
+    return { backupCodes };
   }
 
   private setRefreshTokenCookie(res: Response, rawToken: string, maxAgeMs: number): void {

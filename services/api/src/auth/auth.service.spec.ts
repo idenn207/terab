@@ -318,6 +318,82 @@ describe('AuthService', () => {
     });
   });
 
+  describe('regenerateBackupCodes', () => {
+    it('userId가 존재하지 않으면 INVALID_CREDENTIALS 예외를 던지고 insert 호출이 발생하지 않는다', async () => {
+      mockAuthRepository.findUserWithPermissionsById.mockResolvedValue(null);
+
+      await expect(service.regenerateBackupCodes('ghost-id', 'pw')).rejects.toMatchObject({
+        code: 'INVALID_CREDENTIALS',
+      });
+      expect(mockAuthRepository.markBackupCodeUsed).not.toHaveBeenCalled();
+      expect(mockAuthRepository.insertBackupCodes).not.toHaveBeenCalled();
+    });
+
+    it('비밀번호가 일치하지 않으면 INVALID_CREDENTIALS 예외를 던지고 폐기·재발급이 일어나지 않는다', async () => {
+      mockAuthRepository.findUserWithPermissionsById.mockResolvedValue(mockUser);
+      mockTokenService.pepperPassword.mockReturnValue('peppered');
+      (bcrypt.compare as jest.Mock).mockResolvedValue(false);
+
+      await expect(service.regenerateBackupCodes(mockUser.id, 'wrong')).rejects.toMatchObject({
+        code: 'INVALID_CREDENTIALS',
+      });
+      expect(mockAuthRepository.markBackupCodeUsed).not.toHaveBeenCalled();
+      expect(mockAuthRepository.insertBackupCodes).not.toHaveBeenCalled();
+    });
+
+    it('비활성 계정이면 ACCOUNT_DISABLED 예외를 던진다', async () => {
+      mockAuthRepository.findUserWithPermissionsById.mockResolvedValue({ ...mockUser, active: false });
+      mockTokenService.pepperPassword.mockReturnValue('peppered');
+      (bcrypt.compare as jest.Mock).mockResolvedValue(true);
+
+      await expect(service.regenerateBackupCodes(mockUser.id, 'pw')).rejects.toMatchObject({
+        code: 'ACCOUNT_DISABLED',
+      });
+    });
+
+    it('성공 시 기존 unused 코드를 각각 markBackupCodeUsed로 폐기하고 insertBackupCodes로 8개 평문을 반환한다', async () => {
+      mockAuthRepository.findUserWithPermissionsById.mockResolvedValue(mockUser);
+      mockTokenService.pepperPassword.mockReturnValue('peppered');
+      (bcrypt.compare as jest.Mock).mockResolvedValue(true);
+      (bcrypt.hash as jest.Mock).mockResolvedValue('hashed');
+      mockAuthRepository.findUnusedBackupCodes.mockResolvedValue([
+        { id: 'bc-1', codeHash: 'h1' },
+        { id: 'bc-2', codeHash: 'h2' },
+        { id: 'bc-3', codeHash: 'h3' },
+      ]);
+      mockAuthRepository.markBackupCodeUsed.mockResolvedValue(undefined);
+      mockAuthRepository.insertBackupCodes.mockResolvedValue(undefined);
+
+      const result = await service.regenerateBackupCodes(mockUser.id, 'pw');
+
+      expect(result).toHaveLength(8);
+      expect(mockAuthRepository.markBackupCodeUsed).toHaveBeenCalledTimes(3);
+      expect(mockAuthRepository.markBackupCodeUsed).toHaveBeenCalledWith('bc-1', expect.any(Date));
+      expect(mockAuthRepository.markBackupCodeUsed).toHaveBeenCalledWith('bc-2', expect.any(Date));
+      expect(mockAuthRepository.markBackupCodeUsed).toHaveBeenCalledWith('bc-3', expect.any(Date));
+      expect(mockAuthRepository.insertBackupCodes).toHaveBeenCalledTimes(1);
+      const [, hashes] = mockAuthRepository.insertBackupCodes.mock.calls[0];
+      expect(hashes).toHaveLength(8);
+    });
+
+    it('성공 시 폐기 + 재발급이 동일 트랜잭션 안에서 수행된다 (tx 시작 이후 호출됨)', async () => {
+      mockAuthRepository.findUserWithPermissionsById.mockResolvedValue(mockUser);
+      mockTokenService.pepperPassword.mockReturnValue('peppered');
+      (bcrypt.compare as jest.Mock).mockResolvedValue(true);
+      (bcrypt.hash as jest.Mock).mockResolvedValue('hashed');
+      mockAuthRepository.findUnusedBackupCodes.mockResolvedValue([{ id: 'bc-1', codeHash: 'h1' }]);
+      mockAuthRepository.markBackupCodeUsed.mockResolvedValue(undefined);
+      mockAuthRepository.insertBackupCodes.mockResolvedValue(undefined);
+
+      await service.regenerateBackupCodes(mockUser.id, 'pw');
+
+      expect(mockDbTransaction).toHaveBeenCalled();
+      const txOrder = mockDbTransaction.mock.invocationCallOrder[0];
+      expect(mockAuthRepository.markBackupCodeUsed.mock.invocationCallOrder[0]).toBeGreaterThan(txOrder);
+      expect(mockAuthRepository.insertBackupCodes.mock.invocationCallOrder[0]).toBeGreaterThan(txOrder);
+    });
+  });
+
   describe('completeTwoFa', () => {
     it('챌린지가 APPROVED 상태가 아니면 TwoFaService에서 예외가 전파된다', async () => {
       const { ApiException } = await import('@terab/common');
