@@ -1,6 +1,12 @@
 import { Test } from '@nestjs/testing';
 import { DatabaseService, TransactionContext } from '@terab/db';
-import { mockDatabaseService, mockDbInsert, mockDbLimit, mockTransactionContext, setupMockDbSelectChain } from '@terab/test';
+import {
+  mockDatabaseService,
+  mockDbInsert,
+  mockDbLimit,
+  mockTransactionContext,
+  setupMockDbSelectChain,
+} from '@terab/test';
 import { AuthRepository } from './auth.repository';
 
 describe('AuthRepository', () => {
@@ -77,9 +83,9 @@ describe('AuthRepository', () => {
         values: jest.fn().mockReturnValue({ returning: mockReturning }),
       });
 
-      await expect(
-        repo.insertUser({ username: 'x', nickname: 'y', password: 'z' }),
-      ).rejects.toMatchObject({ code: 'REGISTRATION_FAILED' });
+      await expect(repo.insertUser({ username: 'x', nickname: 'y', password: 'z' })).rejects.toMatchObject({
+        code: 'REGISTRATION_FAILED',
+      });
     });
   });
 });

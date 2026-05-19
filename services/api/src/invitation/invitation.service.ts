@@ -21,10 +21,7 @@ export class InvitationService extends ServiceCore {
   }
 
   @LogReplay()
-  async create(
-    createdBy: string,
-    expiresInDays: number = this.DEFAULT_EXPIRES_DAYS,
-  ): Promise<InvitationResponseDto> {
+  async create(createdBy: string, expiresInDays: number = this.DEFAULT_EXPIRES_DAYS): Promise<InvitationResponseDto> {
     const expiresAt = new Date(Date.now() + expiresInDays * this.MS_PER_DAY);
     const row = await this.invitationRepository.insert({ createdBy, expiresAt });
     const baseUrl = this.configService.getOrThrow<string>('APP_BASE_URL');

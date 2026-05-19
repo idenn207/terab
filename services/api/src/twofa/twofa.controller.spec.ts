@@ -91,7 +91,9 @@ describe('TwoFaController', () => {
     it('TWO_FA_CHALLENGE_NOT_FOUND이 발생하면 그대로 전파한다', async () => {
       service.respond.mockRejectedValue(new ApiException('TWO_FA_CHALLENGE_NOT_FOUND'));
 
-      await expect(controller.respond(mockAuthUser, 'ghost-id', { selectedNumber: '47' })).rejects.toThrow(ApiException);
+      await expect(controller.respond(mockAuthUser, 'ghost-id', { selectedNumber: '47' })).rejects.toThrow(
+        ApiException,
+      );
       await expect(controller.respond(mockAuthUser, 'ghost-id', { selectedNumber: '47' })).rejects.toMatchObject({
         code: 'TWO_FA_CHALLENGE_NOT_FOUND',
       });

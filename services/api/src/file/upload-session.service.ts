@@ -4,12 +4,7 @@ import { DatabaseService, ServiceCore, TransactionContext } from '@terab/db';
 import { randomUUID } from 'node:crypto';
 import { FolderService } from '../folder/folder.service';
 import { MinioService } from '../minio/minio.service';
-import {
-  FileItemDto,
-  UploadCompletePartDto,
-  UploadInitBodyDto,
-  UploadInitResponseDto,
-} from './dto';
+import { FileItemDto, UploadCompletePartDto, UploadInitBodyDto, UploadInitResponseDto } from './dto';
 import { FileRepository } from './file.repository';
 import { UploadSessionRepository } from './upload-session.repository';
 
@@ -163,19 +158,27 @@ export class UploadSessionService extends ServiceCore {
     });
   }
 
-  async cleanupExpired(batchSize: number): Promise<{ scannedCount: number; abortedCount: number; removedCount: number }> {
+  async cleanupExpired(
+    batchSize: number,
+  ): Promise<{ scannedCount: number; abortedCount: number; removedCount: number }> {
     const sessions = await this.uploadSessionRepository.findExpiredForCleanup(this.GRACE_MS, batchSize);
     let abortedCount = 0;
     let removedCount = 0;
     for (const session of sessions) {
       if (session.uploadKind === 'multipart' && session.multipartUploadId) {
-        await this.minioService.abortMultipartUpload(session.minioKey, session.multipartUploadId).then(() => {
-          abortedCount += 1;
-        }).catch(() => undefined);
+        await this.minioService
+          .abortMultipartUpload(session.minioKey, session.multipartUploadId)
+          .then(() => {
+            abortedCount += 1;
+          })
+          .catch(() => undefined);
       }
-      await this.minioService.removeObject(session.minioKey).then(() => {
-        removedCount += 1;
-      }).catch(() => undefined);
+      await this.minioService
+        .removeObject(session.minioKey)
+        .then(() => {
+          removedCount += 1;
+        })
+        .catch(() => undefined);
       await this.uploadSessionRepository.deleteById(session.id);
     }
     return { scannedCount: sessions.length, abortedCount, removedCount };

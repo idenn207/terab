@@ -54,10 +54,7 @@ export class TrustedDeviceController {
   @ApiOperation({ summary: '신뢰기기 해제' })
   @ApiResponse({ status: HttpStatus.NO_CONTENT })
   @ApiError('TRUSTED_DEVICE_NOT_FOUND')
-  async revoke(
-    @CurrentUser() user: AuthUser,
-    @Param('id', ParseUUIDPipe) id: string,
-  ): Promise<void> {
+  async revoke(@CurrentUser() user: AuthUser, @Param('id', ParseUUIDPipe) id: string): Promise<void> {
     await this.trustedDeviceService.revoke(id, user.userId);
   }
 }

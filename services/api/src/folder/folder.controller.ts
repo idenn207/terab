@@ -1,15 +1,4 @@
-import {
-  Body,
-  Controller,
-  Delete,
-  Get,
-  HttpCode,
-  HttpStatus,
-  Param,
-  ParseUUIDPipe,
-  Patch,
-  Post,
-} from '@nestjs/common';
+import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, ParseUUIDPipe, Patch, Post } from '@nestjs/common';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { ApiError, type AuthUser, CurrentUser } from '@terab/common';
 import {
@@ -48,10 +37,7 @@ export class FolderController {
   @ApiOperation({ summary: '폴더 생성' })
   @ApiResponse({ status: HttpStatus.CREATED, type: FolderItemDto })
   @ApiError('FOLDER_NOT_FOUND', 'FOLDER_DEPTH_EXCEEDED')
-  async create(
-    @CurrentUser() user: AuthUser,
-    @Body() body: CreateFolderBodyDto,
-  ): Promise<FolderItemDto> {
+  async create(@CurrentUser() user: AuthUser, @Body() body: CreateFolderBodyDto): Promise<FolderItemDto> {
     return this.folderService.create(user.userId, body);
   }
 
@@ -84,10 +70,7 @@ export class FolderController {
   @ApiOperation({ summary: '폴더 소프트 삭제' })
   @ApiResponse({ status: HttpStatus.NO_CONTENT })
   @ApiError('FOLDER_NOT_FOUND')
-  async remove(
-    @CurrentUser() user: AuthUser,
-    @Param('id', ParseUUIDPipe) id: string,
-  ): Promise<void> {
+  async remove(@CurrentUser() user: AuthUser, @Param('id', ParseUUIDPipe) id: string): Promise<void> {
     await this.folderService.remove(user.userId, id);
   }
 }

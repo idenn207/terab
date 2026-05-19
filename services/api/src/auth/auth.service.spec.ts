@@ -3,7 +3,14 @@ import { Test } from '@nestjs/testing';
 import { ApiException } from '@terab/common';
 import { DatabaseService, TransactionContext } from '@terab/db';
 import { TokenService } from '@terab/security';
-import { mockConfigService, mockDatabaseService, mockDbTransaction, mockTransactionContext, mockUser, setupMockDbTransactionChain } from '@terab/test';
+import {
+  mockConfigService,
+  mockDatabaseService,
+  mockDbTransaction,
+  mockTransactionContext,
+  mockUser,
+  setupMockDbTransactionChain,
+} from '@terab/test';
 import bcrypt from 'bcryptjs';
 import { DeviceService } from '../device/device.service';
 import { InvitationService } from '../invitation/invitation.service';

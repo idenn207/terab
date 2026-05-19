@@ -57,10 +57,7 @@ export class TrustedDeviceService extends ServiceCore {
   }
 
   // sliding window: verify 성공 시 expiresAt을 now + TRUST_DURATION_MS로 연장하되 createdAt + TRUST_ABSOLUTE_MAX_MS를 초과하지 않는다(rolling exposure 차단)
-  private async slideExpiresAt(
-    device: { id: string; createdAt: Date; expiresAt: Date },
-    now: Date,
-  ): Promise<void> {
+  private async slideExpiresAt(device: { id: string; createdAt: Date; expiresAt: Date }, now: Date): Promise<void> {
     const candidateExpiresAt = new Date(now.getTime() + this.TRUST_DURATION_MS);
     const hardCapAt = new Date(device.createdAt.getTime() + this.TRUST_ABSOLUTE_MAX_MS);
     const newExpiresAt = candidateExpiresAt < hardCapAt ? candidateExpiresAt : hardCapAt;

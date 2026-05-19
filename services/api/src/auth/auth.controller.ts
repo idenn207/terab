@@ -1,4 +1,16 @@
-import { Body, Controller, Get, Headers, HttpCode, HttpStatus, Param, ParseUUIDPipe, Post, Req, Res } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Headers,
+  HttpCode,
+  HttpStatus,
+  Param,
+  ParseUUIDPipe,
+  Post,
+  Req,
+  Res,
+} from '@nestjs/common';
 import { ApiExtraModels, ApiOperation, ApiResponse, ApiTags, getSchemaPath, refs } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
 import { ApiError, Cookies, CurrentUser, Public, type AuthUser } from '@terab/common';
@@ -24,7 +36,7 @@ const LOGIN_RESPONSE_API_RESPONSE = {
     discriminator: {
       propertyName: 'status',
       mapping: {
-        AUTHENTICATED: getSchemaPath(AuthenticatedResponseDto),
+        'AUTHENTICATED': getSchemaPath(AuthenticatedResponseDto),
         '2FA_REQUIRED': getSchemaPath(TwoFaRequiredResponseDto),
       },
     },

@@ -48,9 +48,7 @@ describe('TrustedDeviceController', () => {
     });
 
     it('등록된 신뢰기기 목록을 반환한다', async () => {
-      const devices = [
-        { id: randomUUID(), userAgent: 'Mozilla/5.0', createdAt: new Date('2026-01-01') },
-      ];
+      const devices = [{ id: randomUUID(), userAgent: 'Mozilla/5.0', createdAt: new Date('2026-01-01') }];
       service.list.mockResolvedValue(devices);
 
       const result = await controller.list(mockAuthUser);

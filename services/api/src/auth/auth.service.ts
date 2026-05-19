@@ -13,13 +13,7 @@ import { TrustedDeviceService } from '../trusted-device/trusted-device.service';
 import { PushChallengePublisher } from '../twofa/push-challenge.publisher';
 import { TwoFaService } from '../twofa/twofa.service';
 import { AuthRepository, UserWithPermissions } from './auth.repository';
-import {
-  BackupLoginBodyDto,
-  LoginBodyDto,
-  LoginResponse,
-  RegisterBodyDto,
-  RegisterResponseDto,
-} from './dto';
+import { BackupLoginBodyDto, LoginBodyDto, LoginResponse, RegisterBodyDto, RegisterResponseDto } from './dto';
 
 interface AuthTokens {
   accessToken: string;

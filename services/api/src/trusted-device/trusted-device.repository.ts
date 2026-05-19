@@ -13,10 +13,7 @@ export class TrustedDeviceRepository extends RepositoryCore {
   }
 
   async findByTokenHash(tokenHash: string) {
-    const [row = null] = await this.conn
-      .select()
-      .from(trustedDevices)
-      .where(eq(trustedDevices.tokenHash, tokenHash));
+    const [row = null] = await this.conn.select().from(trustedDevices).where(eq(trustedDevices.tokenHash, tokenHash));
     return row;
   }
 

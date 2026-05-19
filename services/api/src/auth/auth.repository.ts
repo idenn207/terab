@@ -119,11 +119,7 @@ export class AuthRepository extends RepositoryCore {
   }
 
   async findRoleByName(name: string) {
-    const [row = null] = await this.conn
-      .select({ id: roles.id })
-      .from(roles)
-      .where(eq(roles.name, name))
-      .limit(1);
+    const [row = null] = await this.conn.select({ id: roles.id }).from(roles).where(eq(roles.name, name)).limit(1);
     return row;
   }
 
