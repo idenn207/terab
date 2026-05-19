@@ -1,153 +1,147 @@
-import { ExecutionContext, HttpStatus, INestApplication } from '@nestjs/common';
-import { APP_GUARD } from '@nestjs/core';
 import { Test } from '@nestjs/testing';
+import { ApiException } from '@terab/common';
 import { FILE_ID, FOLDER_ID, mockAuthUser, mockFileItem } from '@terab/test';
-import { TsRestModule } from '@ts-rest/nest';
-import request from 'supertest';
 import { FileController } from './file.controller';
 import { FileService } from './file.service';
 
-const mockFileService = {
-  rename: jest.fn(),
-  move: jest.fn(),
-  copy: jest.fn(),
-  remove: jest.fn(),
-  search: jest.fn(),
-};
-
 describe('FileController', () => {
-  let app: INestApplication;
+  let controller: FileController;
+  let service: jest.Mocked<FileService>;
 
-  beforeAll(async () => {
+  beforeEach(async () => {
     const module = await Test.createTestingModule({
-      imports: [TsRestModule.register({ isGlobal: true })],
       controllers: [FileController],
       providers: [
-        { provide: FileService, useValue: mockFileService },
         {
-          provide: APP_GUARD,
+          provide: FileService,
           useValue: {
-            canActivate: (ctx: ExecutionContext) => {
-              ctx.switchToHttp().getRequest().user = mockAuthUser;
-              return true;
-            },
+            search: jest.fn(),
+            rename: jest.fn(),
+            move: jest.fn(),
+            copy: jest.fn(),
+            remove: jest.fn(),
           },
         },
       ],
     }).compile();
 
-    app = module.createNestApplication();
-    await app.init();
+    controller = module.get(FileController);
+    service = module.get(FileService) as jest.Mocked<FileService>;
+    jest.clearAllMocks();
   });
-
-  afterAll(() => app.close());
-  beforeEach(() => jest.clearAllMocks());
 
   it('인스턴스가 생성된다', () => {
-    expect(app).toBeDefined();
+    expect(controller).toBeDefined();
   });
 
-  describe('PATCH /files/:id (이름 변경)', () => {
-    it('파일 이름을 변경한다', async () => {
-      const renamed = { ...mockFileItem, name: 'renamed.txt' };
-      mockFileService.rename.mockResolvedValue(renamed);
+  describe('search', () => {
+    it('FOLDER_NOT_FOUND가 발생하면 그대로 전파한다', async () => {
+      service.search.mockRejectedValue(new ApiException('FOLDER_NOT_FOUND'));
 
-      const res = await request(app.getHttpServer())
-        .patch(`/files/${FILE_ID}`)
-        .send({ name: 'renamed.txt' })
-        .expect(HttpStatus.OK);
+      await expect(
+        controller.search(mockAuthUser, { q: 'test', scope: 'folder', folderId: undefined }),
+      ).rejects.toMatchObject({ code: 'FOLDER_NOT_FOUND' });
+    });
 
-      expect(mockFileService.rename).toHaveBeenCalledWith(FILE_ID, mockAuthUser.userId, 'renamed.txt');
-      expect(res.body.name).toBe('renamed.txt');
+    it('전체 범위에서 파일을 검색하고 결과를 반환한다', async () => {
+      service.search.mockResolvedValue({ files: [mockFileItem] });
+
+      const result = await controller.search(mockAuthUser, { q: 'test', scope: 'all' });
+
+      expect(service.search).toHaveBeenCalledWith(mockAuthUser.userId, { q: 'test', scope: 'all' });
+      expect(result.files).toHaveLength(1);
     });
   });
 
-  describe('PATCH /files/:id/move (이동)', () => {
-    it('파일을 다른 폴더로 이동한다', async () => {
+  describe('rename', () => {
+    it('FILE_NOT_FOUND가 발생하면 그대로 전파한다', async () => {
+      service.rename.mockRejectedValue(new ApiException('FILE_NOT_FOUND'));
+
+      await expect(
+        controller.rename(mockAuthUser, FILE_ID, { name: 'new.txt' }),
+      ).rejects.toMatchObject({ code: 'FILE_NOT_FOUND' });
+    });
+
+    it('파일 이름을 변경하고 결과를 반환한다', async () => {
+      const renamed = { ...mockFileItem, name: 'new.txt' };
+      service.rename.mockResolvedValue(renamed);
+
+      const result = await controller.rename(mockAuthUser, FILE_ID, { name: 'new.txt' });
+
+      expect(service.rename).toHaveBeenCalledWith(mockAuthUser.userId, FILE_ID, { name: 'new.txt' });
+      expect(result.name).toBe('new.txt');
+    });
+  });
+
+  describe('move', () => {
+    it('FILE_NOT_FOUND가 발생하면 그대로 전파한다', async () => {
+      service.move.mockRejectedValue(new ApiException('FILE_NOT_FOUND'));
+
+      await expect(
+        controller.move(mockAuthUser, FILE_ID, { folderId: FOLDER_ID }),
+      ).rejects.toMatchObject({ code: 'FILE_NOT_FOUND' });
+    });
+
+    it('FOLDER_NOT_FOUND가 발생하면 그대로 전파한다', async () => {
+      service.move.mockRejectedValue(new ApiException('FOLDER_NOT_FOUND'));
+
+      await expect(
+        controller.move(mockAuthUser, FILE_ID, { folderId: FOLDER_ID }),
+      ).rejects.toMatchObject({ code: 'FOLDER_NOT_FOUND' });
+    });
+
+    it('파일을 다른 폴더로 이동하고 결과를 반환한다', async () => {
       const moved = { ...mockFileItem, folderId: FOLDER_ID };
-      mockFileService.move.mockResolvedValue(moved);
+      service.move.mockResolvedValue(moved);
 
-      const res = await request(app.getHttpServer())
-        .patch(`/files/${FILE_ID}/move`)
-        .send({ folderId: FOLDER_ID })
-        .expect(HttpStatus.OK);
+      const result = await controller.move(mockAuthUser, FILE_ID, { folderId: FOLDER_ID });
 
-      expect(mockFileService.move).toHaveBeenCalledWith(FILE_ID, mockAuthUser.userId, FOLDER_ID);
-      expect(res.body.folderId).toBe(FOLDER_ID);
-    });
-
-    it('파일을 루트로 이동한다', async () => {
-      mockFileService.move.mockResolvedValue(mockFileItem);
-
-      const res = await request(app.getHttpServer())
-        .patch(`/files/${FILE_ID}/move`)
-        .send({ folderId: null })
-        .expect(HttpStatus.OK);
-
-      expect(mockFileService.move).toHaveBeenCalledWith(FILE_ID, mockAuthUser.userId, null);
-      expect(res.body.folderId).toBeNull();
+      expect(service.move).toHaveBeenCalledWith(mockAuthUser.userId, FILE_ID, { folderId: FOLDER_ID });
+      expect(result.folderId).toBe(FOLDER_ID);
     });
   });
 
-  describe('POST /files/:id/copy (복사)', () => {
-    it('파일을 복사한다', async () => {
+  describe('copy', () => {
+    it('FILE_NOT_FOUND가 발생하면 그대로 전파한다', async () => {
+      service.copy.mockRejectedValue(new ApiException('FILE_NOT_FOUND'));
+
+      await expect(
+        controller.copy(mockAuthUser, FILE_ID, { folderId: null }),
+      ).rejects.toMatchObject({ code: 'FILE_NOT_FOUND' });
+    });
+
+    it('FOLDER_NOT_FOUND가 발생하면 그대로 전파한다', async () => {
+      service.copy.mockRejectedValue(new ApiException('FOLDER_NOT_FOUND'));
+
+      await expect(
+        controller.copy(mockAuthUser, FILE_ID, { folderId: FOLDER_ID }),
+      ).rejects.toMatchObject({ code: 'FOLDER_NOT_FOUND' });
+    });
+
+    it('파일을 복사하고 결과를 반환한다', async () => {
       const copied = { ...mockFileItem, id: '00000000-0000-0000-0000-000000000099' };
-      mockFileService.copy.mockResolvedValue(copied);
+      service.copy.mockResolvedValue(copied);
 
-      const res = await request(app.getHttpServer())
-        .post(`/files/${FILE_ID}/copy`)
-        .send({ folderId: null })
-        .expect(HttpStatus.CREATED);
+      const result = await controller.copy(mockAuthUser, FILE_ID, { folderId: null });
 
-      expect(mockFileService.copy).toHaveBeenCalledWith(FILE_ID, mockAuthUser.userId, null);
-      expect(res.body.id).toBe(copied.id);
-    });
-
-    it('파일을 다른 폴더에 복사한다', async () => {
-      const copied = { ...mockFileItem, id: '00000000-0000-0000-0000-000000000099', folderId: FOLDER_ID };
-      mockFileService.copy.mockResolvedValue(copied);
-
-      await request(app.getHttpServer())
-        .post(`/files/${FILE_ID}/copy`)
-        .send({ folderId: FOLDER_ID })
-        .expect(HttpStatus.CREATED);
-
-      expect(mockFileService.copy).toHaveBeenCalledWith(FILE_ID, mockAuthUser.userId, FOLDER_ID);
+      expect(service.copy).toHaveBeenCalledWith(mockAuthUser.userId, FILE_ID, { folderId: null });
+      expect(result.id).toBe(copied.id);
     });
   });
 
-  describe('DELETE /files/:id (삭제)', () => {
+  describe('remove', () => {
+    it('FILE_NOT_FOUND가 발생하면 그대로 전파한다', async () => {
+      service.remove.mockRejectedValue(new ApiException('FILE_NOT_FOUND'));
+
+      await expect(controller.remove(mockAuthUser, FILE_ID)).rejects.toMatchObject({ code: 'FILE_NOT_FOUND' });
+    });
+
     it('파일을 소프트 삭제한다', async () => {
-      mockFileService.remove.mockResolvedValue(undefined);
+      service.remove.mockResolvedValue(undefined);
 
-      await request(app.getHttpServer()).delete(`/files/${FILE_ID}`).expect(HttpStatus.NO_CONTENT);
+      await controller.remove(mockAuthUser, FILE_ID);
 
-      expect(mockFileService.remove).toHaveBeenCalledWith(FILE_ID, mockAuthUser.userId);
-    });
-  });
-
-  describe('GET /files/search (검색)', () => {
-    it('전체 범위에서 파일을 검색한다', async () => {
-      mockFileService.search.mockResolvedValue({ files: [mockFileItem] });
-
-      const res = await request(app.getHttpServer())
-        .get('/files/search')
-        .query({ q: 'test', scope: 'all' })
-        .expect(HttpStatus.OK);
-
-      expect(mockFileService.search).toHaveBeenCalledWith(mockAuthUser.userId, 'test', 'all', undefined);
-      expect(res.body.files).toHaveLength(1);
-    });
-
-    it('특정 폴더 내에서 파일을 검색한다', async () => {
-      mockFileService.search.mockResolvedValue({ files: [mockFileItem] });
-
-      await request(app.getHttpServer())
-        .get('/files/search')
-        .query({ q: 'test', scope: 'folder', folderId: FOLDER_ID })
-        .expect(HttpStatus.OK);
-
-      expect(mockFileService.search).toHaveBeenCalledWith(mockAuthUser.userId, 'test', 'folder', FOLDER_ID);
+      expect(service.remove).toHaveBeenCalledWith(mockAuthUser.userId, FILE_ID);
     });
   });
 });

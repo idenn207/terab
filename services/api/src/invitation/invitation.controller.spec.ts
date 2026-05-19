@@ -1,79 +1,94 @@
-import { ExecutionContext, HttpStatus, INestApplication } from '@nestjs/common';
-import { APP_GUARD } from '@nestjs/core';
-import { Test, TestingModule } from '@nestjs/testing';
+import { Test } from '@nestjs/testing';
+import { ApiException } from '@terab/common';
 import { mockAuthAdmin } from '@terab/test';
-import { TsRestModule } from '@ts-rest/nest';
-import request from 'supertest';
 import { InvitationController } from './invitation.controller';
 import { InvitationService } from './invitation.service';
 
-const mockInvitationService = {
-  create: jest.fn(),
-  validate: jest.fn(),
-  deactivate: jest.fn(),
-};
-
 describe('InvitationController', () => {
-  let app: INestApplication;
-  // let controller: InvitationController;
+  let controller: InvitationController;
+  let service: jest.Mocked<InvitationService>;
 
-  beforeAll(async () => {
-    const module: TestingModule = await Test.createTestingModule({
-      imports: [TsRestModule.register({ isGlobal: true })],
+  beforeEach(async () => {
+    const module = await Test.createTestingModule({
       controllers: [InvitationController],
       providers: [
-        { provide: InvitationService, useValue: mockInvitationService },
         {
-          provide: APP_GUARD,
+          provide: InvitationService,
           useValue: {
-            canActivate: (ctx: ExecutionContext) => {
-              ctx.switchToHttp().getRequest().user = mockAuthAdmin;
-              return true;
-            },
+            create: jest.fn(),
+            validate: jest.fn(),
+            deactivate: jest.fn(),
           },
         },
       ],
     }).compile();
 
-    app = module.createNestApplication();
-    await app.init();
+    controller = module.get(InvitationController);
+    service = module.get(InvitationService);
+    jest.clearAllMocks();
   });
 
-  afterAll(() => app.close());
-
-  beforeEach(() => jest.clearAllMocks());
-
-  it('POST /invitations ── 초대장을 생성하고 201을 반환한다', async () => {
-    const fakeResult = {
-      token: 'tok-uuid',
-      url: 'https://example.com/invite/tok-uuid',
-      expiresAt: new Date('2026-05-10T00:00:00.000Z'),
-    };
-    mockInvitationService.create.mockResolvedValue(fakeResult);
-
-    const res = await request(app.getHttpServer())
-      .post('/invitations')
-      .send({ expiresInDays: 7 })
-      .expect(HttpStatus.CREATED);
-
-    expect(mockInvitationService.create).toHaveBeenCalledWith('uuid-1', 7);
-    expect(res.body.token).toBe('tok-uuid');
+  it('인스턴스가 생성된다', () => {
+    expect(controller).toBeDefined();
   });
 
-  it('GET /invitations/:token — valid: true를 반환한다', async () => {
-    mockInvitationService.validate.mockResolvedValue({ valid: true });
+  describe('create', () => {
+    it('현재 사용자 id와 expiresInDays로 service.create를 호출하고 결과를 반환한다', async () => {
+      const expected = { token: 'tok-1', url: 'https://x/register/tok-1', expiresAt: new Date('2030-01-01') };
+      service.create.mockResolvedValue(expected);
 
-    const res = await request(app.getHttpServer()).get('/invitations/tok-uuid').expect(HttpStatus.OK);
+      const result = await controller.create(mockAuthAdmin, { expiresInDays: 7 });
 
-    expect(mockInvitationService.validate).toHaveBeenCalledWith('tok-uuid');
-    expect(res.body).toEqual({ valid: true });
+      expect(service.create).toHaveBeenCalledWith(mockAuthAdmin.userId, 7);
+      expect(result).toEqual(expected);
+    });
+
+    it('expiresInDays 미지정 시에도 service.create를 호출한다', async () => {
+      const expected = { token: 'tok-2', url: 'https://x/register/tok-2', expiresAt: new Date('2030-01-01') };
+      service.create.mockResolvedValue(expected);
+
+      const result = await controller.create(mockAuthAdmin, {});
+
+      expect(service.create).toHaveBeenCalledWith(mockAuthAdmin.userId, undefined);
+      expect(result).toEqual(expected);
+    });
   });
 
-  it('DELETE /invitations/:token — 204를 반환한다', async () => {
-    mockInvitationService.deactivate.mockResolvedValue(undefined);
+  describe('validate', () => {
+    it('토큰이 유효하면 { valid: true } 반환', async () => {
+      service.validate.mockResolvedValue({ valid: true });
 
-    await request(app.getHttpServer()).delete('/invitations/tok-uuid').expect(204);
+      const result = await controller.validate('valid-token');
 
-    expect(mockInvitationService.deactivate).toHaveBeenCalledWith('tok-uuid');
+      expect(service.validate).toHaveBeenCalledWith('valid-token');
+      expect(result).toEqual({ valid: true });
+    });
+
+    it('토큰이 무효이면 { valid: false } 반환', async () => {
+      service.validate.mockResolvedValue({ valid: false });
+
+      const result = await controller.validate('invalid-token');
+
+      expect(result).toEqual({ valid: false });
+    });
+  });
+
+  describe('deactivate', () => {
+    it('토큰으로 service.deactivate를 호출한다', async () => {
+      service.deactivate.mockResolvedValue(undefined);
+
+      await controller.deactivate('tok-1');
+
+      expect(service.deactivate).toHaveBeenCalledWith('tok-1');
+    });
+
+    it('service.deactivate에서 INVITATION_NOT_FOUND를 던지면 그대로 전파한다', async () => {
+      service.deactivate.mockRejectedValue(new ApiException('INVITATION_NOT_FOUND'));
+
+      await expect(controller.deactivate('ghost-token')).rejects.toThrow(ApiException);
+      await expect(controller.deactivate('ghost-token')).rejects.toMatchObject({
+        code: 'INVITATION_NOT_FOUND',
+      });
+    });
   });
 });

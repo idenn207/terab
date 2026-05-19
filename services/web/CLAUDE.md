@@ -44,7 +44,7 @@
 
 | 세그먼트 | 역할                                                           | 사용 시점                                                                                  |
 | -------- | -------------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
-| `api/`   | 서버 통신 어댑터(ts-rest mutation/query 래퍼, axios 호출 함수) | 슬라이스가 외부 API를 호출할 때. 슬라이스 외부에는 비공개 — `index.ts`에서 export 금지     |
+| `api/`   | 서버 통신 어댑터(hey-api mutation/query 래퍼, axios 호출 함수) | 슬라이스가 외부 API를 호출할 때. 슬라이스 외부에는 비공개 — `index.ts`에서 export 금지     |
 | `model/` | 비즈니스 로직(훅, 스토어, 도메인 유틸)                         | `api/` 호출을 조합하거나 상태를 관리하는 훅·스토어가 필요할 때                             |
 | `ui/`    | 슬라이스 전용 React 컴포넌트                                   | 이 슬라이스의 행위·도메인을 화면에 노출할 때. 외부 슬라이스의 컴포넌트를 import하지 않는다 |
 
@@ -53,6 +53,31 @@
 - `features/file-upload/` — `api/`(mutation 래퍼) + `model/`(useUploadFile 훅) + `ui/`(UploadButton)
 - `entities/user/` — `model/`(useUserStore) + `types.ts` (api·ui 불필요)
 - `widgets/sidebar/` — `ui/`만 (자체 model·api 없이 features를 조합)
+
+### codegen 도입 후 api/ 세그먼트 규칙
+
+`@hey-api/openapi-ts` codegen 함수를 호출하는 슬라이스는 **정책 유무와 무관하게 `api/` 세그먼트를 항상 생성**한다. 단순 wrapper도 작성한다.
+
+- 파일 분리: GET → `api/query.ts`, POST/PATCH/PUT/DELETE → `api/mutation.ts`
+- model은 항상 `../api/...`를 경유한다. **codegen 함수(`@shared/api`의 `xxxMutation`, `xxxOptions`)를 model에서 직접 import 금지** (타입 import는 허용)
+- `api/`는 슬라이스 `index.ts`에서 export 안 함 (외부에는 model/ui만 노출)
+- codegen 산출물 직접 경로(`@/shared/api/generated/...`) 사용 금지 — 항상 `@shared/api` 통일
+
+```ts
+// features/login-by-credentials/api/mutation.ts
+import { useMutation } from '@tanstack/react-query';
+import { loginMutation } from '@shared/api';
+
+export function useLoginMutation() {
+  return useMutation({ ...loginMutation() });
+}
+```
+
+```ts
+// features/login-by-credentials/model/useLogin.ts
+import { useLoginMutation } from '../api/mutation';     // ✅ api 경유
+// ❌ import { loginMutation } from '@shared/api';      // model에서 codegen 함수 직접 import 금지
+```
 
 ### 주요 명령어
 
@@ -276,17 +301,103 @@ export { useUserStore };
 | `useUserStore()` 전체 구독          | 불필요한 리렌더링       | selector 사용               |
 | 스토어 배열 직접 `push`             | 불변성 위반             | `[...prev, item]`           |
 
-## API 레이어 컨벤션
+## API 레이어 / TanStack Query × Zustand 컨벤션
 
-- axios 인스턴스: `shared/api/axiosInstance.ts` — 이 외 경로에 인스턴스 생성 금지
-- `axiosInstance`는 401 응답 시 자동 토큰 갱신(refresh queue) 처리 후 검증 실패 시 `/login`으로 리다이렉트한다
-- **인스턴스 선택 기준**
-  - `axiosInstance`: 로그인 이후 사용자 자격증명(accessToken)이 필요한 모든 요청
-  - 순수 `axios`: 인증이 필요 없는 공개 엔드포인트 (예: `POST /api/auth/login`, `POST /api/auth/refresh`)
-  - 로그인 API에 `axiosInstance`를 사용하면 401 → `/login` 리다이렉트 무한 루프가 발생하므로 반드시 순수 `axios` 사용
-- API 함수는 레이어별 `api/` 서브디렉토리에 작성 (예: `features/login-by-2fa/api/twoFactorApi.ts`)
-- 반환 타입 명시 필수 — `any` 사용 금지
-- 에러 핸들링은 호출부(훅 또는 컴포넌트)에서 처리
+> 본 컨벤션은 ts-rest 제거 마이그레이션(2026-05-16) 완료 시점에 박제됨. 원본은 `docs/superpowers/finish-specs/2026-05-16-ts-rest-removal-swagger-migration-design.md` §6.B.
+
+### Transport / codegen
+
+- axios 인스턴스: `shared/api/axiosInstance.ts` — **단일 인스턴스**. 이 외 경로에 인스턴스 생성 금지
+- `axiosInstance`는 request interceptor 내부에서 `isPublicPath(url)` 기반으로 Authorization 헤더를 분기 부착한다 (`@Public()` 라우트는 헤더 미부착)
+- 401 응답 시 refresh queue로 토큰 갱신 후 원 요청 재시도, 검증 실패 시 `/login` 리다이렉트
+- codegen 산출물은 `shared/api/generated/` (git tracked)
+- import는 `@shared/api` 단일 진입점 — `@/shared/api/generated/...` 직접 경로 금지
+
+### codegen 워크플로우
+
+1. API DTO/엔드포인트 변경
+2. API dev 서버 reload (켜져 있어야 함)
+3. `npm --prefix services/web run openapi:codegen`
+4. generated diff 검토 + 사용처 갱신
+5. 동시에 commit (generated + 사용처 분리 금지)
+
+### 상태 분류
+
+| 데이터 | 저장소 |
+|---|---|
+| 서버 응답 객체(user, files 등) | TanStack Query 캐시 |
+| 클라이언트 세션(accessToken) | Zustand |
+| UI 토글/모달 | useState / features Zustand |
+| 폼 임시값 | React Hook Form |
+
+**원칙**: 서버 데이터를 Zustand에 복제 금지. user 표시는 `useMeQuery()`로 가져온 캐시 사용.
+
+### `api/` 세그먼트 — 항상 생성
+
+- codegen 함수를 호출하는 슬라이스는 **정책 유무 무관 `api/` 필수**
+- 파일 분리: GET → `query.ts`, mutation → `mutation.ts`
+- 단순 wrapper도 작성:
+  ```ts
+  export function useLoginMutation() {
+    return useMutation({ ...loginMutation() });
+  }
+  ```
+- model은 항상 `../api/...`만 import (codegen 함수 직접 import 금지, 타입 import는 허용)
+- `api/`는 슬라이스 `index.ts`에서 export 안 함 (외부에는 model/ui만)
+
+### 호출 패턴
+
+```ts
+// mutation
+const { mutate, isPending } = useXxxMutation();
+mutate({ body, path, query }, { onSuccess: ({ data }) => { ... } });
+
+// query
+const { data, isLoading } = useXxxQuery();
+```
+
+응답 구조: `{ data, error, response }` (hey-api 형식).
+
+### Zustand 액션 호출
+
+```ts
+// model/useXxx.ts의 onSuccess 콜백에서만
+useUserStore.getState().setAuth(token, user);   // ✅ getState() — 콜백에서는 구독 불필요
+```
+
+콜백 안에서 hook 호출 금지 (rules of hooks 위반).
+
+### Query Invalidation
+
+- 도메인 공통 invalidation은 `api/mutation.ts` wrapper에서 처리:
+  ```ts
+  const queryClient = useQueryClient();
+  return useMutation({
+    ...uploadCompleteMutation(),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: [{ _id: 'getFiles' }] }),
+  });
+  ```
+- queryKey는 hey-api 자동 생성 키만 사용 (수동 작성 금지)
+
+### react-hook-form
+
+- DTO 타입을 `useForm<XxxDto>()` 제네릭 사용
+- 검증은 `register()` 내장 옵션(`required`/`minLength`/`pattern`)
+- `zodResolver` 금지
+
+### 금지 패턴
+
+| 금지 | 대체 |
+|---|---|
+| model에서 `@shared/api`의 codegen 함수 직접 import | `api/` wrapper 경유 |
+| 서버 데이터 Zustand 복제 | TanStack Query 캐시 |
+| `useUserStore()` 전체 구독 | selector |
+| `useUserStore.setState()` 직접 호출 | `getState().action()` |
+| `useForm` 제네릭 생략 | `useForm<XxxDto>()` |
+| queryKey 수동 작성 | hey-api 자동 키 |
+| codegen 산출물 직접 경로 import | `@shared/api` 통일 |
+| `axiosBasic`/`axiosAuth` 같은 인스턴스 분리 | 단일 `axiosInstance` + 인터셉터 분기 |
+| `zodResolver` 등 zod 기반 폼 검증 | react-hook-form `register()` 내장 옵션 |
 
 ## Android / Capacitor 컨벤션
 

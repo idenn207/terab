@@ -85,7 +85,7 @@ describe('FolderService', () => {
       };
       mockFolderRepository.insert.mockResolvedValue(folder);
 
-      const result = await service.create('u1', 'test', null);
+      const result = await service.create('u1', { name: 'test', parentId: null });
 
       expect(mockFolderRepository.insert).toHaveBeenCalledWith({ userId: 'u1', name: 'test', parentId: null });
       expect(result.name).toBe('test');
@@ -96,7 +96,7 @@ describe('FolderService', () => {
     it('폴더가 없으면 FOLDER_NOT_FOUND를 던진다', async () => {
       mockFolderRepository.findByIdAndUser.mockResolvedValue(null);
 
-      await expect(service.remove('f1', 'u1')).rejects.toThrow(ApiException);
+      await expect(service.remove('u1', 'f1')).rejects.toThrow(ApiException);
     });
   });
 

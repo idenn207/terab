@@ -13,7 +13,7 @@ export function useUploadFile() {
 
   return useMutation({
     mutationFn: async ({ file, folderId }: UploadFileInput) => {
-      const initRes = await initMutation.mutateAsync({
+      const init = await initMutation.mutateAsync({
         body: {
           folderId,
           name: file.name,
@@ -21,21 +21,13 @@ export function useUploadFile() {
           mimeType: file.type || 'application/octet-stream',
         },
       });
-      if (initRes.status !== 201) {
-        throw new Error(`upload-init failed: ${initRes.status}`);
-      }
-      const init = initRes.body;
 
       const partResults = await uploadParts(file, init.parts, init.uploadHeaders);
 
-      const completeRes = await completeMutation.mutateAsync({
-        params: { sessionId: init.sessionId },
+      return completeMutation.mutateAsync({
+        path: { sessionId: init.sessionId },
         body: { parts: partResults },
       });
-      if (completeRes.status !== 201) {
-        throw new Error(`upload-complete failed: ${completeRes.status}`);
-      }
-      return completeRes.body;
     },
   });
 }

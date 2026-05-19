@@ -4,7 +4,7 @@ import { DatabaseService, ServiceCore, TransactionContext } from '@terab/db';
 import { LogReplay } from '@terab/logger';
 import { TokenService } from '@terab/security';
 import { randomUUID } from 'node:crypto';
-import { TrustedDeviceResponseDto } from './dto/trusted-device-response.dto';
+import { TrustedDeviceResponseDto } from './dto';
 import { TrustedDeviceRepository } from './trusted-device.repository';
 
 @Injectable()
@@ -38,9 +38,13 @@ export class TrustedDeviceService extends ServiceCore {
     return true;
   }
 
-  async findAll(userId: string): Promise<TrustedDeviceResponseDto[]> {
+  async list(userId: string): Promise<TrustedDeviceResponseDto[]> {
     const rows = await this.trustedDeviceRepository.findByUserId(userId);
-    return rows.map((r) => ({ ...r, userAgent: r.userAgent ?? undefined }));
+    return rows.map((r) => ({
+      id: r.id,
+      userAgent: r.userAgent ?? undefined,
+      createdAt: r.createdAt,
+    }));
   }
 
   async revoke(id: string, userId: string): Promise<void> {

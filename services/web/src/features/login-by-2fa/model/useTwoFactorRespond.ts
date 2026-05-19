@@ -15,19 +15,19 @@ export function useTwoFactorRespond(challengeId: string) {
       setRespondStatus('expired');
       return;
     }
-    if (!data || data.status !== 200) return;
-    if (data.body.status === 'PENDING') {
+    if (!data) return;
+    if (data.status === 'PENDING') {
       setRespondStatus('selecting');
     } else {
       setRespondStatus('expired');
     }
   }, [data, isError]);
 
-  const options = data?.status === 200 && data.body.status === 'PENDING' ? data.body.options : [];
+  const options = data?.status === 'PENDING' ? data.options : [];
 
   const respond = (selectedNumber: string) => {
     respondMutation.mutate(
-      { params: { id: challengeId }, body: { selectedNumber } },
+      { path: { id: challengeId }, body: { selectedNumber } },
       {
         onSuccess: () => setRespondStatus('done'),
       },

@@ -1,9 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import { ApiException } from '@terab/common';
-import { contract } from '@terab/contract';
 import { DatabaseService, ServiceCore, TransactionContext } from '@terab/db';
 import { LogReplay } from '@terab/logger';
-import { ServerInferResponseBody } from '@ts-rest/core';
+import { DeviceResponseDto } from './dto';
 import { DeviceRepository } from './device.repository';
 
 @Injectable()
@@ -21,9 +20,13 @@ export class DeviceService extends ServiceCore {
     await this.deviceRepository.upsert(userId, pushToken, userAgent);
   }
 
-  async findAll(userId: string): Promise<ServerInferResponseBody<typeof contract.device.list>> {
+  async list(userId: string): Promise<DeviceResponseDto[]> {
     const rows = await this.deviceRepository.findByUserId(userId);
-    return rows.map((r) => ({ ...r, userAgent: r.userAgent ?? undefined }));
+    return rows.map((r) => ({
+      id: r.id,
+      userAgent: r.userAgent ?? undefined,
+      createdAt: r.createdAt,
+    }));
   }
 
   async remove(id: string, userId: string): Promise<void> {

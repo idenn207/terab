@@ -1,127 +1,127 @@
-import { ExecutionContext, HttpStatus, INestApplication } from '@nestjs/common';
-import { APP_GUARD } from '@nestjs/core';
 import { Test } from '@nestjs/testing';
 import { ApiException } from '@terab/common';
 import { FILE_ID, FOLDER_ID, mockAuthUser, mockTrashItem } from '@terab/test';
-import { TsRestModule } from '@ts-rest/nest';
-import request from 'supertest';
 import { TrashController } from './trash.controller';
 import { TrashService } from './trash.service';
 
-const mockTrashService = {
-  list: jest.fn(),
-  restore: jest.fn(),
-  permanentDelete: jest.fn(),
-};
-
 describe('TrashController', () => {
-  let app: INestApplication;
+  let controller: TrashController;
+  let service: jest.Mocked<TrashService>;
 
-  beforeAll(async () => {
+  beforeEach(async () => {
     const module = await Test.createTestingModule({
-      imports: [TsRestModule.register({ isGlobal: true })],
       controllers: [TrashController],
       providers: [
-        { provide: TrashService, useValue: mockTrashService },
         {
-          provide: APP_GUARD,
+          provide: TrashService,
           useValue: {
-            canActivate: (ctx: ExecutionContext) => {
-              ctx.switchToHttp().getRequest().user = mockAuthUser;
-              return true;
-            },
+            list: jest.fn(),
+            restore: jest.fn(),
+            permanentDelete: jest.fn(),
           },
         },
       ],
     }).compile();
 
-    app = module.createNestApplication();
-    await app.init();
+    controller = module.get(TrashController);
+    service = module.get(TrashService) as jest.Mocked<TrashService>;
+    jest.clearAllMocks();
   });
-
-  afterAll(() => app.close());
-  beforeEach(() => jest.clearAllMocks());
 
   it('인스턴스가 생성된다', () => {
-    expect(app).toBeDefined();
+    expect(controller).toBeDefined();
   });
 
-  describe('GET /trash', () => {
-    it('소프트 삭제된 파일·폴더 목록을 반환한다', async () => {
-      mockTrashService.list.mockResolvedValue({ items: [mockTrashItem] });
+  describe('list', () => {
+    it('빈 목록을 반환한다', async () => {
+      service.list.mockResolvedValue({ items: [] });
 
-      const res = await request(app.getHttpServer()).get('/trash').expect(HttpStatus.OK);
+      const result = await controller.list(mockAuthUser);
 
-      expect(mockTrashService.list).toHaveBeenCalledWith(mockAuthUser.userId);
-      expect(res.body.items).toHaveLength(1);
-      expect(res.body.items[0].type).toBe('file');
-    });
-  });
-
-  describe('POST /trash/:id/restore', () => {
-    it('휴지통의 파일을 복원한다', async () => {
-      mockTrashService.restore.mockResolvedValue(undefined);
-
-      await request(app.getHttpServer())
-        .post(`/trash/${FILE_ID}/restore`)
-        .send({ type: 'file' })
-        .expect(HttpStatus.NO_CONTENT);
-
-      expect(mockTrashService.restore).toHaveBeenCalledWith(FILE_ID, 'file', mockAuthUser.userId);
+      expect(service.list).toHaveBeenCalledWith(mockAuthUser.userId);
+      expect(result.items).toHaveLength(0);
     });
 
-    it('휴지통의 폴더를 복원한다 (하위 항목 cascade 포함)', async () => {
-      mockTrashService.restore.mockResolvedValue(undefined);
+    it('휴지통 항목을 반환한다', async () => {
+      service.list.mockResolvedValue({ items: [mockTrashItem] });
 
-      await request(app.getHttpServer())
-        .post(`/trash/${FOLDER_ID}/restore`)
-        .send({ type: 'folder' })
-        .expect(HttpStatus.NO_CONTENT);
+      const result = await controller.list(mockAuthUser);
 
-      expect(mockTrashService.restore).toHaveBeenCalledWith(FOLDER_ID, 'folder', mockAuthUser.userId);
-    });
-
-    it('휴지통에 없는 파일을 복원하면 404를 반환한다', async () => {
-      // parentId가 존재하지 않거나 이미 삭제되지 않은 항목 복원 시도
-      mockTrashService.restore.mockRejectedValue(new ApiException('FILE_NOT_FOUND'));
-
-      await request(app.getHttpServer())
-        .post(`/trash/${FILE_ID}/restore`)
-        .send({ type: 'file' })
-        .expect(HttpStatus.NOT_FOUND);
-    });
-
-    it('휴지통에 없는 폴더를 복원하면 404를 반환한다', async () => {
-      mockTrashService.restore.mockRejectedValue(new ApiException('FOLDER_NOT_FOUND'));
-
-      await request(app.getHttpServer())
-        .post(`/trash/${FOLDER_ID}/restore`)
-        .send({ type: 'folder' })
-        .expect(HttpStatus.NOT_FOUND);
+      expect(service.list).toHaveBeenCalledWith(mockAuthUser.userId);
+      expect(result.items).toHaveLength(1);
+      expect(result.items[0]).toEqual(mockTrashItem);
     });
   });
 
-  describe('DELETE /trash/:id (영구 삭제)', () => {
-    it('파일을 영구 삭제한다', async () => {
-      mockTrashService.permanentDelete.mockResolvedValue(undefined);
+  describe('restore', () => {
+    it('file 타입 - FILE_NOT_FOUND 전파', async () => {
+      service.restore.mockRejectedValue(new ApiException('FILE_NOT_FOUND'));
 
-      await request(app.getHttpServer())
-        .delete(`/trash/${FILE_ID}`)
-        .send({ type: 'file' })
-        .expect(HttpStatus.NO_CONTENT);
-
-      expect(mockTrashService.permanentDelete).toHaveBeenCalledWith(FILE_ID, 'file', mockAuthUser.userId);
+      await expect(controller.restore(mockAuthUser, FILE_ID, { type: 'file' })).rejects.toThrow(ApiException);
+      await expect(controller.restore(mockAuthUser, FILE_ID, { type: 'file' })).rejects.toMatchObject({
+        code: 'FILE_NOT_FOUND',
+      });
     });
 
-    it('폴더를 영구 삭제한다 (하위 파일 MinIO까지 cascade 삭제)', async () => {
-      mockTrashService.permanentDelete.mockResolvedValue(undefined);
+    it('folder 타입 - FOLDER_NOT_FOUND 전파', async () => {
+      service.restore.mockRejectedValue(new ApiException('FOLDER_NOT_FOUND'));
 
-      await request(app.getHttpServer())
-        .delete(`/trash/${FOLDER_ID}`)
-        .send({ type: 'folder' })
-        .expect(HttpStatus.NO_CONTENT);
+      await expect(controller.restore(mockAuthUser, FOLDER_ID, { type: 'folder' })).rejects.toThrow(ApiException);
+      await expect(controller.restore(mockAuthUser, FOLDER_ID, { type: 'folder' })).rejects.toMatchObject({
+        code: 'FOLDER_NOT_FOUND',
+      });
+    });
 
-      expect(mockTrashService.permanentDelete).toHaveBeenCalledWith(FOLDER_ID, 'folder', mockAuthUser.userId);
+    it('file 복원 성공', async () => {
+      service.restore.mockResolvedValue(undefined);
+
+      await controller.restore(mockAuthUser, FILE_ID, { type: 'file' });
+
+      expect(service.restore).toHaveBeenCalledWith(mockAuthUser.userId, FILE_ID, 'file');
+    });
+
+    it('folder 복원 성공', async () => {
+      service.restore.mockResolvedValue(undefined);
+
+      await controller.restore(mockAuthUser, FOLDER_ID, { type: 'folder' });
+
+      expect(service.restore).toHaveBeenCalledWith(mockAuthUser.userId, FOLDER_ID, 'folder');
+    });
+  });
+
+  describe('permanentDelete', () => {
+    it('file 타입 - FILE_NOT_FOUND 전파', async () => {
+      service.permanentDelete.mockRejectedValue(new ApiException('FILE_NOT_FOUND'));
+
+      await expect(controller.permanentDelete(mockAuthUser, FILE_ID, { type: 'file' })).rejects.toThrow(ApiException);
+      await expect(controller.permanentDelete(mockAuthUser, FILE_ID, { type: 'file' })).rejects.toMatchObject({
+        code: 'FILE_NOT_FOUND',
+      });
+    });
+
+    it('folder 타입 - FOLDER_NOT_FOUND 전파', async () => {
+      service.permanentDelete.mockRejectedValue(new ApiException('FOLDER_NOT_FOUND'));
+
+      await expect(controller.permanentDelete(mockAuthUser, FOLDER_ID, { type: 'folder' })).rejects.toThrow(ApiException);
+      await expect(controller.permanentDelete(mockAuthUser, FOLDER_ID, { type: 'folder' })).rejects.toMatchObject({
+        code: 'FOLDER_NOT_FOUND',
+      });
+    });
+
+    it('file 영구 삭제 성공', async () => {
+      service.permanentDelete.mockResolvedValue(undefined);
+
+      await controller.permanentDelete(mockAuthUser, FILE_ID, { type: 'file' });
+
+      expect(service.permanentDelete).toHaveBeenCalledWith(mockAuthUser.userId, FILE_ID, 'file');
+    });
+
+    it('folder 영구 삭제 성공', async () => {
+      service.permanentDelete.mockResolvedValue(undefined);
+
+      await controller.permanentDelete(mockAuthUser, FOLDER_ID, { type: 'folder' });
+
+      expect(service.permanentDelete).toHaveBeenCalledWith(mockAuthUser.userId, FOLDER_ID, 'folder');
     });
   });
 });

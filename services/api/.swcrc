@@ -2,13 +2,17 @@
   "$schema": "https://swc.rs/schema.json",
   "sourceMaps": true,
   "jsc": {
+    "baseUrl": "./",
     "parser": {
       "syntax": "typescript",
       "tsx": false,
       "dynamicImport": true,
       "decorators": true
     },
-    "baseUrl": "./"
+    "transform": {
+      "legacyDecorator": true,
+      "decoratorMetadata": true
+    }
   },
   "minify": false
 }

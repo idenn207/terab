@@ -1,9 +1,9 @@
-import { api } from '@/shared/api';
-import { contract } from '@terab/contract';
+import { authControllerMeOptions } from '@shared/api';
+import { useQuery } from '@tanstack/react-query';
 
 export function useMeQuery() {
-  return api.auth.me.useQuery({
-    queryKey: [contract.auth.me.path],
+  return useQuery({
+    ...authControllerMeOptions(),
     staleTime: 1000 * 60 * 5,
   });
 }

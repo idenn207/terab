@@ -33,6 +33,7 @@ describe('TrashService', () => {
     }).compile();
 
     service = module.get<TrashService>(TrashService);
+    jest.clearAllMocks();
   });
 
   it('인스턴스가 생성된다', () => {
@@ -41,12 +42,12 @@ describe('TrashService', () => {
 
   it('restore file은 파일이 없으면 FILE_NOT_FOUND를 던진다', async () => {
     mockTrashRepository.findDeletedFile.mockResolvedValue(null);
-    await expect(service.restore('id', 'file', 'u1')).rejects.toThrow(ApiException);
+    await expect(service.restore('u1', 'id', 'file')).rejects.toThrow(ApiException);
   });
 
   it('permanentDelete file은 minioKey를 조회 후 MinIO와 DB를 삭제한다', async () => {
     mockTrashRepository.permanentDeleteFile.mockResolvedValue('user-1/key-1');
-    await service.permanentDelete('id', 'file', 'u1');
+    await service.permanentDelete('u1', 'id', 'file');
     expect(mockMinioService.removeObject).toHaveBeenCalledWith('user-1/key-1');
   });
 });

@@ -1,5 +1,6 @@
-import { api } from '@/shared/api';
+import { authControllerRegisterMutation } from '@shared/api';
+import { useMutation } from '@tanstack/react-query';
 
 export function useRegisterMutation() {
-  return api.auth.register.useMutation();
+  return useMutation({ ...authControllerRegisterMutation() });
 }

@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
+    "openapi:codegen": "openapi-ts && node scripts/extract-public-paths.mjs",
     "lint": "eslint .",
     "preview": "vite preview",
     "test": "vitest run",
@@ -30,11 +31,9 @@
     "@capacitor/status-bar": "^8.0.2",
     "@headlessui/react": "^2.2.9",
     "@heroicons/react": "^2.2.0",
+    "@hey-api/client-axios": "0.9.1",
     "@tailwindcss/vite": "^4.2.2",
     "@tanstack/react-query": "^5.100.6",
-    "@terab/contract": "file:../../packages/contracts",
-    "@ts-rest/core": "^3.52.1",
-    "@ts-rest/react-query": "^3.52.1",
     "axios": "^1.15.0",
     "clsx": "^2.1.1",
     "cva": "^0.0.0",
@@ -44,10 +43,10 @@
     "react-hook-form": "^7.72.1",
     "react-router-dom": "^7.13.2",
     "tailwind-merge": "^3.5.0",
-    "zod": "3.22.x",
     "zustand": "^5.0.12"
   },
   "devDependencies": {
+    "@hey-api/openapi-ts": "0.97.1",
     "@eslint/js": "^9.39.4",
     "@testing-library/dom": "^10.4.1",
     "@testing-library/jest-dom": "^6.9.1",

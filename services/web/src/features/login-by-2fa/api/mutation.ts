@@ -1,17 +1,23 @@
-import { api } from '@/shared/api';
+import {
+  authControllerCompleteTwoFaMutation,
+  authControllerLoginWithBackupMutation,
+  twoFaControllerResendMutation,
+  twoFaControllerRespondMutation,
+} from '@shared/api';
+import { useMutation } from '@tanstack/react-query';
 
 export function useLoginWithBackupMutation() {
-  return api.auth.loginWithBackup.useMutation();
+  return useMutation({ ...authControllerLoginWithBackupMutation() });
 }
 
 export function useRespondChallengeMutation() {
-  return api.twofa.respond.useMutation();
+  return useMutation({ ...twoFaControllerRespondMutation() });
 }
 
 export function useResendChallengeMutation() {
-  return api.twofa.resend.useMutation();
+  return useMutation({ ...twoFaControllerResendMutation() });
 }
 
 export function useCompleteTwoFaMutation() {
-  return api.auth.completeTwoFa.useMutation();
+  return useMutation({ ...authControllerCompleteTwoFaMutation() });
 }

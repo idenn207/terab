@@ -1,19 +1,25 @@
 import { Injectable, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { ApiException } from '@terab/common';
-import { contract } from '@terab/contract';
 import { DatabaseService, ServiceCore, TransactionContext } from '@terab/db';
 import { LogReplay } from '@terab/logger';
 import { TokenService } from '@terab/security';
-import { ServerInferRequest, ServerInferResponseBody } from '@ts-rest/core';
 import bcrypt from 'bcryptjs';
 import { randomBytes } from 'node:crypto';
-import { DeviceService } from '../device/device.service.js';
-import { InvitationService } from '../invitation/invitation.service.js';
-import { TrustedDeviceService } from '../trusted-device/trusted-device.service.js';
-import { PushChallengePublisher } from '../twofa/push-challenge.publisher.js';
-import { TwoFaService } from '../twofa/twofa.service.js';
-import { AuthRepository, UserWithPermissions } from './auth.repository.js';
+import { UserDto } from '../common/dto';
+import { DeviceService } from '../device/device.service';
+import { InvitationService } from '../invitation/invitation.service';
+import { TrustedDeviceService } from '../trusted-device/trusted-device.service';
+import { PushChallengePublisher } from '../twofa/push-challenge.publisher';
+import { TwoFaService } from '../twofa/twofa.service';
+import { AuthRepository, UserWithPermissions } from './auth.repository';
+import {
+  BackupLoginBodyDto,
+  LoginBodyDto,
+  LoginResponse,
+  RegisterBodyDto,
+  RegisterResponseDto,
+} from './dto';
 
 interface AuthTokens {
   accessToken: string;
@@ -48,10 +54,8 @@ export class AuthService extends ServiceCore implements OnModuleInit {
 
   @LogReplay()
   async register(
-    data: ServerInferRequest<typeof contract.auth.register>['body'],
-  ): Promise<
-    ServerInferResponseBody<typeof contract.auth.register> & Pick<AuthTokens, 'rawRefreshToken' | 'refreshTokenExpMs'>
-  > {
+    data: RegisterBodyDto,
+  ): Promise<RegisterResponseDto & Pick<AuthTokens, 'rawRefreshToken' | 'refreshTokenExpMs'>> {
     await this.invitationService.validateOrThrow(data.token);
 
     const userRole = await this.authRepository.findRoleByName('USER');
@@ -102,12 +106,12 @@ export class AuthService extends ServiceCore implements OnModuleInit {
 
   @LogReplay({ captureResult: true })
   async login(
-    data: ServerInferRequest<typeof contract.auth.login>['body'],
+    data: LoginBodyDto,
     trustToken: string | undefined,
     _userAgent: string | undefined,
   ): Promise<
     {
-      response: ServerInferResponseBody<typeof contract.auth.login>;
+      response: LoginResponse;
     } & Partial<Pick<AuthTokens, 'rawRefreshToken' | 'refreshTokenExpMs'>>
   > {
     const user = await this.authRepository.findUserWithPermissionsByUsername(data.username);
@@ -177,7 +181,7 @@ export class AuthService extends ServiceCore implements OnModuleInit {
 
   async completeTwoFa(challengeId: string): Promise<
     {
-      response: ServerInferResponseBody<typeof contract.auth.login>;
+      response: LoginResponse;
     } & Pick<AuthTokens, 'rawRefreshToken' | 'refreshTokenExpMs'>
   > {
     const userId = await this.twoFaService.claimApprovedChallenge(challengeId);
@@ -199,9 +203,9 @@ export class AuthService extends ServiceCore implements OnModuleInit {
     };
   }
 
-  async loginWithBackupCode(data: ServerInferRequest<typeof contract.auth.loginWithBackup>['body']): Promise<
+  async loginWithBackupCode(data: BackupLoginBodyDto): Promise<
     {
-      response: ServerInferResponseBody<typeof contract.auth.login>;
+      response: LoginResponse;
     } & Pick<AuthTokens, 'rawRefreshToken' | 'refreshTokenExpMs'>
   > {
     const user = await this.authRepository.findUserWithPermissionsByUsername(data.username);
@@ -230,7 +234,7 @@ export class AuthService extends ServiceCore implements OnModuleInit {
   @LogReplay({ captureResult: true })
   async refresh(rawRefreshToken: string | undefined): Promise<
     {
-      response: ServerInferResponseBody<typeof contract.auth.login>;
+      response: LoginResponse;
     } & Pick<AuthTokens, 'rawRefreshToken' | 'refreshTokenExpMs'>
   > {
     if (!rawRefreshToken) throw new ApiException('REFRESH_TOKEN_INVALID');
@@ -281,7 +285,7 @@ export class AuthService extends ServiceCore implements OnModuleInit {
 
   // ─── Me ──────────────────────────────────────────────────────────────
 
-  async getCurrentUser(userId: string): Promise<ServerInferResponseBody<typeof contract.auth.me>> {
+  async getCurrentUser(userId: string): Promise<UserDto> {
     const user = await this.authRepository.findUserWithPermissionsById(userId);
     if (!user) throw new ApiException('INVALID_CREDENTIALS');
     return {
