@@ -12,6 +12,7 @@ COPY package*.json ./
 RUN npm ci --ignore-scripts
 
 COPY tsconfig*.json nest-cli.json .swcrc ./
+COPY types ./types
 COPY src ./src
 
 RUN npm run build
