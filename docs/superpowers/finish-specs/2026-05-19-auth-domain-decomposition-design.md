@@ -188,36 +188,69 @@ AuthService
 ## 8. 작업 산출물 체크리스트 (Phase별)
 
 Phase 0 — owner seed 이전:
-- [ ] `RbacSeeder` @Injectable 클래스로 리팩토링 (`seedRbac` 함수 제거)
-- [ ] `OwnerSeeder` @Injectable 클래스 신설 (ConfigService + TokenService 주입)
-- [ ] `DatabaseModule.providers`에 두 Seeder 등록
-- [ ] `DatabaseService.seed()`에서 `seeder.seed(this.db)` 순차 호출
-- [ ] `AuthService`에서 `OnModuleInit` / `initOwnerAccount` 제거
-- [ ] 신규 DB 부팅 + 재부팅 + 동시 기동 회귀 통과
+- [x] `RbacSeeder` @Injectable 클래스로 리팩토링 (`seedRbac` 함수 제거)
+- [x] `OwnerSeeder` @Injectable 클래스 신설 (ConfigService + TokenService 주입)
+- [x] `DatabaseModule.providers`에 두 Seeder 등록
+- [x] `DatabaseService.seed()`에서 `seeder.seed(this.db)` 순차 호출
+- [x] `AuthService`에서 `OnModuleInit` / `initOwnerAccount` 제거
+- [x] 신규 DB 부팅 + 재부팅 + 동시 기동 회귀 통과
 
 Phase A — session:
-- [ ] `session/` 모듈 신설
-- [ ] refresh_token 메서드 이동
-- [ ] AuthService refresh 흐름 위임
-- [ ] e2e 통과
+- [x] `session/` 모듈 신설
+- [x] refresh_token 메서드 이동
+- [x] AuthService refresh 흐름 위임
+- [x] e2e 통과
 
 Phase B — backup-code:
-- [ ] `backup-code/` 모듈 신설
-- [ ] backup_code 메서드 이동
-- [ ] (선택) 누락 4 regenerate endpoint 함께 노출
-- [ ] e2e 통과
+- [x] `backup-code/` 모듈 신설
+- [x] backup_code 메서드 이동
+- [x] (선택) 누락 4 regenerate endpoint 함께 노출
+- [x] e2e 통과
 
 Phase C — user + role:
-- [ ] `user/`, `role/` 모듈 신설
-- [ ] users/roles/permissions/user_roles/role_permissions 메서드 이동
-- [ ] `initOwnerAccount`를 `UserService.ensureOwner`로 이동
-- [ ] e2e 통과
+- [x] `user/`, `role/` 모듈 신설
+- [x] users/roles/permissions/user_roles/role_permissions 메서드 이동
+- [x] ~~`initOwnerAccount`를 `UserService.ensureOwner`로 이동~~ — Phase 0에서 이미 OwnerSeeder로 이전됨
+- [x] e2e 통과
 
 Phase D — auth 정리:
-- [ ] `AuthRepository` 제거
-- [ ] `AuthModule` imports 정리
-- [ ] e2e 통과
+- [x] `AuthRepository` 제거
+- [x] `AuthModule` imports 정리
+- [x] e2e 통과
 
 Phase E — path alias (선택):
 - [ ] `@terab/user`, `@terab/role`, `@terab/session`, `@terab/backup-code` alias 추가
 - [ ] import 일괄 갱신
+
+> **Phase E는 본 종결에서 제외** — ts-rest 제거 작업이 path alias 정책에 영향 줄 수 있어 별도 spec에서 일괄 검토.
+
+## 9. Resolution (2026-05-19 종결)
+
+본 spec의 Phase 0~D 산출물 모두 처리 완료. Phase E는 의도적 보류.
+
+**구현 요약**
+- 신규 모듈 5개: `user/`, `role/`, `session/`, `backup-code/` (+ `database/seed/` 내 `RbacSeeder`/`OwnerSeeder`)
+- AuthRepository 완전 제거 — `grep -r "AuthRepository" services/api/src` 0건
+- `UserWithPermissions` 타입은 `auth/types/user-with-permissions.type.ts`로 이전, AuthService private 메서드로 합성 (UserService + RoleService 2 query)
+- AuthService 책임 축소 — 오케스트레이션 facade로 전환, `OnModuleInit`/owner 부트스트랩/DB 직접 접근 모두 제거
+
+**Phase 0 (spec 외 작업)**
+- `AuthService.initOwnerAccount` → `@Injectable OwnerSeeder.seed(db)`로 이전, `DatabaseService.onModuleInit`에서 `RbacSeeder` → `OwnerSeeder` 순차 호출
+- 기존 `seedRbac` 순수 함수도 `RbacSeeder` 클래스로 통일 (DI 패턴 일관성)
+- 순환 의존 회피: Seeder 생성자는 `ConfigService`/`TokenService`만 주입, `db`는 메서드 파라미터로 전달
+
+**부수 효과 (잠재 버그 발견·수정)**
+- Phase A 중 `refresh` 흐름에서 `sessionService.rotate()` 도입 후에도 `issueTokenPair`가 또 토큰을 발급해 한 refresh당 refresh token이 2개 생성되는 잠재 버그 제거 — rotate 결과를 그대로 사용하도록 정정
+
+**테스트 결과**
+- 단위 테스트: 57 suites / 357 tests (이전 334 → +23, 신규 모듈 spec 추가분)
+- e2e: 10/10 통과
+- 타입 체크: 깨끗 (기존 `metadata.ts`/`file.service.spec.ts` 이슈는 본 작업과 무관)
+
+**커밋 이력**
+- f30804b — `docs(superpowers): auth 도메인 분해 spec — Phase 0 owner seed 추가 + seeder 패턴 통일`
+- 40c1bb3 — `refactor(api): auth 도메인 분해 — session/backup-code/user/role 분리`
+
+**잔여·후속 작업**
+- Phase E (path alias) — ts-rest 제거 마이그레이션과 충돌 가능성으로 보류, 별도 spec에서 다룰 것
+- e2e fixture 도메인별 분리(`user.fixtures.ts`, `role.fixtures.ts`) — 현재 `auth.fixtures.ts`로 충분히 동작, 신규 fixture 필요 시점에 처리
