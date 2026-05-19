@@ -184,4 +184,39 @@ push 외에 다음 인증 strategy 부재 — 사용자 결정 필요:
 - [x] 단위 테스트 추가 (Repository 7 + Service register 4 + Service sliding 4 = 15 신규, 전체 324/324 GREEN)
 - [x] e2e 테스트 추가 (`test/trusted-device.e2e-spec.ts`, 5/5 GREEN — trim/sliding/cap 4 시나리오)
 - [x] 기존 테스트 통과
-- [ ] fallback strategy(`auth-2fa-fallback-strategies-design`) 별도 spec 작성 — 본 spec 외
+- [x] fallback strategy(`auth-2fa-fallback-strategies-design`) 별도 spec 작성 (commits `1a8f760`, `c2b5460`)
+
+## 9. Resolution (2026-05-19 종결)
+
+본 spec의 모든 작업 산출물이 처리됐다. 후속 결함(§9.2 fallback strategy)은 별도 spec으로 분리해 트래킹 중이며 본 spec 범위에서 분리된다.
+
+### 9.1 구현 요약
+
+| 영역 | 변경 |
+|---|---|
+| Schema | 변경 없음 (`trusted_devices` 기존 컬럼만 활용 — `createdAt` 기반 cap, `expiresAt` 기반 sliding) |
+| Repository | `countActiveByUserId`, `deleteOldestByUserId`(select→`inArray`로 PG 제약 우회), `refreshExpiresAt` 추가 |
+| Service | `MAX_TRUST_PER_USER = 10`, `TRUST_ABSOLUTE_MAX_MS = 90일` 상수 도입. `register`를 `runInTx`로 감싸고 trim 후 insert. `verify` 성공 직후 `slideExpiresAt`으로 `min(now+30일, createdAt+90일)` 갱신, 단 새 값이 현재 값보다 클 때만 update |
+| Controller | 변경 없음 (`POST /trusted-device` endpoint 기존 유지) |
+| Web | 변경 없음 (`TwoFactorWaiting` + `useTwoFactorPolling.onAuthenticated` 콜백이 이미 wired — server 정책 부재로 dormant였던 client가 자동으로 활성화) |
+
+### 9.2 테스트 결과
+
+- 단위 신규 15: Repository 7 + Service register 4 + Service sliding 4
+- e2e 신규 5: trim 2 + sliding 1 + cap 2 (실제 DB row의 `createdAt`을 위조해 시간 의존 분기 검증)
+- 전체 단위 324/324 GREEN, e2e 5/5 GREEN
+
+### 9.3 커밋 이력
+
+- `fd25f9e` feat(api): 신뢰기기 trust UX 정책 — trim·sliding·hard cap 추가
+- `1a8f760` docs(superpowers): 2FA fallback strategy(TOTP/Passkey) 별도 spec 작성
+- `c2b5460` docs(superpowers): auth-2fa-fallback §3 결정 항목 사용자 확인 반영
+
+### 9.4 분리된 후속 spec
+
+- [`2026-05-19-auth-2fa-fallback-strategies-design.md`](../specs/2026-05-19-auth-2fa-fallback-strategies-design.md) — §9.2 fallback strategy(TOTP/Passkey) 인터페이스·구현 단계 분할. §3 결정 박제 완료, Phase 0 implementation 진입 대기.
+
+### 9.5 잔여 작업 (본 spec 외)
+
+- 신뢰기기 목록 페이지(`TrustedDeviceSection` placeholder → 등록 시각·UA·해제 버튼) — frontend-design 단계
+- 비밀번호 변경 시 모든 trust 폐기 — 비밀번호 변경 endpoint 자체가 미구현, 별도 spec 필요
