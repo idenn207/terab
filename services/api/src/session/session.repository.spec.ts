@@ -1,11 +1,6 @@
 import { Test } from '@nestjs/testing';
 import { DatabaseService, TransactionContext } from '@terab/db';
-import {
-  mockDatabaseService,
-  mockDbLimit,
-  mockTransactionContext,
-  setupMockDbSelectChain,
-} from '@terab/test';
+import { mockDatabaseService, mockDbLimit, mockTransactionContext, setupMockDbSelectChain } from '@terab/test';
 import { SessionRepository } from './session.repository';
 
 describe('SessionRepository', () => {

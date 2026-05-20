@@ -57,9 +57,9 @@ describe('UserRepository', () => {
         values: jest.fn().mockReturnValue({ returning: mockReturning }),
       });
 
-      await expect(
-        repo.insert({ username: 'x', nickname: 'y', password: 'z' }),
-      ).rejects.toMatchObject({ code: 'REGISTRATION_FAILED' });
+      await expect(repo.insert({ username: 'x', nickname: 'y', password: 'z' })).rejects.toMatchObject({
+        code: 'REGISTRATION_FAILED',
+      });
     });
   });
 });

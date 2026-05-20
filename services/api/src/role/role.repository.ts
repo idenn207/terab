@@ -18,18 +18,11 @@ export class RoleRepository extends RepositoryCore {
   }
 
   async findByName(name: string): Promise<{ id: string } | null> {
-    const [row = null] = await this.conn
-      .select({ id: roles.id })
-      .from(roles)
-      .where(eq(roles.name, name))
-      .limit(1);
+    const [row = null] = await this.conn.select({ id: roles.id }).from(roles).where(eq(roles.name, name)).limit(1);
     return row;
   }
 
-  async insertUserRole(
-    userId: UserRoles$Insert['userId'],
-    roleId: UserRoles$Insert['roleId'],
-  ): Promise<void> {
+  async insertUserRole(userId: UserRoles$Insert['userId'], roleId: UserRoles$Insert['roleId']): Promise<void> {
     await this.conn.insert(userRoles).values({ userId, roleId });
   }
 

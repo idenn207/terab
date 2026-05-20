@@ -34,11 +34,11 @@ export class PushTwoFaStrategy
     super(database, txContext);
   }
 
-  async startSetup(userId: string): Promise<never> {
+  async startSetup(_userId: string): Promise<never> {
     throw new ApiException('TWO_FA_SETUP_NOT_SUPPORTED');
   }
 
-  async completeSetup(userId: string, payload: unknown): Promise<void> {
+  async completeSetup(_userId: string, _payload: unknown): Promise<void> {
     throw new ApiException('TWO_FA_SETUP_NOT_SUPPORTED');
   }
 
@@ -64,11 +64,11 @@ export class PushTwoFaStrategy
     return false;
   }
 
-  async list(userId: string): Promise<TwoFaStrategyInstance[]> {
+  async list(_userId: string): Promise<TwoFaStrategyInstance[]> {
     throw new ApiException('TWO_FA_SETUP_NOT_SUPPORTED');
   }
 
-  async revoke(userId: string, id: string): Promise<void> {
+  async revoke(_userId: string, _id: string): Promise<void> {
     throw new ApiException('TWO_FA_SETUP_NOT_SUPPORTED');
   }
 

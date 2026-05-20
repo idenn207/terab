@@ -16,12 +16,14 @@ const mockToken = {
   pepperPassword: jest.fn(),
 };
 
-function buildDb(overrides: {
-  existingUser?: { id: string } | null;
-  ownerRole?: { id: string } | null;
-  insertUserImpl?: () => Promise<Array<{ id: string }>>;
-  insertUserRoleImpl?: () => Promise<unknown>;
-} = {}) {
+function buildDb(
+  overrides: {
+    existingUser?: { id: string } | null;
+    ownerRole?: { id: string } | null;
+    insertUserImpl?: () => Promise<Array<{ id: string }>>;
+    insertUserRoleImpl?: () => Promise<unknown>;
+  } = {},
+) {
   const { existingUser = null, ownerRole = { id: 'role-owner' } } = overrides;
   const insertUserReturning = jest
     .fn()
@@ -88,9 +90,7 @@ describe('OwnerSeeder', () => {
     });
 
     it('동일 username의 owner가 이미 존재하면 insert를 건너뛴다', async () => {
-      mockConfig.get.mockImplementation((key: string) =>
-        key === 'OWNER_PASSWORD' ? 'pwd' : undefined,
-      );
+      mockConfig.get.mockImplementation((key: string) => (key === 'OWNER_PASSWORD' ? 'pwd' : undefined));
       const { db, insertFn } = buildDb({ existingUser: { id: 'existing-owner' } });
 
       await seeder.seed(db as never);
@@ -99,18 +99,14 @@ describe('OwnerSeeder', () => {
     });
 
     it('OWNER role이 DB에 없으면 명확한 Error를 던진다', async () => {
-      mockConfig.get.mockImplementation((key: string) =>
-        key === 'OWNER_PASSWORD' ? 'pwd' : undefined,
-      );
+      mockConfig.get.mockImplementation((key: string) => (key === 'OWNER_PASSWORD' ? 'pwd' : undefined));
       const { db } = buildDb({ ownerRole: null });
 
       await expect(seeder.seed(db as never)).rejects.toThrow(/OWNER role 없음/);
     });
 
     it('users insert가 UNIQUE 충돌(23505)을 던지면 swallow한다 (동시 기동 보호)', async () => {
-      mockConfig.get.mockImplementation((key: string) =>
-        key === 'OWNER_PASSWORD' ? 'pwd' : undefined,
-      );
+      mockConfig.get.mockImplementation((key: string) => (key === 'OWNER_PASSWORD' ? 'pwd' : undefined));
       const { db, insertUserRoleValues } = buildDb({
         insertUserImpl: () => Promise.reject({ code: '23505' }),
       });
@@ -120,9 +116,7 @@ describe('OwnerSeeder', () => {
     });
 
     it('UNIQUE 외의 DB 오류는 그대로 전파한다', async () => {
-      mockConfig.get.mockImplementation((key: string) =>
-        key === 'OWNER_PASSWORD' ? 'pwd' : undefined,
-      );
+      mockConfig.get.mockImplementation((key: string) => (key === 'OWNER_PASSWORD' ? 'pwd' : undefined));
       const { db } = buildDb({
         insertUserImpl: () => Promise.reject({ code: '40001' }),
       });
