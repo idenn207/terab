@@ -12,7 +12,7 @@ import {
 } from './dto';
 import { TwoFaService } from './twofa.service';
 
-@Controller('auth/2fa/challenge')
+@Controller('2fa/challenge')
 @ApiTags('TwoFa')
 export class TwoFaController {
   constructor(private readonly twoFaService: TwoFaService) {}

@@ -70,7 +70,7 @@ const appRoutes: RouteObject[] = [
     ],
   },
   {
-    path: '/auth/2fa/:id',
+    path: '/2fa/:id',
     element: <TwoFAApprovalPage />,
   },
 ];

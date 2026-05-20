@@ -12,7 +12,7 @@ export function Link2TwoFAAuth() {
         <Label>Challenge ID</Label>
         <Input type="text" onChange={(e) => setChallengeId(e.target.value)} />
       </Field>
-      <Button onClick={() => navigation(`/auth/2fa/${challendId}`)}>이동</Button>
+      <Button onClick={() => navigation(`/2fa/${challendId}`)}>이동</Button>
     </>
   );
 }
