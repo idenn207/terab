@@ -75,4 +75,14 @@ export class TotpService extends ServiceCore {
     }
     return ok;
   }
+
+  async list(userId: string) {
+    const row = await this.totpRepository.findByUserId(userId);
+    return row;
+  }
+
+  async revoke(userId: string, id: string): Promise<boolean> {
+    const ok = await this.totpRepository.deleteByIdForUser(id, userId);
+    return !!ok;
+  }
 }
