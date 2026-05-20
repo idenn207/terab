@@ -66,6 +66,14 @@ export const ErrorCode = {
     message: '2FA 챌린지를 찾을 수 없습니다.',
     status: HttpStatus.NOT_FOUND,
   },
+  TWO_FA_STRATEGY_NOT_FOUND: {
+    message: '등록되지 않은 2FA 방식입니다.',
+    status: HttpStatus.NOT_FOUND,
+  },
+  TWO_FA_SETUP_NOT_SUPPORTED: {
+    message: '해당 2FA 방식은 별도 등록 절차가 없습니다.',
+    status: HttpStatus.BAD_REQUEST,
+  },
   DEVICE_NOT_FOUND: {
     message: '등록되지 않은 디바이스입니다.',
     status: HttpStatus.NOT_FOUND,
