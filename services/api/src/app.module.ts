@@ -16,8 +16,6 @@ import { FolderModule } from './folder/folder.module';
 import { HealthModule } from './health/health.module';
 import { InvitationModule } from './invitation/invitation.module';
 import { MinioModule } from './minio/minio.module';
-import { RoleModule } from './role/role.module';
-import { SessionModule } from './session/session.module';
 import { TrashModule } from './trash/trash.module';
 import { TrustedDeviceModule } from './trusted-device/trusted-device.module';
 import { TwoFaModule } from './twofa/twofa.module';
@@ -50,8 +48,6 @@ import { UserModule } from './user/user.module';
     SecurityModule,
     HealthModule,
     UserModule,
-    RoleModule,
-    SessionModule,
     AuthModule,
     DeviceModule,
     TrustedDeviceModule,

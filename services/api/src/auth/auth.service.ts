@@ -3,8 +3,8 @@ import { ApiException } from '@terab/common';
 import { DatabaseService, ServiceCore, TransactionContext, Users$Select } from '@terab/db';
 import { TokenService } from '@terab/security';
 import bcrypt from 'bcryptjs';
-import { RoleService } from '../role/role.service';
-import { SessionService } from '../session/session.service';
+import { RoleService } from './role/role.service';
+import { SessionService } from './session/session.service';
 import { UserWithPermissions } from './types/user-with-permissions.type';
 
 interface AuthTokens {
