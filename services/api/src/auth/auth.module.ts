@@ -1,7 +1,6 @@
 import { BullModule } from '@nestjs/bullmq';
 import { Module } from '@nestjs/common';
 import { PassportModule } from '@nestjs/passport';
-import { BackupCodeModule } from '../backup-code/backup-code.module';
 import { DeviceModule } from '../device/device.module';
 import { InvitationModule } from '../invitation/invitation.module';
 import { RoleModule } from '../role/role.module';
@@ -23,7 +22,6 @@ import { JwtStrategy } from './strategies/jwt.strategy';
     TrustedDeviceModule,
     InvitationModule,
     SessionModule,
-    BackupCodeModule,
     UserModule,
     RoleModule,
   ],

@@ -21,9 +21,7 @@ export class BackupCodeService extends ServiceCore {
 
   async generateForUser(userId: string): Promise<string[]> {
     const rawCodes = this.generateRawCodes();
-    const codeHashes = await Promise.all(
-      rawCodes.map((code) => bcrypt.hash(code, this.BCRYPT_ROUNDS)),
-    );
+    const codeHashes = await Promise.all(rawCodes.map((code) => bcrypt.hash(code, this.BCRYPT_ROUNDS)));
     await this.backupCodeRepository.insertMany(userId, codeHashes);
     return rawCodes;
   }

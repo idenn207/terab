@@ -1,10 +1,6 @@
 import { Test } from '@nestjs/testing';
 import { DatabaseService, TransactionContext } from '@terab/db';
-import {
-  mockDatabaseService,
-  mockTransactionContext,
-  setupMockDbSelectChain,
-} from '@terab/test';
+import { mockDatabaseService, mockTransactionContext, setupMockDbSelectChain } from '@terab/test';
 import { BackupCodeRepository } from './backup-code.repository';
 
 describe('BackupCodeRepository', () => {

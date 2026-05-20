@@ -12,10 +12,10 @@ import {
 import bcrypt from 'bcryptjs';
 import { DeviceService } from '../device/device.service';
 import { InvitationService } from '../invitation/invitation.service';
-import { TrustedDeviceService } from '../trusted-device/trusted-device.service';
-import { BackupCodeService } from '../backup-code/backup-code.service';
 import { RoleService } from '../role/role.service';
 import { SessionService } from '../session/session.service';
+import { TrustedDeviceService } from '../trusted-device/trusted-device.service';
+import { BackupCodeService } from '../twofa/backup-code.service';
 import { PushChallengePublisher } from '../twofa/push-challenge.publisher';
 import { TwoFaService } from '../twofa/twofa.service';
 import { UserService } from '../user/user.service';

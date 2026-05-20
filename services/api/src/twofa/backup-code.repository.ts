@@ -1,11 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import {
-  BackupCodes$Insert,
-  DatabaseService,
-  backupCodes,
-  RepositoryCore,
-  TransactionContext,
-} from '@terab/db';
+import { backupCodes, BackupCodes$Insert, DatabaseService, RepositoryCore, TransactionContext } from '@terab/db';
 import { and, eq, isNull } from 'drizzle-orm';
 
 @Injectable()
@@ -21,13 +15,8 @@ export class BackupCodeRepository extends RepositoryCore {
       .where(and(eq(backupCodes.userId, userId), isNull(backupCodes.usedAt)));
   }
 
-  async insertMany(
-    userId: BackupCodes$Insert['userId'],
-    codeHashes: BackupCodes$Insert['codeHash'][],
-  ): Promise<void> {
-    await this.conn
-      .insert(backupCodes)
-      .values(codeHashes.map((codeHash) => ({ userId, codeHash })));
+  async insertMany(userId: BackupCodes$Insert['userId'], codeHashes: BackupCodes$Insert['codeHash'][]): Promise<void> {
+    await this.conn.insert(backupCodes).values(codeHashes.map((codeHash) => ({ userId, codeHash })));
   }
 
   async markUsed(id: string, usedAt: BackupCodes$Insert['usedAt']): Promise<void> {

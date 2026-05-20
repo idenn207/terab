@@ -10,7 +10,6 @@ import { DatabaseModule } from '@terab/db';
 import { LoggerModule, TraceInterceptor } from '@terab/logger';
 import { SecurityModule } from '@terab/security';
 import { AuthModule } from './auth/auth.module';
-import { BackupCodeModule } from './backup-code/backup-code.module';
 import { DeviceModule } from './device/device.module';
 import { FileModule } from './file/file.module';
 import { FolderModule } from './folder/folder.module';
@@ -20,9 +19,9 @@ import { MinioModule } from './minio/minio.module';
 import { RoleModule } from './role/role.module';
 import { SessionModule } from './session/session.module';
 import { TrashModule } from './trash/trash.module';
-import { UserModule } from './user/user.module';
 import { TrustedDeviceModule } from './trusted-device/trusted-device.module';
 import { TwoFaModule } from './twofa/twofa.module';
+import { UserModule } from './user/user.module';
 
 @Module({
   imports: [
@@ -53,7 +52,6 @@ import { TwoFaModule } from './twofa/twofa.module';
     UserModule,
     RoleModule,
     SessionModule,
-    BackupCodeModule,
     AuthModule,
     DeviceModule,
     TrustedDeviceModule,
