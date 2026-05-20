@@ -15,6 +15,7 @@ import { ApiExtraModels, ApiOperation, ApiResponse, ApiTags, getSchemaPath, refs
 import { Throttle } from '@nestjs/throttler';
 import { ApiError, Cookies, CurrentUser, Public, type AuthUser } from '@terab/common';
 import type { Request, Response } from 'express';
+import { UserDto } from '../common/dto';
 import { AuthService } from './auth.service';
 import {
   AuthenticatedResponseDto,
@@ -22,12 +23,11 @@ import {
   BackupCodeRegenerateResponseDto,
   BackupLoginBodyDto,
   LoginBodyDto,
-  type LoginResponse,
   RegisterBodyDto,
   RegisterResponseDto,
   TwoFaRequiredResponseDto,
+  type LoginResponse,
 } from './dto';
-import { UserDto } from '../common/dto';
 
 const LOGIN_RESPONSE_API_RESPONSE = {
   status: HttpStatus.OK,
@@ -116,7 +116,7 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: '2FA 챌린지 완료 — APPROVED 상태에서 토큰 발급' })
   @ApiResponse(LOGIN_RESPONSE_API_RESPONSE)
-  @ApiError('TWO_FA_CHALLENGE_NOT_FOUND')
+  @ApiError('TWOFA_CHALLENGE_NOT_FOUND')
   async completeTwoFa(
     @Param('id', ParseUUIDPipe) id: string,
     @Res({ passthrough: true }) res: Response,

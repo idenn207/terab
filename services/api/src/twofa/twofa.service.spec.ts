@@ -20,7 +20,7 @@ const mockPushStrategy = {
 const mockRegistry = {
   get: jest.fn((type: string) => {
     if (type === 'PUSH') return mockPushStrategy;
-    throw new ApiException('TWO_FA_STRATEGY_NOT_FOUND');
+    throw new ApiException('TWOFA_STRATEGY_NOT_FOUND');
   }),
 };
 
@@ -54,7 +54,7 @@ describe('TwoFaService', () => {
     jest.clearAllMocks();
     mockRegistry.get.mockImplementation((type: string) => {
       if (type === 'PUSH') return mockPushStrategy;
-      throw new ApiException('TWO_FA_STRATEGY_NOT_FOUND');
+      throw new ApiException('TWOFA_STRATEGY_NOT_FOUND');
     });
   });
 
@@ -77,7 +77,7 @@ describe('TwoFaService', () => {
   });
 
   describe('getStatus', () => {
-    it('챌린지가 없으면 ApiException(TWO_FA_CHALLENGE_NOT_FOUND)을 던진다', async () => {
+    it('챌린지가 없으면 ApiException(TWOFA_CHALLENGE_NOT_FOUND)을 던진다', async () => {
       mockTwoFaRepository.findById.mockResolvedValue(null);
 
       await expect(service.getStatus('id')).rejects.toThrow(ApiException);
@@ -154,7 +154,7 @@ describe('TwoFaService', () => {
   });
 
   describe('claimApprovedChallenge', () => {
-    it('챌린지가 없으면 ApiException(TWO_FA_CHALLENGE_NOT_FOUND)을 던진다', async () => {
+    it('챌린지가 없으면 ApiException(TWOFA_CHALLENGE_NOT_FOUND)을 던진다', async () => {
       mockTwoFaRepository.findById.mockResolvedValue(null);
 
       await expect(service.claimApprovedChallenge('id')).rejects.toThrow(ApiException);

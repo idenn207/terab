@@ -17,6 +17,7 @@
 ## File Structure
 
 **Create — api**
+
 - `services/api/src/security/encryption.service.ts` — `EncryptionService` (AES-256-GCM envelope, `TWOFA_MASTER_KEY` base64)
 - `services/api/src/security/encryption.service.spec.ts`
 - `services/api/src/database/schema/two-fa-totp.schema.ts` — `two_fa_totp` 테이블 정의
@@ -40,6 +41,7 @@
 - `services/api/test/totp.e2e-spec.ts`
 
 **Modify — api**
+
 - `services/api/src/common/exceptions/error-code.enum.ts` — `TWOFA_TOTP_INVALID_CODE` / `TWOFA_TOTP_LOCKED` / `TWOFA_LAST_STRATEGY_CANNOT_REMOVE` 3종 추가
 - `services/api/package.json` — `otplib` dependency 추가
 - `api.env.example` — `TWOFA_MASTER_KEY` 추가 (변경 없음의 placeholder)
@@ -52,12 +54,14 @@
 - `services/api/src/database/schema/index.ts` — `two-fa-totp.schema.ts` re-export 추가
 
 **Create — web**
+
 - `services/web/src/pages/settings/twofa-setup-totp.tsx` — QR/manual key 표시 + 코드 확인 UI
 - `services/web/src/pages/settings/twofa-setup-totp.test.tsx`
 - `services/web/src/pages/login/twofa-choose-method.tsx` — challenge 화면에서 "다른 방법으로" 클릭 시 strategy 선택 모달
 - `services/web/src/pages/login/twofa-totp-input.tsx` — TOTP 코드 입력 화면
 
 **Modify — web**
+
 - `services/web/src/api/openapi/...` — openapi 타입 codegen 자동 갱신 (api 변경 적용 후 `npm run gen:api`)
 - `services/web/src/pages/login/twofa-challenge.tsx`(또는 기존 push polling 컴포넌트) — '다른 방법으로' 버튼 + 진입 처리 추가
 
@@ -66,6 +70,7 @@
 ## Task 1: ErrorCode 3종 추가
 
 **Files:**
+
 - Modify: `services/api/src/common/exceptions/error-code.enum.ts`
 
 - [ ] **Step 1.1: ErrorCode에 3종 추가**
@@ -106,6 +111,7 @@ Phase 1에서 도입되는 TotpTwoFaStrategy의 검증 실패·lockout·마지�
 ## Task 2: api.env에 TWOFA_MASTER_KEY 추가 + otplib 의존성
 
 **Files:**
+
 - Modify: `api.env.example`
 - Modify: `services/api/package.json`
 
@@ -145,6 +151,7 @@ RFC 6238 TOTP 검증과 secret AES-256-GCM envelope encryption을 위해 추가.
 ## Task 3: two_fa_totp 스키마 + migration
 
 **Files:**
+
 - Create: `services/api/src/database/schema/two-fa-totp.schema.ts`
 - Modify: `services/api/src/database/schema/index.ts`
 - Create: `services/api/drizzle/0005_create_two_fa_totp.sql` (자동 생성)
@@ -166,15 +173,21 @@ export const twoFaTotp = table(
       .uuid('user_id')
       .notNull()
       .references(() => users.id, { onDelete: 'cascade' }),
-    secretEncrypted: t.customType<{ data: Buffer; driverData: Buffer }>({
-      dataType: () => 'bytea',
-    })('secret_encrypted').notNull(),
-    iv: t.customType<{ data: Buffer; driverData: Buffer }>({
-      dataType: () => 'bytea',
-    })('iv').notNull(),
-    authTag: t.customType<{ data: Buffer; driverData: Buffer }>({
-      dataType: () => 'bytea',
-    })('auth_tag').notNull(),
+    secretEncrypted: t
+      .customType<{ data: Buffer; driverData: Buffer }>({
+        dataType: () => 'bytea',
+      })('secret_encrypted')
+      .notNull(),
+    iv: t
+      .customType<{ data: Buffer; driverData: Buffer }>({
+        dataType: () => 'bytea',
+      })('iv')
+      .notNull(),
+    authTag: t
+      .customType<{ data: Buffer; driverData: Buffer }>({
+        dataType: () => 'bytea',
+      })('auth_tag')
+      .notNull(),
     algorithm: t.varchar('algorithm', { length: 16 }).notNull().default('SHA1'),
     digits: t.integer('digits').notNull().default(6),
     periodSec: t.integer('period_sec').notNull().default(30),
@@ -252,6 +265,7 @@ AES-256-GCM envelope encryption 컬럼(secret_encrypted/iv/auth_tag) + unique(us
 `SecurityModule`에 `EncryptionService`를 추가한다. `TWOFA_MASTER_KEY`(base64 32바이트)를 마스터 키로 사용, per-row IV(12바이트)를 생성하고 GCM auth tag를 별도 보관.
 
 **Files:**
+
 - Create: `services/api/src/security/encryption.service.ts`
 - Create: `services/api/src/security/encryption.service.spec.ts`
 - Modify: `services/api/src/security/security.module.ts`
@@ -271,11 +285,10 @@ const validKey = Buffer.alloc(32, 'x').toString('base64'); // 32바이트
 describe('EncryptionService', () => {
   const buildService = (key: string) => {
     return Test.createTestingModule({
-      providers: [
-        EncryptionService,
-        { provide: ConfigService, useValue: { getOrThrow: () => key } },
-      ],
-    }).compile().then((m) => m.get(EncryptionService));
+      providers: [EncryptionService, { provide: ConfigService, useValue: { getOrThrow: () => key } }],
+    })
+      .compile()
+      .then((m) => m.get(EncryptionService));
   };
 
   describe('초기화', () => {
@@ -372,10 +385,7 @@ export class EncryptionService {
     }
     const decipher = createDecipheriv(this.ALGORITHM, this.key, payload.iv);
     decipher.setAuthTag(payload.authTag);
-    const plaintext = Buffer.concat([
-      decipher.update(payload.ciphertext),
-      decipher.final(),
-    ]);
+    const plaintext = Buffer.concat([decipher.update(payload.ciphertext), decipher.final()]);
     return plaintext.toString('utf8');
   }
 }
@@ -430,6 +440,7 @@ TWOFA_MASTER_KEY(base64 32바이트)를 사용한 envelope encryption. per-row I
 ## Task 5: TotpRepository
 
 **Files:**
+
 - Create: `services/api/src/twofa/totp.repository.ts`
 - Create: `services/api/src/twofa/totp.repository.spec.ts`
 
@@ -472,12 +483,16 @@ describe('TotpRepository', () => {
 
     it('userId에 등록된 TOTP가 있으면 row 반환', async () => {
       const row = {
-        id: 'totp-1', userId: 'user-1',
+        id: 'totp-1',
+        userId: 'user-1',
         secretEncrypted: Buffer.from([1, 2]),
         iv: Buffer.from([3]),
         authTag: Buffer.from([4]),
-        algorithm: 'SHA1', digits: 6, periodSec: 30,
-        createdAt: new Date(), lastUsedAt: null,
+        algorithm: 'SHA1',
+        digits: 6,
+        periodSec: 30,
+        createdAt: new Date(),
+        lastUsedAt: null,
       };
       mockDbLimit.mockResolvedValue([row]);
       const result = await repo.findByUserId('user-1');
@@ -502,14 +517,7 @@ Expected: FAIL.
 
 ```ts
 import { Injectable } from '@nestjs/common';
-import {
-  DatabaseService,
-  RepositoryCore,
-  TransactionContext,
-  twoFaTotp,
-  TwoFaTotp$Insert,
-  TwoFaTotp$Select,
-} from '@terab/db';
+import { DatabaseService, RepositoryCore, TransactionContext, twoFaTotp, TwoFaTotp$Insert, TwoFaTotp$Select } from '@terab/db';
 import { eq } from 'drizzle-orm';
 
 @Injectable()
@@ -519,20 +527,12 @@ export class TotpRepository extends RepositoryCore {
   }
 
   async findByUserId(userId: string): Promise<TwoFaTotp$Select | null> {
-    const [row = null] = await this.conn
-      .select()
-      .from(twoFaTotp)
-      .where(eq(twoFaTotp.userId, userId))
-      .limit(1);
+    const [row = null] = await this.conn.select().from(twoFaTotp).where(eq(twoFaTotp.userId, userId)).limit(1);
     return row;
   }
 
   async findById(id: string): Promise<TwoFaTotp$Select | null> {
-    const [row = null] = await this.conn
-      .select()
-      .from(twoFaTotp)
-      .where(eq(twoFaTotp.id, id))
-      .limit(1);
+    const [row = null] = await this.conn.select().from(twoFaTotp).where(eq(twoFaTotp.id, id)).limit(1);
     return row;
   }
 
@@ -542,10 +542,7 @@ export class TotpRepository extends RepositoryCore {
   }
 
   async deleteByIdForUser(id: string, userId: string): Promise<boolean> {
-    const rows = await this.conn
-      .delete(twoFaTotp)
-      .where(eq(twoFaTotp.id, id))
-      .returning({ userId: twoFaTotp.userId });
+    const rows = await this.conn.delete(twoFaTotp).where(eq(twoFaTotp.id, id)).returning({ userId: twoFaTotp.userId });
     return rows.length === 1 && rows[0].userId === userId;
   }
 
@@ -580,6 +577,7 @@ findByUserId/findById/insert/deleteByIdForUser/updateLastUsedAt 제공."
 secret 생성·인코딩·검증을 담당. `otplib`의 `authenticator`(SHA1, 6digit, 30s — 기본값)를 사용.
 
 **Files:**
+
 - Create: `services/api/src/twofa/totp.service.ts`
 - Create: `services/api/src/twofa/totp.service.spec.ts`
 
@@ -841,6 +839,7 @@ RFC 6238 SHA1/6digit/30s default, ±1 step window 허용. secret AES-256-GCM 저
 5회/5분 사용자 단위 lockout. `@nestjs/cache-manager`(이미 글로벌 등록)의 `Cache` 인스턴스를 사용.
 
 **Files:**
+
 - Create: `services/api/src/twofa/totp-lockout.service.ts`
 - Create: `services/api/src/twofa/totp-lockout.service.spec.ts`
 
@@ -876,10 +875,7 @@ describe('TotpLockoutService', () => {
 
   beforeEach(async () => {
     const module = await Test.createTestingModule({
-      providers: [
-        TotpLockoutService,
-        { provide: CACHE_MANAGER, useValue: mockCache },
-      ],
+      providers: [TotpLockoutService, { provide: CACHE_MANAGER, useValue: mockCache }],
     }).compile();
     service = module.get(TotpLockoutService);
     store.clear();
@@ -991,6 +987,7 @@ CacheManager(이미 글로벌 keyv/redis) 기반. 신규 인프라 도입 없음
 Phase 0의 `TwoFaStrategy` 인터페이스를 구현. setup ceremony는 TOTP가 의미를 가지는 첫 strategy.
 
 **Files:**
+
 - Create: `services/api/src/twofa/strategies/totp.strategy.ts`
 - Create: `services/api/src/twofa/strategies/totp.strategy.spec.ts`
 
@@ -1139,11 +1136,7 @@ import { ApiException } from '@terab/common';
 import { TotpLockoutService } from '../totp-lockout.service';
 import { TotpRepository } from '../totp.repository';
 import { TotpService } from '../totp.service';
-import {
-  TwoFaStrategy,
-  TwoFaStrategyInstance,
-  TwoFaStrategyType,
-} from './twofa-strategy.interface';
+import { TwoFaStrategy, TwoFaStrategyInstance, TwoFaStrategyType } from './twofa-strategy.interface';
 
 interface TotpSetupPayload {
   secret: string;
@@ -1155,9 +1148,7 @@ interface TotpResponsePayload {
 }
 
 @Injectable()
-export class TotpTwoFaStrategy
-  implements TwoFaStrategy<unknown, never, TotpResponsePayload>
-{
+export class TotpTwoFaStrategy implements TwoFaStrategy<unknown, never, TotpResponsePayload> {
   readonly type: TwoFaStrategyType = 'TOTP';
 
   constructor(
@@ -1182,11 +1173,7 @@ export class TotpTwoFaStrategy
     throw new ApiException('TWOFA_SETUP_NOT_SUPPORTED');
   }
 
-  async verifyResponse(
-    userId: string,
-    _challengeId: string,
-    payload: TotpResponsePayload,
-  ): Promise<boolean> {
+  async verifyResponse(userId: string, _challengeId: string, payload: TotpResponsePayload): Promise<boolean> {
     if (await this.lockout.isLocked(userId)) {
       throw new ApiException('TWOFA_TOTP_LOCKED');
     }
@@ -1237,6 +1224,7 @@ TotpService(검증)·TotpLockoutService(5회 잠금)·TotpRepository(list/revoke
 설정 화면에서 사용할 setup start/complete + list/revoke endpoint.
 
 **Files:**
+
 - Create: `services/api/src/twofa/dto/totp-setup-start-response.dto.ts`
 - Create: `services/api/src/twofa/dto/totp-setup-complete-body.dto.ts`
 - Create: `services/api/src/twofa/dto/totp-list-response.dto.ts`
@@ -1323,13 +1311,7 @@ import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, ParseUUIDPi
 import { ApiExtraModels, ApiOperation, ApiResponse, ApiTags, getSchemaPath, refs } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
 import { ApiError, CurrentUser, type AuthUser } from '@terab/common';
-import {
-  TotpListResponseDto,
-  TotpSetupCompleteBodyDto,
-  TotpSetupEnrolledDto,
-  TotpSetupPendingDto,
-  type TotpSetupStartResponse,
-} from './dto';
+import { TotpListResponseDto, TotpSetupCompleteBodyDto, TotpSetupEnrolledDto, TotpSetupPendingDto, type TotpSetupStartResponse } from './dto';
 import { TotpTwoFaStrategy } from './strategies/totp.strategy';
 import { TwoFaService } from './twofa.service';
 
@@ -1369,10 +1351,7 @@ export class TotpController {
   @ApiOperation({ summary: 'TOTP 등록 완료 — 1회 검증 후 영구 저장' })
   @ApiResponse({ status: HttpStatus.NO_CONTENT })
   @ApiError('TWOFA_TOTP_INVALID_CODE', 'TWOFA_SETUP_NOT_SUPPORTED')
-  async completeSetup(
-    @CurrentUser() user: AuthUser,
-    @Body() body: TotpSetupCompleteBodyDto,
-  ): Promise<void> {
+  async completeSetup(@CurrentUser() user: AuthUser, @Body() body: TotpSetupCompleteBodyDto): Promise<void> {
     await this.totpStrategy.completeSetup(user.userId, body);
   }
 
@@ -1483,6 +1462,7 @@ DELETE /auth/2fa/totp/:id"
 기존 `auth.controller.ts`의 `POST /auth/2fa/challenge/:id/complete`를 `challenge.controller.ts`로 이관하면서 body 추가. `:id/status`, `:id/respond`, `:id/resend` 3개 endpoint(기존 `twofa.controller.ts`)도 함께 이관해 challenge 도메인을 한 곳에 모은다.
 
 **Files:**
+
 - Create: `services/api/src/twofa/challenge.controller.ts`
 - Create: `services/api/src/twofa/challenge.controller.spec.ts`
 - Create: `services/api/src/twofa/dto/complete-challenge-body.dto.ts`
@@ -1612,10 +1592,7 @@ import { Body, Controller, Get, HttpCode, HttpStatus, Param, ParseUUIDPipe, Post
 import { ApiExtraModels, ApiOperation, ApiResponse, ApiTags, getSchemaPath, refs } from '@nestjs/swagger';
 import { ApiError, type AuthUser, CurrentUser, Public } from '@terab/common';
 import { TokenService } from '@terab/security';
-import {
-  AuthenticatedResponseDto,
-  type LoginResponse,
-} from '../auth/dto';
+import { AuthenticatedResponseDto, type LoginResponse } from '../auth/dto';
 import { AuthService } from '../auth/auth.service';
 import {
   ChallengeStatusApprovedDto,
@@ -1644,12 +1621,7 @@ export class ChallengeController {
   @ApiResponse({
     status: HttpStatus.OK,
     schema: {
-      oneOf: refs(
-        ChallengeStatusPendingDto,
-        ChallengeStatusApprovedDto,
-        ChallengeStatusDeniedDto,
-        ChallengeStatusExpiredDto,
-      ),
+      oneOf: refs(ChallengeStatusPendingDto, ChallengeStatusApprovedDto, ChallengeStatusDeniedDto, ChallengeStatusExpiredDto),
       discriminator: {
         propertyName: 'status',
         mapping: {
@@ -1671,11 +1643,7 @@ export class ChallengeController {
   @ApiOperation({ summary: '2FA 챌린지 응답 (PUSH 전용)' })
   @ApiResponse({ status: HttpStatus.NO_CONTENT })
   @ApiError('TWO_FA_CHALLENGE_NOT_FOUND', 'FORBIDDEN')
-  async respond(
-    @CurrentUser() user: AuthUser,
-    @Param('id', ParseUUIDPipe) id: string,
-    @Body() body: RespondChallengeBodyDto,
-  ): Promise<void> {
+  async respond(@CurrentUser() user: AuthUser, @Param('id', ParseUUIDPipe) id: string, @Body() body: RespondChallengeBodyDto): Promise<void> {
     await this.twoFaService.respond(id, user.userId, body.selectedNumber);
   }
 
@@ -1698,10 +1666,7 @@ export class ChallengeController {
     type: AuthenticatedResponseDto,
   })
   @ApiError('TWO_FA_CHALLENGE_NOT_FOUND', 'TWOFA_TOTP_INVALID_CODE', 'TWOFA_TOTP_LOCKED')
-  async complete(
-    @Param('id', ParseUUIDPipe) id: string,
-    @Body() body: CompleteChallengeBodyDto,
-  ): Promise<LoginResponse> {
+  async complete(@Param('id', ParseUUIDPipe) id: string, @Body() body: CompleteChallengeBodyDto): Promise<LoginResponse> {
     const userId = await this.twoFaService.completeChallenge(id, body);
     return this.authService.issueAuthenticatedResponse(userId);
   }
@@ -1824,8 +1789,12 @@ describe('ChallengeController', () => {
 describe('completeChallenge', () => {
   it('type=PUSH면 claimApprovedChallenge에 위임', async () => {
     mockTwoFaRepository.findById.mockResolvedValue({
-      id: 'c', userId: 'u', status: 'APPROVED', expiresAt: new Date(Date.now() + 60_000),
-      options: '47,82,13', correctNum: '47',
+      id: 'c',
+      userId: 'u',
+      status: 'APPROVED',
+      expiresAt: new Date(Date.now() + 60_000),
+      options: '47,82,13',
+      correctNum: '47',
     });
     const userId = await service.completeChallenge('c', { type: 'PUSH' });
     expect(userId).toBe('u');
@@ -1834,8 +1803,12 @@ describe('completeChallenge', () => {
 
   it('type=TOTP면 challenge가 PENDING이어야 하고, strategy.verifyResponse 호출 후 EXPIRED 처리', async () => {
     mockTwoFaRepository.findById.mockResolvedValue({
-      id: 'c', userId: 'u', status: 'PENDING', expiresAt: new Date(Date.now() + 60_000),
-      options: '47,82,13', correctNum: '47',
+      id: 'c',
+      userId: 'u',
+      status: 'PENDING',
+      expiresAt: new Date(Date.now() + 60_000),
+      options: '47,82,13',
+      correctNum: '47',
     });
     const totpStrategy = { type: 'TOTP', verifyResponse: jest.fn().mockResolvedValue(true) };
     mockRegistry.get.mockImplementation((t: string) => (t === 'TOTP' ? totpStrategy : mockPushStrategy));
@@ -1849,8 +1822,12 @@ describe('completeChallenge', () => {
 
   it('type=TOTP인데 challenge가 PENDING이 아니면 TWO_FA_CHALLENGE_NOT_FOUND', async () => {
     mockTwoFaRepository.findById.mockResolvedValue({
-      id: 'c', userId: 'u', status: 'APPROVED', expiresAt: new Date(Date.now() + 60_000),
-      options: '47,82,13', correctNum: '47',
+      id: 'c',
+      userId: 'u',
+      status: 'APPROVED',
+      expiresAt: new Date(Date.now() + 60_000),
+      options: '47,82,13',
+      correctNum: '47',
     });
     await expect(service.completeChallenge('c', { type: 'TOTP', code: '1' })).rejects.toMatchObject({
       code: 'TWO_FA_CHALLENGE_NOT_FOUND',
@@ -1934,6 +1911,7 @@ git commit -m "feat(api): 통합 challenge.controller + completeChallenge/remove
 ## Task 11: TwoFaModule 갱신 — Phase 1 providers/controllers 등록
 
 **Files:**
+
 - Modify: `services/api/src/twofa/twofa.module.ts`
 
 - [ ] **Step 11.1: TwoFaModule 교체**
@@ -1961,10 +1939,7 @@ import { TwoFaRepository } from './twofa.repository';
 import { TwoFaService } from './twofa.service';
 
 @Module({
-  imports: [
-    BullModule.registerQueue({ name: PUSH_CHALLENGE_QUEUE }),
-    forwardRef(() => AuthModule),
-  ],
+  imports: [BullModule.registerQueue({ name: PUSH_CHALLENGE_QUEUE }), forwardRef(() => AuthModule)],
   controllers: [ChallengeController, TotpController],
   providers: [
     TwoFaService,
@@ -1981,11 +1956,7 @@ import { TwoFaService } from './twofa.service';
     TwoFaStrategyRegistry,
     {
       provide: TWOFA_STRATEGY_TOKEN,
-      useFactory: (
-        push: PushTwoFaStrategy,
-        backupCode: BackupCodeTwoFaStrategy,
-        totp: TotpTwoFaStrategy,
-      ) => [push, backupCode, totp],
+      useFactory: (push: PushTwoFaStrategy, backupCode: BackupCodeTwoFaStrategy, totp: TotpTwoFaStrategy) => [push, backupCode, totp],
       inject: [PushTwoFaStrategy, BackupCodeTwoFaStrategy, TotpTwoFaStrategy],
     },
   ],
@@ -2041,6 +2012,7 @@ AuthModule과 TwoFaModule 사이 순환 의존(challenge.controller가 AuthServi
 API 변경에 따라 web의 openapi 타입을 재생성.
 
 **Files:**
+
 - (auto) `services/web/src/api/openapi/**`
 
 - [ ] **Step 12.1: openapi codegen 실행**
@@ -2066,6 +2038,7 @@ git commit -m "chore(web): openapi codegen — Phase 1 TOTP endpoint 반영"
 > 위치·라우팅·디자인은 현재 web 구조를 따른다. 신규 페이지 컴포넌트만 추가.
 
 **Files:**
+
 - Create: `services/web/src/pages/settings/twofa-setup-totp.tsx`
 - Create: `services/web/src/pages/settings/twofa-setup-totp.test.tsx`
 
@@ -2125,14 +2098,11 @@ export function TwoFaSetupTotpPage() {
       </details>
       <label>
         앱에 표시된 6자리 코드:
-        <input
-          value={code}
-          onChange={(e) => setCode(e.target.value)}
-          inputMode="numeric"
-          maxLength={6}
-        />
+        <input value={code} onChange={(e) => setCode(e.target.value)} inputMode="numeric" maxLength={6} />
       </label>
-      <button onClick={submit} disabled={code.length !== 6}>등록</button>
+      <button onClick={submit} disabled={code.length !== 6}>
+        등록
+      </button>
       {error && <p role="alert">{error}</p>}
     </section>
   );
@@ -2208,6 +2178,7 @@ setup/start로 secret+otpauth URI 수령, qrcode로 QR 렌더, 6자리 코드 �
 기존 push polling 컴포넌트(`twofa-challenge.tsx` 또는 동등)에 "다른 방법으로" 버튼 추가, 클릭 시 TOTP 입력 화면으로 전환. TOTP 코드 제출 시 `POST /auth/2fa/challenge/:id/complete`로 `{type:'TOTP',code}` 전송.
 
 **Files:**
+
 - Create: `services/web/src/pages/login/twofa-totp-input.tsx`
 - Modify: `services/web/src/pages/login/twofa-challenge.tsx` (또는 동등 파일)
 
@@ -2250,13 +2221,10 @@ export function TwoFaTotpInputPage({ challengeId, onSuccess }: Props) {
     <section>
       <h1>TOTP 코드 입력</h1>
       <p>인증기 앱에 표시된 6자리 코드를 입력하세요.</p>
-      <input
-        value={code}
-        onChange={(e) => setCode(e.target.value)}
-        inputMode="numeric"
-        maxLength={6}
-      />
-      <button onClick={submit} disabled={code.length !== 6}>확인</button>
+      <input value={code} onChange={(e) => setCode(e.target.value)} inputMode="numeric" maxLength={6} />
+      <button onClick={submit} disabled={code.length !== 6}>
+        확인
+      </button>
       {error && <p role="alert">{error}</p>}
     </section>
   );
@@ -2272,13 +2240,17 @@ export function TwoFaTotpInputPage({ challengeId, onSuccess }: Props) {
 const [altMethod, setAltMethod] = useState<'NONE' | 'TOTP'>('NONE');
 
 // JSX 안에
-{altMethod === 'NONE' && (
-  <>
-    {/* 기존 push polling UI */}
-    <button onClick={() => setAltMethod('TOTP')}>다른 방법으로 (TOTP)</button>
-  </>
-)}
-{altMethod === 'TOTP' && <TwoFaTotpInputPage challengeId={challengeId} onSuccess={onSuccess} />}
+{
+  altMethod === 'NONE' && (
+    <>
+      {/* 기존 push polling UI */}
+      <button onClick={() => setAltMethod('TOTP')}>다른 방법으로 (TOTP)</button>
+    </>
+  );
+}
+{
+  altMethod === 'TOTP' && <TwoFaTotpInputPage challengeId={challengeId} onSuccess={onSuccess} />;
+}
 ```
 
 - [ ] **Step 14.3: 테스트**
@@ -2343,6 +2315,7 @@ push 화면에 '다른 방법으로(TOTP)' 버튼 추가, 클릭 시 TwoFaTotpIn
 ## Task 15: e2e — TOTP setup → login → lockout
 
 **Files:**
+
 - Create: `services/api/test/totp.e2e-spec.ts`
 
 - [ ] **Step 15.1: e2e 작성**
@@ -2372,9 +2345,7 @@ describe('TOTP (e2e)', () => {
     db = moduleFixture.get(DatabaseService);
 
     // owner 로그인으로 access token 획득
-    const loginRes = await request(app.getHttpServer())
-      .post('/auth/login')
-      .send({ username: 'owner', password: process.env.OWNER_PASSWORD });
+    const loginRes = await request(app.getHttpServer()).post('/auth/login').send({ username: 'owner', password: process.env.OWNER_PASSWORD });
     accessToken = loginRes.body.accessToken;
     const me = await request(app.getHttpServer()).get('/auth/me').set('Authorization', `Bearer ${accessToken}`);
     userId = me.body.id;
@@ -2386,9 +2357,7 @@ describe('TOTP (e2e)', () => {
   });
 
   it('setup/start → setup/complete → list에 1개 → revoke 불가(마지막 strategy 가드)', async () => {
-    const start = await request(app.getHttpServer())
-      .post('/auth/2fa/totp/setup/start')
-      .set('Authorization', `Bearer ${accessToken}`);
+    const start = await request(app.getHttpServer()).post('/auth/2fa/totp/setup/start').set('Authorization', `Bearer ${accessToken}`);
     expect(start.status).toBe(200);
     expect(start.body.status).toBe('PENDING');
     const secret = start.body.secret as string;
@@ -2400,17 +2369,13 @@ describe('TOTP (e2e)', () => {
       .send({ secret, code });
     expect(complete.status).toBe(204);
 
-    const list = await request(app.getHttpServer())
-      .get('/auth/2fa/totp')
-      .set('Authorization', `Bearer ${accessToken}`);
+    const list = await request(app.getHttpServer()).get('/auth/2fa/totp').set('Authorization', `Bearer ${accessToken}`);
     expect(list.body.instances).toHaveLength(1);
     const totpId = list.body.instances[0].id as string;
 
     // backup code 미보유 사용자라면 마지막 strategy 가드 작동
     // (owner가 init 시 backup-code를 보유한다면 backup-code 1개 + totp 1개 → totp revoke 가능)
-    const revoke = await request(app.getHttpServer())
-      .delete(`/auth/2fa/totp/${totpId}`)
-      .set('Authorization', `Bearer ${accessToken}`);
+    const revoke = await request(app.getHttpServer()).delete(`/auth/2fa/totp/${totpId}`).set('Authorization', `Bearer ${accessToken}`);
     // 시나리오에 따라 200 or 400 — 본 e2e에서는 backup-code 여부에 무관하게 응답 코드만 확인
     expect([204, 400]).toContain(revoke.status);
   }, 30_000);
@@ -2507,3 +2472,4 @@ Plan complete and saved to `docs/superpowers/plans/2026-05-20-auth-2fa-fallback-
 
 1. **Subagent-Driven (recommended)** — task별 fresh subagent 디스패치, 중간 리뷰 가능. `superpowers:subagent-driven-development` 사용
 2. **Inline Execution** — 본 세션에서 일괄 실행, 체크포인트마다 리뷰. `superpowers:executing-plans` 사용
+

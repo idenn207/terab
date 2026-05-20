@@ -15,7 +15,7 @@ export class TwoFaStrategyRegistry {
 
   get(type: TwoFaStrategyType): TwoFaStrategy {
     const strategy = this.map.get(type);
-    if (!strategy) throw new ApiException('TWO_FA_STRATEGY_NOT_FOUND');
+    if (!strategy) throw new ApiException('TWOFA_STRATEGY_NOT_FOUND');
     return strategy;
   }
 }

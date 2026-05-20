@@ -178,7 +178,7 @@ export class AuthService extends ServiceCore {
   > {
     const userId = await this.twoFaService.claimApprovedChallenge(challengeId);
     const user = await this.findUserWithPermissionsById(userId);
-    if (!user) throw new ApiException('TWO_FA_CHALLENGE_NOT_FOUND');
+    if (!user) throw new ApiException('TWOFA_CHALLENGE_NOT_FOUND');
     const tokens = await this.issueTokenPair(user);
     return {
       response: {

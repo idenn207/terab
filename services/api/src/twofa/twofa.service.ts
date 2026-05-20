@@ -27,7 +27,7 @@ export class TwoFaService extends ServiceCore {
 
   async getStatus(challengeId: string): Promise<ChallengeStatusResponse> {
     const challenge = await this.twoFaRepository.findById(challengeId);
-    if (!challenge) throw new ApiException('TWO_FA_CHALLENGE_NOT_FOUND');
+    if (!challenge) throw new ApiException('TWOFA_CHALLENGE_NOT_FOUND');
 
     if (challenge.status === 'PENDING' && challenge.expiresAt <= new Date()) {
       await this.twoFaRepository.updateStatus(challengeId, 'EXPIRED');
@@ -46,7 +46,7 @@ export class TwoFaService extends ServiceCore {
 
     if (challenge.status === 'APPROVED') {
       const user = await this.twoFaRepository.findUserWithPermissionsById(challenge.userId);
-      if (!user) throw new ApiException('TWO_FA_CHALLENGE_NOT_FOUND');
+      if (!user) throw new ApiException('TWOFA_CHALLENGE_NOT_FOUND');
       const accessToken = this.tokenService.generateAccessToken(user.id, user.username, user.permissions);
       return {
         status: 'APPROVED',
@@ -71,7 +71,7 @@ export class TwoFaService extends ServiceCore {
   @LogReplay()
   async claimApprovedChallenge(challengeId: string): Promise<string> {
     const challenge = await this.twoFaRepository.findById(challengeId);
-    if (!challenge || challenge.status !== 'APPROVED') throw new ApiException('TWO_FA_CHALLENGE_NOT_FOUND');
+    if (!challenge || challenge.status !== 'APPROVED') throw new ApiException('TWOFA_CHALLENGE_NOT_FOUND');
     await this.twoFaRepository.updateStatus(challengeId, 'EXPIRED');
     return challenge.userId;
   }
@@ -79,7 +79,7 @@ export class TwoFaService extends ServiceCore {
   @LogReplay()
   async resend(oldChallengeId: string): Promise<ResendChallengeResponseDto> {
     const old = await this.twoFaRepository.findById(oldChallengeId);
-    if (!old) throw new ApiException('TWO_FA_CHALLENGE_NOT_FOUND');
+    if (!old) throw new ApiException('TWOFA_CHALLENGE_NOT_FOUND');
     if (old.status === 'PENDING') {
       await this.twoFaRepository.updateStatus(oldChallengeId, 'EXPIRED');
     }

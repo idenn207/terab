@@ -35,11 +35,11 @@ export class PushTwoFaStrategy
   }
 
   async startSetup(_userId: string): Promise<never> {
-    throw new ApiException('TWO_FA_SETUP_NOT_SUPPORTED');
+    throw new ApiException('TWOFA_SETUP_NOT_SUPPORTED');
   }
 
   async completeSetup(_userId: string, _payload: unknown): Promise<void> {
-    throw new ApiException('TWO_FA_SETUP_NOT_SUPPORTED');
+    throw new ApiException('TWOFA_SETUP_NOT_SUPPORTED');
   }
 
   async createChallenge(userId: string): Promise<PushChallengePayload> {
@@ -52,7 +52,7 @@ export class PushTwoFaStrategy
 
   async verifyResponse(userId: string, challengeId: string, payload: PushResponsePayload): Promise<boolean> {
     const challenge = await this.twoFaRepository.findById(challengeId);
-    if (!challenge) throw new ApiException('TWO_FA_CHALLENGE_NOT_FOUND');
+    if (!challenge) throw new ApiException('TWOFA_CHALLENGE_NOT_FOUND');
     if (challenge.userId !== userId) throw new ApiException('FORBIDDEN');
     if (challenge.status !== 'PENDING' || challenge.expiresAt <= new Date()) return false;
 
@@ -65,11 +65,11 @@ export class PushTwoFaStrategy
   }
 
   async list(_userId: string): Promise<TwoFaStrategyInstance[]> {
-    throw new ApiException('TWO_FA_SETUP_NOT_SUPPORTED');
+    throw new ApiException('TWOFA_SETUP_NOT_SUPPORTED');
   }
 
   async revoke(_userId: string, _id: string): Promise<void> {
-    throw new ApiException('TWO_FA_SETUP_NOT_SUPPORTED');
+    throw new ApiException('TWOFA_SETUP_NOT_SUPPORTED');
   }
 
   private generateOptions(): number[] {

@@ -62,15 +62,15 @@ export const ErrorCode = {
     message: '유효하지 않은 백업 코드입니다.',
     status: HttpStatus.UNAUTHORIZED,
   },
-  TWO_FA_CHALLENGE_NOT_FOUND: {
+  TWOFA_CHALLENGE_NOT_FOUND: {
     message: '2FA 챌린지를 찾을 수 없습니다.',
     status: HttpStatus.NOT_FOUND,
   },
-  TWO_FA_STRATEGY_NOT_FOUND: {
+  TWOFA_STRATEGY_NOT_FOUND: {
     message: '등록되지 않은 2FA 방식입니다.',
     status: HttpStatus.NOT_FOUND,
   },
-  TWO_FA_SETUP_NOT_SUPPORTED: {
+  TWOFA_SETUP_NOT_SUPPORTED: {
     message: '해당 2FA 방식은 별도 등록 절차가 없습니다.',
     status: HttpStatus.BAD_REQUEST,
   },

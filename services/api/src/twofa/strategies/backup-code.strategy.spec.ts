@@ -23,12 +23,12 @@ describe('BackupCodeTwoFaStrategy', () => {
   });
 
   describe('startSetup / completeSetup / createChallenge / list / revoke', () => {
-    it('모두 TWO_FA_SETUP_NOT_SUPPORTED를 던진다', async () => {
-      await expect(strategy.startSetup('u')).rejects.toMatchObject({ code: 'TWO_FA_SETUP_NOT_SUPPORTED' });
-      await expect(strategy.completeSetup('u', {})).rejects.toMatchObject({ code: 'TWO_FA_SETUP_NOT_SUPPORTED' });
-      await expect(strategy.createChallenge('u')).rejects.toMatchObject({ code: 'TWO_FA_SETUP_NOT_SUPPORTED' });
-      await expect(strategy.list('u')).rejects.toMatchObject({ code: 'TWO_FA_SETUP_NOT_SUPPORTED' });
-      await expect(strategy.revoke('u', 'x')).rejects.toMatchObject({ code: 'TWO_FA_SETUP_NOT_SUPPORTED' });
+    it('모두 TWOFA_SETUP_NOT_SUPPORTED를 던진다', async () => {
+      await expect(strategy.startSetup('u')).rejects.toMatchObject({ code: 'TWOFA_SETUP_NOT_SUPPORTED' });
+      await expect(strategy.completeSetup('u', {})).rejects.toMatchObject({ code: 'TWOFA_SETUP_NOT_SUPPORTED' });
+      await expect(strategy.createChallenge('u')).rejects.toMatchObject({ code: 'TWOFA_SETUP_NOT_SUPPORTED' });
+      await expect(strategy.list('u')).rejects.toMatchObject({ code: 'TWOFA_SETUP_NOT_SUPPORTED' });
+      await expect(strategy.revoke('u', 'x')).rejects.toMatchObject({ code: 'TWOFA_SETUP_NOT_SUPPORTED' });
     });
   });
 

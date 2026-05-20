@@ -412,7 +412,7 @@ describe('AuthService', () => {
   describe('completeTwoFa', () => {
     it('챌린지가 APPROVED 상태가 아니면 TwoFaService에서 예외가 전파된다', async () => {
       const { ApiException } = await import('@terab/common');
-      mockTwoFaService.claimApprovedChallenge.mockRejectedValue(new ApiException('TWO_FA_CHALLENGE_NOT_FOUND'));
+      mockTwoFaService.claimApprovedChallenge.mockRejectedValue(new ApiException('TWOFA_CHALLENGE_NOT_FOUND'));
 
       await expect(service.completeTwoFa('challenge-id')).rejects.toThrow(ApiException);
     });

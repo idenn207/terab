@@ -3,10 +3,10 @@ import { ApiExtraModels, ApiOperation, ApiResponse, ApiTags, getSchemaPath, refs
 import { ApiError, type AuthUser, CurrentUser, Public } from '@terab/common';
 import {
   ChallengeStatusApprovedDto,
-  type ChallengeStatusResponse,
   ChallengeStatusDeniedDto,
   ChallengeStatusExpiredDto,
   ChallengeStatusPendingDto,
+  type ChallengeStatusResponse,
   ResendChallengeResponseDto,
   RespondChallengeBodyDto,
 } from './dto';
@@ -46,7 +46,7 @@ export class TwoFaController {
       },
     },
   })
-  @ApiError('TWO_FA_CHALLENGE_NOT_FOUND')
+  @ApiError('TWOFA_CHALLENGE_NOT_FOUND')
   async getStatus(@Param('id', ParseUUIDPipe) id: string): Promise<ChallengeStatusResponse> {
     return this.twoFaService.getStatus(id);
   }
@@ -55,7 +55,7 @@ export class TwoFaController {
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: '2FA 챌린지 응답' })
   @ApiResponse({ status: HttpStatus.NO_CONTENT })
-  @ApiError('TWO_FA_CHALLENGE_NOT_FOUND', 'FORBIDDEN')
+  @ApiError('TWOFA_CHALLENGE_NOT_FOUND', 'FORBIDDEN')
   async respond(
     @CurrentUser() user: AuthUser,
     @Param('id', ParseUUIDPipe) id: string,
@@ -69,7 +69,7 @@ export class TwoFaController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: '2FA 챌린지 재발송' })
   @ApiResponse({ status: HttpStatus.OK, type: ResendChallengeResponseDto })
-  @ApiError('TWO_FA_CHALLENGE_NOT_FOUND')
+  @ApiError('TWOFA_CHALLENGE_NOT_FOUND')
   async resend(@Param('id', ParseUUIDPipe) id: string): Promise<ResendChallengeResponseDto> {
     return this.twoFaService.resend(id);
   }

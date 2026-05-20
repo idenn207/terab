@@ -14,15 +14,15 @@ export class BackupCodeTwoFaStrategy implements TwoFaStrategy<never, never, Back
   constructor(private readonly backupCodeService: BackupCodeService) {}
 
   async startSetup(_userId: string): Promise<never> {
-    throw new ApiException('TWO_FA_SETUP_NOT_SUPPORTED');
+    throw new ApiException('TWOFA_SETUP_NOT_SUPPORTED');
   }
 
   async completeSetup(_userId: string, _payload: unknown): Promise<void> {
-    throw new ApiException('TWO_FA_SETUP_NOT_SUPPORTED');
+    throw new ApiException('TWOFA_SETUP_NOT_SUPPORTED');
   }
 
   async createChallenge(_userId: string): Promise<never> {
-    throw new ApiException('TWO_FA_SETUP_NOT_SUPPORTED');
+    throw new ApiException('TWOFA_SETUP_NOT_SUPPORTED');
   }
 
   async verifyResponse(userId: string, _challengeId: string, payload: BackupCodeResponsePayload): Promise<boolean> {
@@ -31,10 +31,10 @@ export class BackupCodeTwoFaStrategy implements TwoFaStrategy<never, never, Back
   }
 
   async list(_userId: string): Promise<TwoFaStrategyInstance[]> {
-    throw new ApiException('TWO_FA_SETUP_NOT_SUPPORTED');
+    throw new ApiException('TWOFA_SETUP_NOT_SUPPORTED');
   }
 
   async revoke(_userId: string, _id: string): Promise<void> {
-    throw new ApiException('TWO_FA_SETUP_NOT_SUPPORTED');
+    throw new ApiException('TWOFA_SETUP_NOT_SUPPORTED');
   }
 }

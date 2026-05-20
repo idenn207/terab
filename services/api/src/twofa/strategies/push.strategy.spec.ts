@@ -34,17 +34,17 @@ describe('PushTwoFaStrategy', () => {
   });
 
   describe('startSetup', () => {
-    it('TWO_FA_SETUP_NOT_SUPPORTED를 던진다', async () => {
+    it('TWOFA_SETUP_NOT_SUPPORTED를 던진다', async () => {
       await expect(strategy.startSetup('user-1')).rejects.toMatchObject({
-        code: 'TWO_FA_SETUP_NOT_SUPPORTED',
+        code: 'TWOFA_SETUP_NOT_SUPPORTED',
       });
     });
   });
 
   describe('completeSetup', () => {
-    it('TWO_FA_SETUP_NOT_SUPPORTED를 던진다', async () => {
+    it('TWOFA_SETUP_NOT_SUPPORTED를 던진다', async () => {
       await expect(strategy.completeSetup('user-1', {})).rejects.toMatchObject({
-        code: 'TWO_FA_SETUP_NOT_SUPPORTED',
+        code: 'TWOFA_SETUP_NOT_SUPPORTED',
       });
     });
   });
@@ -62,7 +62,7 @@ describe('PushTwoFaStrategy', () => {
   });
 
   describe('verifyResponse', () => {
-    it('챌린지가 없으면 ApiException(TWO_FA_CHALLENGE_NOT_FOUND)을 던진다', async () => {
+    it('챌린지가 없으면 ApiException(TWOFA_CHALLENGE_NOT_FOUND)을 던진다', async () => {
       mockTwoFaRepository.findById.mockResolvedValue(null);
 
       await expect(strategy.verifyResponse('u', 'c', { selectedNumber: '47' })).rejects.toThrow(ApiException);
@@ -112,17 +112,17 @@ describe('PushTwoFaStrategy', () => {
   });
 
   describe('list', () => {
-    it('TWO_FA_SETUP_NOT_SUPPORTED를 던진다 (push는 instance 개념 없음)', async () => {
+    it('TWOFA_SETUP_NOT_SUPPORTED를 던진다 (push는 instance 개념 없음)', async () => {
       await expect(strategy.list('user-1')).rejects.toMatchObject({
-        code: 'TWO_FA_SETUP_NOT_SUPPORTED',
+        code: 'TWOFA_SETUP_NOT_SUPPORTED',
       });
     });
   });
 
   describe('revoke', () => {
-    it('TWO_FA_SETUP_NOT_SUPPORTED를 던진다', async () => {
+    it('TWOFA_SETUP_NOT_SUPPORTED를 던진다', async () => {
       await expect(strategy.revoke('user-1', 'x')).rejects.toMatchObject({
-        code: 'TWO_FA_SETUP_NOT_SUPPORTED',
+        code: 'TWOFA_SETUP_NOT_SUPPORTED',
       });
     });
   });

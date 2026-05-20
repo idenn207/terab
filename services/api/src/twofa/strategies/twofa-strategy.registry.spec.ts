@@ -25,14 +25,14 @@ describe('TwoFaStrategyRegistry', () => {
       expect(registry.get('PUSH')).toBe(push);
     });
 
-    it('미등록 type이면 TWO_FA_STRATEGY_NOT_FOUND를 던진다', async () => {
+    it('미등록 type이면 TWOFA_STRATEGY_NOT_FOUND를 던진다', async () => {
       const module = await Test.createTestingModule({
         providers: [TwoFaStrategyRegistry, { provide: TWOFA_STRATEGY_TOKEN, useValue: [] }],
       }).compile();
       const registry = module.get(TwoFaStrategyRegistry);
 
       expect(() => registry.get('TOTP')).toThrow(ApiException);
-      expect(() => registry.get('TOTP')).toThrow(new ApiException('TWO_FA_STRATEGY_NOT_FOUND'));
+      expect(() => registry.get('TOTP')).toThrow(new ApiException('TWOFA_STRATEGY_NOT_FOUND'));
     });
 
     it('같은 type 중복 등록 시 마지막 등록을 우선한다', async () => {

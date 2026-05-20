@@ -11,6 +11,7 @@
 **Spec:** `docs/superpowers/specs/2026-05-19-auth-2fa-fallback-strategies-design.md` §5.3
 
 **Pre-requisite:**
+
 - Phase 0 plan(`2026-05-20-auth-2fa-fallback-strategies-phase-0.md`) 실행 완료 — Strategy/Registry/PushTwoFaStrategy/BackupCodeTwoFaStrategy가 존재
 - Phase 1 plan(`2026-05-20-auth-2fa-fallback-strategies-phase-1.md`) 실행 완료 — `ChallengeController`, `CompleteChallengeBodyDto`, `TwoFaService.completeChallenge` / `removeStrategy`, `EncryptionService`, last-strategy 가드(`TWOFA_LAST_STRATEGY_CANNOT_REMOVE`)가 이미 도입돼 있음. Phase 2는 이 기반 위에 PASSKEY 분기만 얹는다
 
@@ -21,6 +22,7 @@
 ## File Structure
 
 **Create — api**
+
 - `services/api/src/database/schema/two-fa-passkey.schema.ts` — `two_fa_passkey` 테이블
 - `services/api/drizzle/0006_create_two_fa_passkey.sql` — migration (실제 파일명은 db:generate 결과; 본 plan은 0006 가정. Phase 1이 0005를 사용)
 - `services/api/src/twofa/passkey.repository.ts`
@@ -40,6 +42,7 @@
 - `services/api/test/passkey.e2e-spec.ts`
 
 **Modify — api**
+
 - `services/api/src/common/exceptions/error-code.enum.ts` — `TWOFA_PASSKEY_VERIFICATION_FAILED` / `TWOFA_PASSKEY_NOT_ENROLLED` 추가
 - `services/api/package.json` — `@simplewebauthn/server` dependency
 - `api.env.example` — `WEBAUTHN_RP_ID`, `WEBAUTHN_RP_NAME`, `WEBAUTHN_RP_ORIGIN`
@@ -49,11 +52,13 @@
 - `services/api/src/database/schema/index.ts` — `two-fa-passkey.schema.ts` re-export
 
 **Create — web**
+
 - `services/web/src/pages/settings/twofa-setup-passkey.tsx` — Passkey 등록 UI
 - `services/web/src/pages/settings/twofa-setup-passkey.test.tsx`
 - `services/web/src/pages/login/twofa-passkey-ceremony.tsx` — login 시 Passkey ceremony 진입
 
 **Modify — web**
+
 - `services/web/src/api/openapi/**` — codegen 갱신
 - `services/web/src/pages/login/twofa-challenge.tsx` (또는 Phase 1에서 도입된 alt-method 진입점) — `PASSKEY` 선택지 추가
 - `services/web/package.json` — `@simplewebauthn/browser` dependency
@@ -63,6 +68,7 @@
 ## Task 1: ErrorCode 2종 추가
 
 **Files:**
+
 - Modify: `services/api/src/common/exceptions/error-code.enum.ts`
 
 - [ ] **Step 1.1: ErrorCode 추가**
@@ -102,6 +108,7 @@ TWOFA_PASSKEY_VERIFICATION_FAILED(검증 실패) / TWOFA_PASSKEY_NOT_ENROLLED(�
 ## Task 2: @simplewebauthn/server 의존성 + env 추가
 
 **Files:**
+
 - Modify: `services/api/package.json`
 - Modify: `api.env.example`
 
@@ -142,6 +149,7 @@ WEBAUTHN_RP_ID/RP_NAME/RP_ORIGIN 3종. 실제 값은 운영자가 채운다."
 ## Task 3: two_fa_passkey 스키마 + migration
 
 **Files:**
+
 - Create: `services/api/src/database/schema/two-fa-passkey.schema.ts`
 - Modify: `services/api/src/database/schema/index.ts`
 - Create: `services/api/drizzle/0006_create_two_fa_passkey.sql` (자동 생성)
@@ -176,10 +184,7 @@ export const twoFaPasskey = table(
     createdAt: t.timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     lastUsedAt: t.timestamp('last_used_at', { withTimezone: true }),
   },
-  (table) => [
-    t.uniqueIndex().on(table.credentialId),
-    t.index().on(table.userId),
-  ],
+  (table) => [t.uniqueIndex().on(table.credentialId), t.index().on(table.userId)],
 );
 
 export type TwoFaPasskey$Insert = typeof twoFaPasskey.$inferInsert;
@@ -226,6 +231,7 @@ per-user 다중 credential 허용, unique(credential_id) 제약, transports/aagu
 ## Task 4: PasskeyRepository
 
 **Files:**
+
 - Create: `services/api/src/twofa/passkey.repository.ts`
 - Create: `services/api/src/twofa/passkey.repository.spec.ts`
 
@@ -281,14 +287,7 @@ Expected: FAIL.
 
 ```ts
 import { Injectable } from '@nestjs/common';
-import {
-  DatabaseService,
-  RepositoryCore,
-  TransactionContext,
-  twoFaPasskey,
-  TwoFaPasskey$Insert,
-  TwoFaPasskey$Select,
-} from '@terab/db';
+import { DatabaseService, RepositoryCore, TransactionContext, twoFaPasskey, TwoFaPasskey$Insert, TwoFaPasskey$Select } from '@terab/db';
 import { and, eq } from 'drizzle-orm';
 
 @Injectable()
@@ -298,20 +297,12 @@ export class PasskeyRepository extends RepositoryCore {
   }
 
   async findByCredentialId(credentialId: Buffer): Promise<TwoFaPasskey$Select | null> {
-    const [row = null] = await this.conn
-      .select()
-      .from(twoFaPasskey)
-      .where(eq(twoFaPasskey.credentialId, credentialId))
-      .limit(1);
+    const [row = null] = await this.conn.select().from(twoFaPasskey).where(eq(twoFaPasskey.credentialId, credentialId)).limit(1);
     return row;
   }
 
   async findById(id: string): Promise<TwoFaPasskey$Select | null> {
-    const [row = null] = await this.conn
-      .select()
-      .from(twoFaPasskey)
-      .where(eq(twoFaPasskey.id, id))
-      .limit(1);
+    const [row = null] = await this.conn.select().from(twoFaPasskey).where(eq(twoFaPasskey.id, id)).limit(1);
     return row;
   }
 
@@ -325,10 +316,7 @@ export class PasskeyRepository extends RepositoryCore {
   }
 
   async updateAfterAuth(id: string, signCount: number, lastUsedAt: Date): Promise<void> {
-    await this.conn
-      .update(twoFaPasskey)
-      .set({ signCount, lastUsedAt })
-      .where(eq(twoFaPasskey.id, id));
+    await this.conn.update(twoFaPasskey).set({ signCount, lastUsedAt }).where(eq(twoFaPasskey.id, id));
   }
 
   async deleteByIdForUser(id: string, userId: string): Promise<boolean> {
@@ -363,6 +351,7 @@ git commit -m "feat(api): PasskeyRepository — credential CRUD + signCount upda
 WebAuthn은 registration/authentication ceremony 시작 시 RP가 challenge(랜덤 32바이트)를 만들어 browser에 전달하고, browser는 그 challenge를 서명해 돌려준다. RP는 서명 검증 시 "지금 받은 challenge가 이전에 RP가 발급한 그것"이 맞는지 확인해야 한다. 짧은 TTL(60초)로 CacheManager에 저장.
 
 **Files:**
+
 - Create: `services/api/src/twofa/passkey-challenge.store.ts`
 - Create: `services/api/src/twofa/passkey-challenge.store.spec.ts`
 
@@ -380,8 +369,12 @@ describe('PasskeyChallengeStore', () => {
   const cache = new Map<string, string>();
   const mockCache = {
     get: jest.fn(async (k: string) => cache.get(k)),
-    set: jest.fn(async (k: string, v: string) => { cache.set(k, v); }),
-    del: jest.fn(async (k: string) => { cache.delete(k); }),
+    set: jest.fn(async (k: string, v: string) => {
+      cache.set(k, v);
+    }),
+    del: jest.fn(async (k: string) => {
+      cache.delete(k);
+    }),
   };
 
   beforeEach(async () => {
@@ -484,6 +477,7 @@ registration은 user 단위, authentication은 challengeId 단위. CacheManager(
 RP 측 ceremony 4종 (generateRegistrationOptions / verifyRegistrationResponse / generateAuthenticationOptions / verifyAuthenticationResponse)을 캡슐화.
 
 **Files:**
+
 - Create: `services/api/src/twofa/passkey.service.ts`
 - Create: `services/api/src/twofa/passkey.service.spec.ts`
 
@@ -542,9 +536,7 @@ describe('PasskeyService', () => {
 
   describe('startRegistration', () => {
     it('이미 등록된 credentialId는 excludeCredentials에 포함', async () => {
-      mockPasskeyRepository.listByUserId.mockResolvedValue([
-        { credentialId: Buffer.from([1, 2, 3]), transports: ['internal'] },
-      ]);
+      mockPasskeyRepository.listByUserId.mockResolvedValue([{ credentialId: Buffer.from([1, 2, 3]), transports: ['internal'] }]);
       const options = await service.startRegistration('user-1', 'owner');
       expect(options.excludeCredentials).toHaveLength(1);
       expect(mockStore.saveRegistrationChallenge).toHaveBeenCalledWith('user-1', options.challenge);
@@ -554,9 +546,9 @@ describe('PasskeyService', () => {
   describe('verifyRegistration', () => {
     it('저장된 challenge가 없으면 TWOFA_PASSKEY_VERIFICATION_FAILED', async () => {
       mockStore.consumeRegistrationChallenge.mockResolvedValue(null);
-      await expect(
-        service.verifyRegistration('user-1', { id: 'x', rawId: 'x', response: {}, type: 'public-key' } as never),
-      ).rejects.toMatchObject({ code: 'TWOFA_PASSKEY_VERIFICATION_FAILED' });
+      await expect(service.verifyRegistration('user-1', { id: 'x', rawId: 'x', response: {}, type: 'public-key' } as never)).rejects.toMatchObject({
+        code: 'TWOFA_PASSKEY_VERIFICATION_FAILED',
+      });
     });
   });
 
@@ -574,7 +566,10 @@ describe('PasskeyService', () => {
       mockStore.consumeAuthenticationChallenge.mockResolvedValue(null);
       await expect(
         service.verifyAuthentication('challenge-1', {
-          id: 'x', rawId: 'x', response: {}, type: 'public-key',
+          id: 'x',
+          rawId: 'x',
+          response: {},
+          type: 'public-key',
         } as never),
       ).rejects.toMatchObject({ code: 'TWOFA_PASSKEY_VERIFICATION_FAILED' });
     });
@@ -605,12 +600,7 @@ import type {
   RegistrationResponseJSON,
   AuthenticationResponseJSON,
 } from '@simplewebauthn/server';
-import {
-  generateAuthenticationOptions,
-  generateRegistrationOptions,
-  verifyAuthenticationResponse,
-  verifyRegistrationResponse,
-} from '@simplewebauthn/server';
+import { generateAuthenticationOptions, generateRegistrationOptions, verifyAuthenticationResponse, verifyRegistrationResponse } from '@simplewebauthn/server';
 import { PasskeyChallengeStore } from './passkey-challenge.store';
 import { PasskeyRepository } from './passkey.repository';
 
@@ -662,10 +652,7 @@ export class PasskeyService extends ServiceCore {
     return options;
   }
 
-  async verifyRegistration(
-    userId: string,
-    response: RegistrationResponseJSON,
-  ): Promise<VerifiedRegistration> {
+  async verifyRegistration(userId: string, response: RegistrationResponseJSON): Promise<VerifiedRegistration> {
     const expectedChallenge = await this.challengeStore.consumeRegistrationChallenge(userId);
     if (!expectedChallenge) throw new ApiException('TWOFA_PASSKEY_VERIFICATION_FAILED');
 
@@ -711,10 +698,7 @@ export class PasskeyService extends ServiceCore {
     return options;
   }
 
-  async verifyAuthentication(
-    challengeId: string,
-    response: AuthenticationResponseJSON,
-  ): Promise<VerifiedAuthentication> {
+  async verifyAuthentication(challengeId: string, response: AuthenticationResponseJSON): Promise<VerifiedAuthentication> {
     const expectedChallenge = await this.challengeStore.consumeAuthenticationChallenge(challengeId);
     if (!expectedChallenge) throw new ApiException('TWOFA_PASSKEY_VERIFICATION_FAILED');
 
@@ -741,11 +725,7 @@ export class PasskeyService extends ServiceCore {
     if (verification.authenticationInfo.newCounter < stored.signCount) {
       throw new ApiException('TWOFA_PASSKEY_VERIFICATION_FAILED');
     }
-    await this.passkeyRepository.updateAfterAuth(
-      stored.id,
-      verification.authenticationInfo.newCounter,
-      new Date(),
-    );
+    await this.passkeyRepository.updateAfterAuth(stored.id, verification.authenticationInfo.newCounter, new Date());
     return { userId: stored.userId };
   }
 }
@@ -777,6 +757,7 @@ git commit -m "feat(api): PasskeyService — registration·authentication ceremo
 ## Task 7: PasskeyTwoFaStrategy
 
 **Files:**
+
 - Create: `services/api/src/twofa/strategies/passkey.strategy.ts`
 - Create: `services/api/src/twofa/strategies/passkey.strategy.spec.ts`
 
@@ -839,9 +820,7 @@ describe('PasskeyTwoFaStrategy', () => {
 
     it('verify 결과 userId가 다르면 ApiException(FORBIDDEN)', async () => {
       mockPasskeyService.verifyAuthentication.mockResolvedValue({ userId: 'other' });
-      await expect(
-        strategy.verifyResponse('u', 'challenge-1', { credentialResponse: { id: 'x' } as never }),
-      ).rejects.toMatchObject({ code: 'FORBIDDEN' });
+      await expect(strategy.verifyResponse('u', 'challenge-1', { credentialResponse: { id: 'x' } as never })).rejects.toMatchObject({ code: 'FORBIDDEN' });
     });
   });
 
@@ -887,20 +866,14 @@ import { ApiException } from '@terab/common';
 import type { AuthenticationResponseJSON } from '@simplewebauthn/server';
 import { PasskeyRepository } from '../passkey.repository';
 import { PasskeyService } from '../passkey.service';
-import {
-  TwoFaStrategy,
-  TwoFaStrategyInstance,
-  TwoFaStrategyType,
-} from './twofa-strategy.interface';
+import { TwoFaStrategy, TwoFaStrategyInstance, TwoFaStrategyType } from './twofa-strategy.interface';
 
 interface PasskeyResponsePayload {
   credentialResponse: AuthenticationResponseJSON;
 }
 
 @Injectable()
-export class PasskeyTwoFaStrategy
-  implements TwoFaStrategy<never, never, PasskeyResponsePayload>
-{
+export class PasskeyTwoFaStrategy implements TwoFaStrategy<never, never, PasskeyResponsePayload> {
   readonly type: TwoFaStrategyType = 'PASSKEY';
 
   constructor(
@@ -920,11 +893,7 @@ export class PasskeyTwoFaStrategy
     throw new ApiException('TWOFA_SETUP_NOT_SUPPORTED');
   }
 
-  async verifyResponse(
-    userId: string,
-    challengeId: string,
-    payload: PasskeyResponsePayload,
-  ): Promise<boolean> {
+  async verifyResponse(userId: string, challengeId: string, payload: PasskeyResponsePayload): Promise<boolean> {
     const result = await this.passkeyService.verifyAuthentication(challengeId, payload.credentialResponse);
     if (result.userId !== userId) throw new ApiException('FORBIDDEN');
     return true;
@@ -966,6 +935,7 @@ setup/createChallenge는 PasskeyController가 직접 처리(2단계 ceremony이�
 ## Task 8: PasskeyController
 
 **Files:**
+
 - Create: `services/api/src/twofa/dto/passkey-registration-options.dto.ts`
 - Create: `services/api/src/twofa/dto/passkey-registration-complete-body.dto.ts`
 - Create: `services/api/src/twofa/dto/passkey-authentication-options.dto.ts`
@@ -1054,12 +1024,7 @@ import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
 import { ApiError, CurrentUser, Public, type AuthUser } from '@terab/common';
 import type { RegistrationResponseJSON } from '@simplewebauthn/server';
-import {
-  PasskeyAuthenticationOptionsDto,
-  PasskeyListResponseDto,
-  PasskeyRegistrationCompleteBodyDto,
-  PasskeyRegistrationOptionsDto,
-} from './dto';
+import { PasskeyAuthenticationOptionsDto, PasskeyListResponseDto, PasskeyRegistrationCompleteBodyDto, PasskeyRegistrationOptionsDto } from './dto';
 import { PasskeyService } from './passkey.service';
 import { PasskeyTwoFaStrategy } from './strategies/passkey.strategy';
 import { TwoFaService } from './twofa.service';
@@ -1089,10 +1054,7 @@ export class PasskeyController {
   @ApiOperation({ summary: 'Passkey 등록 완료 — credentialResponse 검증 후 저장' })
   @ApiResponse({ status: HttpStatus.NO_CONTENT })
   @ApiError('TWOFA_PASSKEY_VERIFICATION_FAILED')
-  async completeRegistration(
-    @CurrentUser() user: AuthUser,
-    @Body() body: PasskeyRegistrationCompleteBodyDto,
-  ): Promise<void> {
+  async completeRegistration(@CurrentUser() user: AuthUser, @Body() body: PasskeyRegistrationCompleteBodyDto): Promise<void> {
     await this.passkeyService.verifyRegistration(user.userId, body.credentialResponse as unknown as RegistrationResponseJSON);
   }
 
@@ -1120,9 +1082,7 @@ export class PasskeyController {
   @ApiOperation({ summary: 'Passkey 로그인 ceremony 시작 — challengeId 단위로 authentication options 발급' })
   @ApiResponse({ status: HttpStatus.OK, type: PasskeyAuthenticationOptionsDto })
   @ApiError('TWO_FA_CHALLENGE_NOT_FOUND', 'TWOFA_PASSKEY_NOT_ENROLLED')
-  async startAuthentication(
-    @Param('challengeId', ParseUUIDPipe) challengeId: string,
-  ): Promise<PasskeyAuthenticationOptionsDto> {
+  async startAuthentication(@Param('challengeId', ParseUUIDPipe) challengeId: string): Promise<PasskeyAuthenticationOptionsDto> {
     const userId = await this.twoFaService.getChallengeUserId(challengeId);
     const options = await this.passkeyService.startAuthentication(userId, challengeId);
     return { options: options as unknown as Record<string, unknown> };
@@ -1225,6 +1185,7 @@ POST /auth/2fa/passkey/auth/:challengeId/start (@Public)"
 ## Task 9: TwoFaService 확장 — getChallengeUserId + completeChallenge에 PASSKEY 분기
 
 **Files:**
+
 - Modify: `services/api/src/twofa/twofa.service.ts`
 - Modify: `services/api/src/twofa/twofa.service.spec.ts`
 - Modify: `services/api/src/twofa/dto/complete-challenge-body.dto.ts`
@@ -1318,8 +1279,12 @@ async completeChallenge(
 ```ts
 it('type=PASSKEY면 strategy.verifyResponse에 body를 그대로 전달', async () => {
   mockTwoFaRepository.findById.mockResolvedValue({
-    id: 'c', userId: 'u', status: 'PENDING', expiresAt: new Date(Date.now() + 60_000),
-    options: '47,82,13', correctNum: '47',
+    id: 'c',
+    userId: 'u',
+    status: 'PENDING',
+    expiresAt: new Date(Date.now() + 60_000),
+    options: '47,82,13',
+    correctNum: '47',
   });
   const passkeyStrategy = { type: 'PASSKEY', verifyResponse: jest.fn().mockResolvedValue(true) };
   mockRegistry.get.mockImplementation((t: string) => (t === 'PASSKEY' ? passkeyStrategy : mockPushStrategy));
@@ -1338,16 +1303,24 @@ it('type=PASSKEY면 strategy.verifyResponse에 body를 그대로 전달', async 
 describe('getChallengeUserId', () => {
   it('PENDING + 미만료면 userId 반환', async () => {
     mockTwoFaRepository.findById.mockResolvedValue({
-      id: 'c', userId: 'u', status: 'PENDING', expiresAt: new Date(Date.now() + 60_000),
-      options: '47,82,13', correctNum: '47',
+      id: 'c',
+      userId: 'u',
+      status: 'PENDING',
+      expiresAt: new Date(Date.now() + 60_000),
+      options: '47,82,13',
+      correctNum: '47',
     });
     expect(await service.getChallengeUserId('c')).toBe('u');
   });
 
   it('만료 challenge면 TWO_FA_CHALLENGE_NOT_FOUND', async () => {
     mockTwoFaRepository.findById.mockResolvedValue({
-      id: 'c', userId: 'u', status: 'PENDING', expiresAt: new Date(Date.now() - 1_000),
-      options: '47,82,13', correctNum: '47',
+      id: 'c',
+      userId: 'u',
+      status: 'PENDING',
+      expiresAt: new Date(Date.now() - 1_000),
+      options: '47,82,13',
+      correctNum: '47',
     });
     await expect(service.getChallengeUserId('c')).rejects.toMatchObject({ code: 'TWO_FA_CHALLENGE_NOT_FOUND' });
   });
@@ -1378,6 +1351,7 @@ git commit -m "feat(api): completeChallenge·CompleteChallengeBodyDto에 PASSKEY
 ## Task 10: TwoFaModule 갱신 — Passkey providers/controllers 등록
 
 **Files:**
+
 - Modify: `services/api/src/twofa/twofa.module.ts`
 
 - [ ] **Step 10.1: TwoFaModule 교체**
@@ -1410,10 +1384,7 @@ import { TwoFaRepository } from './twofa.repository';
 import { TwoFaService } from './twofa.service';
 
 @Module({
-  imports: [
-    BullModule.registerQueue({ name: PUSH_CHALLENGE_QUEUE }),
-    forwardRef(() => AuthModule),
-  ],
+  imports: [BullModule.registerQueue({ name: PUSH_CHALLENGE_QUEUE }), forwardRef(() => AuthModule)],
   controllers: [ChallengeController, TotpController, PasskeyController],
   providers: [
     TwoFaService,
@@ -1434,12 +1405,12 @@ import { TwoFaService } from './twofa.service';
     TwoFaStrategyRegistry,
     {
       provide: TWOFA_STRATEGY_TOKEN,
-      useFactory: (
-        push: PushTwoFaStrategy,
-        backupCode: BackupCodeTwoFaStrategy,
-        totp: TotpTwoFaStrategy,
-        passkey: PasskeyTwoFaStrategy,
-      ) => [push, backupCode, totp, passkey],
+      useFactory: (push: PushTwoFaStrategy, backupCode: BackupCodeTwoFaStrategy, totp: TotpTwoFaStrategy, passkey: PasskeyTwoFaStrategy) => [
+        push,
+        backupCode,
+        totp,
+        passkey,
+      ],
       inject: [PushTwoFaStrategy, BackupCodeTwoFaStrategy, TotpTwoFaStrategy, PasskeyTwoFaStrategy],
     },
   ],
@@ -1504,6 +1475,7 @@ last-strategy 가드의 카운트 대상에 PASSKEY 추가."
 ## Task 11: Web codegen + @simplewebauthn/browser
 
 **Files:**
+
 - Modify: `services/web/package.json`
 - (auto) `services/web/src/api/openapi/**`
 
@@ -1534,6 +1506,7 @@ git commit -m "chore(web): @simplewebauthn/browser 의존성 + openapi codegen �
 ## Task 12: Web — 설정 화면 Passkey 등록 UI
 
 **Files:**
+
 - Create: `services/web/src/pages/settings/twofa-setup-passkey.tsx`
 - Create: `services/web/src/pages/settings/twofa-setup-passkey.test.tsx`
 
@@ -1570,7 +1543,9 @@ export function TwoFaSetupPasskeyPage() {
     <section>
       <h1>Passkey 등록</h1>
       <p>장치 인증(Touch ID, Windows Hello, 보안키)으로 Passkey를 추가합니다.</p>
-      <button onClick={enroll} disabled={phase === 'IN_PROGRESS'}>등록</button>
+      <button onClick={enroll} disabled={phase === 'IN_PROGRESS'}>
+        등록
+      </button>
       {error && <p role="alert">{error}</p>}
     </section>
   );
@@ -1594,9 +1569,7 @@ describe('TwoFaSetupPasskeyPage', () => {
   beforeEach(() => jest.clearAllMocks());
 
   it('등록 버튼 클릭 → start API → browser ceremony → complete API 순서로 호출', async () => {
-    (apiClient.post as jest.Mock)
-      .mockResolvedValueOnce({ data: { options: { challenge: 'c' } } })
-      .mockResolvedValueOnce({ data: {} });
+    (apiClient.post as jest.Mock).mockResolvedValueOnce({ data: { options: { challenge: 'c' } } }).mockResolvedValueOnce({ data: {} });
     (startRegistration as jest.Mock).mockResolvedValue({ id: 'cred-1' });
 
     render(<TwoFaSetupPasskeyPage />);
@@ -1638,6 +1611,7 @@ start API → navigator.credentials.create (via @simplewebauthn/browser) → com
 Phase 1에서 도입한 "다른 방법으로" alt-method 선택지에 `PASSKEY`를 추가.
 
 **Files:**
+
 - Create: `services/web/src/pages/login/twofa-passkey-ceremony.tsx`
 - Modify: `services/web/src/pages/login/twofa-challenge.tsx` (alt-method 진입점)
 
@@ -1678,7 +1652,9 @@ export function TwoFaPasskeyCeremonyPage({ challengeId, onSuccess }: Props) {
         setError((e as Error).message ?? '실패');
       }
     })();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [challengeId, onSuccess]);
 
   return (
@@ -1698,15 +1674,21 @@ export function TwoFaPasskeyCeremonyPage({ challengeId, onSuccess }: Props) {
 Phase 1의 `twofa-challenge.tsx`에 있는 alt-method 전환 UI에 PASSKEY 진입 추가:
 
 ```tsx
-{altMethod === 'NONE' && (
-  <>
-    {/* push polling UI */}
-    <button onClick={() => setAltMethod('TOTP')}>다른 방법으로 (TOTP)</button>
-    <button onClick={() => setAltMethod('PASSKEY')}>다른 방법으로 (Passkey)</button>
-  </>
-)}
-{altMethod === 'TOTP' && <TwoFaTotpInputPage challengeId={challengeId} onSuccess={onSuccess} />}
-{altMethod === 'PASSKEY' && <TwoFaPasskeyCeremonyPage challengeId={challengeId} onSuccess={onSuccess} />}
+{
+  altMethod === 'NONE' && (
+    <>
+      {/* push polling UI */}
+      <button onClick={() => setAltMethod('TOTP')}>다른 방법으로 (TOTP)</button>
+      <button onClick={() => setAltMethod('PASSKEY')}>다른 방법으로 (Passkey)</button>
+    </>
+  );
+}
+{
+  altMethod === 'TOTP' && <TwoFaTotpInputPage challengeId={challengeId} onSuccess={onSuccess} />;
+}
+{
+  altMethod === 'PASSKEY' && <TwoFaPasskeyCeremonyPage challengeId={challengeId} onSuccess={onSuccess} />;
+}
 ```
 
 - [ ] **Step 13.3: 테스트**
@@ -1726,9 +1708,7 @@ describe('TwoFaPasskeyCeremonyPage', () => {
   beforeEach(() => jest.clearAllMocks());
 
   it('마운트 시 start → ceremony → complete 순서로 호출하고 onSuccess', async () => {
-    (apiClient.post as jest.Mock)
-      .mockResolvedValueOnce({ data: { options: { challenge: 'c' } } })
-      .mockResolvedValueOnce({ data: { status: 'AUTHENTICATED' } });
+    (apiClient.post as jest.Mock).mockResolvedValueOnce({ data: { options: { challenge: 'c' } } }).mockResolvedValueOnce({ data: { status: 'AUTHENTICATED' } });
     (startAuthentication as jest.Mock).mockResolvedValue({ id: 'cred-1' });
     const onSuccess = jest.fn();
 
@@ -1769,6 +1749,7 @@ alt-method 메뉴에 'Passkey' 추가, 선택 시 start → navigator.credential
 브라우저 없는 환경에서 fully-automated WebAuthn e2e는 어렵다. `@simplewebauthn/server`의 ceremony 함수가 통합 테스트되는 형태로 minimal e2e를 작성한다 — `startRegistration` API가 정상 응답하는지, 잘못된 `credentialResponse`를 보냈을 때 `TWOFA_PASSKEY_VERIFICATION_FAILED`를 던지는지 확인하는 수준.
 
 **Files:**
+
 - Create: `services/api/test/passkey.e2e-spec.ts`
 
 - [ ] **Step 14.1: e2e 작성**
@@ -1791,9 +1772,7 @@ describe('Passkey (e2e)', () => {
     app = moduleFixture.createNestApplication();
     await app.init();
 
-    const loginRes = await request(app.getHttpServer())
-      .post('/auth/login')
-      .send({ username: 'owner', password: process.env.OWNER_PASSWORD });
+    const loginRes = await request(app.getHttpServer()).post('/auth/login').send({ username: 'owner', password: process.env.OWNER_PASSWORD });
     accessToken = loginRes.body.accessToken;
   });
 
@@ -1802,25 +1781,25 @@ describe('Passkey (e2e)', () => {
   });
 
   it('POST /auth/2fa/passkey/setup/start — options 발급 성공', async () => {
-    const res = await request(app.getHttpServer())
-      .post('/auth/2fa/passkey/setup/start')
-      .set('Authorization', `Bearer ${accessToken}`);
+    const res = await request(app.getHttpServer()).post('/auth/2fa/passkey/setup/start').set('Authorization', `Bearer ${accessToken}`);
     expect(res.status).toBe(200);
     expect(res.body.options.challenge).toBeDefined();
     expect(res.body.options.rp).toBeDefined();
   });
 
   it('POST /auth/2fa/passkey/setup/complete — 잘못된 credentialResponse는 검증 실패', async () => {
-    await request(app.getHttpServer())
-      .post('/auth/2fa/passkey/setup/start')
-      .set('Authorization', `Bearer ${accessToken}`);
+    await request(app.getHttpServer()).post('/auth/2fa/passkey/setup/start').set('Authorization', `Bearer ${accessToken}`);
 
     const res = await request(app.getHttpServer())
       .post('/auth/2fa/passkey/setup/complete')
       .set('Authorization', `Bearer ${accessToken}`)
       .send({
         credentialResponse: {
-          id: 'fake', rawId: 'fake', response: {}, type: 'public-key', clientExtensionResults: {},
+          id: 'fake',
+          rawId: 'fake',
+          response: {},
+          type: 'public-key',
+          clientExtensionResults: {},
         },
       });
     expect(res.status).toBe(400);
@@ -1828,9 +1807,7 @@ describe('Passkey (e2e)', () => {
   });
 
   it('GET /auth/2fa/passkey — 빈 배열로 응답', async () => {
-    const res = await request(app.getHttpServer())
-      .get('/auth/2fa/passkey')
-      .set('Authorization', `Bearer ${accessToken}`);
+    const res = await request(app.getHttpServer()).get('/auth/2fa/passkey').set('Authorization', `Bearer ${accessToken}`);
     expect(res.status).toBe(200);
     expect(Array.isArray(res.body.instances)).toBe(true);
   });
@@ -1920,3 +1897,4 @@ Plan complete and saved to `docs/superpowers/plans/2026-05-20-auth-2fa-fallback-
 2. **Inline Execution** — 본 세션에서 일괄 실행, 체크포인트마다 리뷰. `superpowers:executing-plans` 사용
 
 > **Phase 1 미실행 상태에서 Phase 2를 시작하면 안 됨** — `CompleteChallengeBodyDto`, `ChallengeController`, `EncryptionService`, `removeStrategy` 등이 Phase 1 산출물이다. 본 plan은 Phase 1 완료를 전제로 한다.
+

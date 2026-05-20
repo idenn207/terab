@@ -38,7 +38,7 @@
 
 **Modify**
 
-- `services/api/src/common/exceptions/error-code.enum.ts` — `TWO_FA_STRATEGY_NOT_FOUND`, `TWO_FA_SETUP_NOT_SUPPORTED` 2종 추가
+- `services/api/src/common/exceptions/error-code.enum.ts` — `TWOFA_STRATEGY_NOT_FOUND`, `TWOFA_SETUP_NOT_SUPPORTED` 2종 추가
 - `services/api/src/twofa/twofa.module.ts` — `BackupCodeService` + `BackupCodeRepository` + 3개 strategy + Registry 등록, `BackupCodeService` export
 - `services/api/src/twofa/twofa.service.ts` — push 분기 로직을 `PushTwoFaStrategy`/Registry로 위임 (public API 무변경)
 - `services/api/src/twofa/twofa.service.spec.ts` — Registry/Strategy mock 기반으로 갱신
@@ -50,7 +50,7 @@
 
 ## Task 1: ErrorCode 2종 추가
 
-**Why first:** strategy interface가 runtime throw에 의존(`TWO_FA_SETUP_NOT_SUPPORTED`), Registry는 미등록 type 시 `TWO_FA_STRATEGY_NOT_FOUND` throw. 이후 모든 task가 이 두 키에 의존하므로 가장 먼저.
+**Why first:** strategy interface가 runtime throw에 의존(`TWOFA_SETUP_NOT_SUPPORTED`), Registry는 미등록 type 시 `TWOFA_STRATEGY_NOT_FOUND` throw. 이후 모든 task가 이 두 키에 의존하므로 가장 먼저.
 
 **Files:**
 
@@ -61,11 +61,11 @@
 `services/api/src/common/exceptions/error-code.enum.ts`의 `// ───── 2FA ──────────────────────────────` 블록 안, `TWO_FA_CHALLENGE_NOT_FOUND` 항목 뒤에 추가:
 
 ```ts
-  TWO_FA_STRATEGY_NOT_FOUND: {
+  TWOFA_STRATEGY_NOT_FOUND: {
     message: '등록되지 않은 2FA 방식입니다.',
     status: HttpStatus.NOT_FOUND,
   },
-  TWO_FA_SETUP_NOT_SUPPORTED: {
+  TWOFA_SETUP_NOT_SUPPORTED: {
     message: '해당 2FA 방식은 별도 등록 절차가 없습니다.',
     status: HttpStatus.BAD_REQUEST,
   },
@@ -82,7 +82,7 @@ Expected: 통과 (새 키만 추가, 사용처 미존재이므로 에러 없음)
 git add services/api/src/common/exceptions/error-code.enum.ts
 git commit -m "feat(api): 2FA strategy refactor용 ErrorCode 2종 추가
 
-TWO_FA_STRATEGY_NOT_FOUND/TWO_FA_SETUP_NOT_SUPPORTED는 Phase 0에서 도입되는 TwoFaStrategy 인터페이스와 Registry가 사용한다."
+TWOFA_STRATEGY_NOT_FOUND/TWOFA_SETUP_NOT_SUPPORTED는 Phase 0에서 도입되는 TwoFaStrategy 인터페이스와 Registry가 사용한다."
 ```
 
 ---
@@ -108,7 +108,7 @@ export interface TwoFaStrategyInstance {
 
 // TSetup/TChallenge/TResponse는 각 strategy가 직접 명시한다.
 // Phase 0에서는 push/backup-code 둘 다 setup ceremony가 없으므로
-// startSetup/completeSetup은 ApiException('TWO_FA_SETUP_NOT_SUPPORTED')를 throw 한다.
+// startSetup/completeSetup은 ApiException('TWOFA_SETUP_NOT_SUPPORTED')를 throw 한다.
 export interface TwoFaStrategy<TSetup = unknown, TChallenge = unknown, TResponse = unknown> {
   readonly type: TwoFaStrategyType;
 
@@ -182,14 +182,14 @@ describe('TwoFaStrategyRegistry', () => {
       expect(registry.get('PUSH')).toBe(push);
     });
 
-    it('미등록 type이면 TWO_FA_STRATEGY_NOT_FOUND를 던진다', async () => {
+    it('미등록 type이면 TWOFA_STRATEGY_NOT_FOUND를 던진다', async () => {
       const module = await Test.createTestingModule({
         providers: [TwoFaStrategyRegistry, { provide: TWOFA_STRATEGY_TOKEN, useValue: [] }],
       }).compile();
       const registry = module.get(TwoFaStrategyRegistry);
 
       expect(() => registry.get('TOTP')).toThrow(ApiException);
-      expect(() => registry.get('TOTP')).toThrow(expect.objectContaining({ code: 'TWO_FA_STRATEGY_NOT_FOUND' }));
+      expect(() => registry.get('TOTP')).toThrow(expect.objectContaining({ code: 'TWOFA_STRATEGY_NOT_FOUND' }));
     });
 
     it('같은 type 중복 등록 시 마지막 등록을 우선한다', async () => {
@@ -233,7 +233,7 @@ export class TwoFaStrategyRegistry {
 
   get(type: TwoFaStrategyType): TwoFaStrategy {
     const strategy = this.map.get(type);
-    if (!strategy) throw new ApiException('TWO_FA_STRATEGY_NOT_FOUND');
+    if (!strategy) throw new ApiException('TWOFA_STRATEGY_NOT_FOUND');
     return strategy;
   }
 }
@@ -250,7 +250,7 @@ Expected: PASS (3 cases).
 git add services/api/src/twofa/strategies/twofa-strategy.registry.ts services/api/src/twofa/strategies/twofa-strategy.registry.spec.ts
 git commit -m "feat(api): TwoFaStrategyRegistry 도입
 
-@Inject(TWOFA_STRATEGY_TOKEN)으로 주입된 strategy 배열을 type → instance 맵으로 변환. 미등록 type 요청 시 TWO_FA_STRATEGY_NOT_FOUND throw."
+@Inject(TWOFA_STRATEGY_TOKEN)으로 주입된 strategy 배열을 type → instance 맵으로 변환. 미등록 type 요청 시 TWOFA_STRATEGY_NOT_FOUND throw."
 ```
 
 ---
@@ -363,7 +363,7 @@ controller 없는 도메인이므로 상위 feature(twofa) 폴더로 이동. Bac
 
 ## Task 5: PushTwoFaStrategy
 
-기존 `TwoFaService`의 push challenge 로직을 strategy로 분리한다. Push는 setup ceremony가 없으므로 `startSetup`/`completeSetup`은 `TWO_FA_SETUP_NOT_SUPPORTED` throw. `list`/`revoke`도 push는 개념상 의미가 없어 throw하거나 빈 결과를 반환 — 본 Phase에서는 throw로 통일(Phase 1에서 web 설정 화면이 도입될 때 의미가 생긴다).
+기존 `TwoFaService`의 push challenge 로직을 strategy로 분리한다. Push는 setup ceremony가 없으므로 `startSetup`/`completeSetup`은 `TWOFA_SETUP_NOT_SUPPORTED` throw. `list`/`revoke`도 push는 개념상 의미가 없어 throw하거나 빈 결과를 반환 — 본 Phase에서는 throw로 통일(Phase 1에서 web 설정 화면이 도입될 때 의미가 생긴다).
 
 **Files:**
 
@@ -411,17 +411,17 @@ describe('PushTwoFaStrategy', () => {
   });
 
   describe('startSetup', () => {
-    it('TWO_FA_SETUP_NOT_SUPPORTED를 던진다', async () => {
+    it('TWOFA_SETUP_NOT_SUPPORTED를 던진다', async () => {
       await expect(strategy.startSetup('user-1')).rejects.toMatchObject({
-        code: 'TWO_FA_SETUP_NOT_SUPPORTED',
+        code: 'TWOFA_SETUP_NOT_SUPPORTED',
       });
     });
   });
 
   describe('completeSetup', () => {
-    it('TWO_FA_SETUP_NOT_SUPPORTED를 던진다', async () => {
+    it('TWOFA_SETUP_NOT_SUPPORTED를 던진다', async () => {
       await expect(strategy.completeSetup('user-1', {})).rejects.toMatchObject({
-        code: 'TWO_FA_SETUP_NOT_SUPPORTED',
+        code: 'TWOFA_SETUP_NOT_SUPPORTED',
       });
     });
   });
@@ -489,17 +489,17 @@ describe('PushTwoFaStrategy', () => {
   });
 
   describe('list', () => {
-    it('TWO_FA_SETUP_NOT_SUPPORTED를 던진다 (push는 instance 개념 없음)', async () => {
+    it('TWOFA_SETUP_NOT_SUPPORTED를 던진다 (push는 instance 개념 없음)', async () => {
       await expect(strategy.list('user-1')).rejects.toMatchObject({
-        code: 'TWO_FA_SETUP_NOT_SUPPORTED',
+        code: 'TWOFA_SETUP_NOT_SUPPORTED',
       });
     });
   });
 
   describe('revoke', () => {
-    it('TWO_FA_SETUP_NOT_SUPPORTED를 던진다', async () => {
+    it('TWOFA_SETUP_NOT_SUPPORTED를 던진다', async () => {
       await expect(strategy.revoke('user-1', 'x')).rejects.toMatchObject({
-        code: 'TWO_FA_SETUP_NOT_SUPPORTED',
+        code: 'TWOFA_SETUP_NOT_SUPPORTED',
       });
     });
   });
@@ -550,11 +550,11 @@ export class PushTwoFaStrategy extends ServiceCore implements TwoFaStrategy<neve
   }
 
   async startSetup(): Promise<never> {
-    throw new ApiException('TWO_FA_SETUP_NOT_SUPPORTED');
+    throw new ApiException('TWOFA_SETUP_NOT_SUPPORTED');
   }
 
   async completeSetup(): Promise<void> {
-    throw new ApiException('TWO_FA_SETUP_NOT_SUPPORTED');
+    throw new ApiException('TWOFA_SETUP_NOT_SUPPORTED');
   }
 
   async createChallenge(userId: string): Promise<PushChallengePayload> {
@@ -580,11 +580,11 @@ export class PushTwoFaStrategy extends ServiceCore implements TwoFaStrategy<neve
   }
 
   async list(): Promise<TwoFaStrategyInstance[]> {
-    throw new ApiException('TWO_FA_SETUP_NOT_SUPPORTED');
+    throw new ApiException('TWOFA_SETUP_NOT_SUPPORTED');
   }
 
   async revoke(): Promise<void> {
-    throw new ApiException('TWO_FA_SETUP_NOT_SUPPORTED');
+    throw new ApiException('TWOFA_SETUP_NOT_SUPPORTED');
   }
 
   private generateOptions(): number[] {
@@ -608,14 +608,14 @@ Expected: PASS.
 git add services/api/src/twofa/strategies/push.strategy.ts services/api/src/twofa/strategies/push.strategy.spec.ts
 git commit -m "feat(api): PushTwoFaStrategy 분리
 
-TwoFaService의 createChallenge·respond 로직을 PushTwoFaStrategy로 옮긴다. setup ceremony가 없는 strategy이므로 startSetup/completeSetup/list/revoke는 TWO_FA_SETUP_NOT_SUPPORTED를 던진다."
+TwoFaService의 createChallenge·respond 로직을 PushTwoFaStrategy로 옮긴다. setup ceremony가 없는 strategy이므로 startSetup/completeSetup/list/revoke는 TWOFA_SETUP_NOT_SUPPORTED를 던진다."
 ```
 
 ---
 
 ## Task 6: BackupCodeTwoFaStrategy
 
-backup-code는 challenge 개념이 없고 verify 단계에서 raw code를 즉시 검증한다. 그래서 `createChallenge`는 의미 없는 wrapper(빈 객체 반환) 또는 throw. 본 Phase에서는 push와 일관되게 **`createChallenge`는 throw**(`TWO_FA_SETUP_NOT_SUPPORTED`)로 두고 `verifyResponse`만 의미를 갖는다. 향후 Phase 1에서 challenge.controller가 도입될 때 `{ type: 'BACKUP_CODE', code: 'XXXX-XXXX' }` 호출이 `verifyResponse(userId, challengeId='', payload)`로 dispatch될 수 있도록 한다.
+backup-code는 challenge 개념이 없고 verify 단계에서 raw code를 즉시 검증한다. 그래서 `createChallenge`는 의미 없는 wrapper(빈 객체 반환) 또는 throw. 본 Phase에서는 push와 일관되게 **`createChallenge`는 throw**(`TWOFA_SETUP_NOT_SUPPORTED`)로 두고 `verifyResponse`만 의미를 갖는다. 향후 Phase 1에서 challenge.controller가 도입될 때 `{ type: 'BACKUP_CODE', code: 'XXXX-XXXX' }` 호출이 `verifyResponse(userId, challengeId='', payload)`로 dispatch될 수 있도록 한다.
 
 **Files:**
 
@@ -652,12 +652,12 @@ describe('BackupCodeTwoFaStrategy', () => {
   });
 
   describe('startSetup / completeSetup / createChallenge / list / revoke', () => {
-    it('모두 TWO_FA_SETUP_NOT_SUPPORTED를 던진다', async () => {
-      await expect(strategy.startSetup('u')).rejects.toMatchObject({ code: 'TWO_FA_SETUP_NOT_SUPPORTED' });
-      await expect(strategy.completeSetup('u', {})).rejects.toMatchObject({ code: 'TWO_FA_SETUP_NOT_SUPPORTED' });
-      await expect(strategy.createChallenge('u')).rejects.toMatchObject({ code: 'TWO_FA_SETUP_NOT_SUPPORTED' });
-      await expect(strategy.list('u')).rejects.toMatchObject({ code: 'TWO_FA_SETUP_NOT_SUPPORTED' });
-      await expect(strategy.revoke('u', 'x')).rejects.toMatchObject({ code: 'TWO_FA_SETUP_NOT_SUPPORTED' });
+    it('모두 TWOFA_SETUP_NOT_SUPPORTED를 던진다', async () => {
+      await expect(strategy.startSetup('u')).rejects.toMatchObject({ code: 'TWOFA_SETUP_NOT_SUPPORTED' });
+      await expect(strategy.completeSetup('u', {})).rejects.toMatchObject({ code: 'TWOFA_SETUP_NOT_SUPPORTED' });
+      await expect(strategy.createChallenge('u')).rejects.toMatchObject({ code: 'TWOFA_SETUP_NOT_SUPPORTED' });
+      await expect(strategy.list('u')).rejects.toMatchObject({ code: 'TWOFA_SETUP_NOT_SUPPORTED' });
+      await expect(strategy.revoke('u', 'x')).rejects.toMatchObject({ code: 'TWOFA_SETUP_NOT_SUPPORTED' });
     });
   });
 
@@ -707,15 +707,15 @@ export class BackupCodeTwoFaStrategy implements TwoFaStrategy<never, never, Back
   constructor(private readonly backupCodeService: BackupCodeService) {}
 
   async startSetup(): Promise<never> {
-    throw new ApiException('TWO_FA_SETUP_NOT_SUPPORTED');
+    throw new ApiException('TWOFA_SETUP_NOT_SUPPORTED');
   }
 
   async completeSetup(): Promise<void> {
-    throw new ApiException('TWO_FA_SETUP_NOT_SUPPORTED');
+    throw new ApiException('TWOFA_SETUP_NOT_SUPPORTED');
   }
 
   async createChallenge(): Promise<never> {
-    throw new ApiException('TWO_FA_SETUP_NOT_SUPPORTED');
+    throw new ApiException('TWOFA_SETUP_NOT_SUPPORTED');
   }
 
   async verifyResponse(userId: string, _challengeId: string, payload: BackupCodeResponsePayload): Promise<boolean> {
@@ -724,11 +724,11 @@ export class BackupCodeTwoFaStrategy implements TwoFaStrategy<never, never, Back
   }
 
   async list(): Promise<TwoFaStrategyInstance[]> {
-    throw new ApiException('TWO_FA_SETUP_NOT_SUPPORTED');
+    throw new ApiException('TWOFA_SETUP_NOT_SUPPORTED');
   }
 
   async revoke(): Promise<void> {
-    throw new ApiException('TWO_FA_SETUP_NOT_SUPPORTED');
+    throw new ApiException('TWOFA_SETUP_NOT_SUPPORTED');
   }
 }
 ```
@@ -744,7 +744,7 @@ Expected: PASS.
 git add services/api/src/twofa/strategies/backup-code.strategy.ts services/api/src/twofa/strategies/backup-code.strategy.spec.ts
 git commit -m "feat(api): BackupCodeTwoFaStrategy 도입
 
-BackupCodeService.consume에 위임하는 adapter. challenge 개념이 없으므로 createChallenge/list/revoke 등은 TWO_FA_SETUP_NOT_SUPPORTED throw."
+BackupCodeService.consume에 위임하는 adapter. challenge 개념이 없으므로 createChallenge/list/revoke 등은 TWOFA_SETUP_NOT_SUPPORTED throw."
 ```
 
 ---
@@ -858,7 +858,7 @@ const mockPushStrategy = {
 const mockRegistry = {
   get: jest.fn((type: string) => {
     if (type === 'PUSH') return mockPushStrategy;
-    throw new ApiException('TWO_FA_STRATEGY_NOT_FOUND');
+    throw new ApiException('TWOFA_STRATEGY_NOT_FOUND');
   }),
 };
 
@@ -892,7 +892,7 @@ describe('TwoFaService', () => {
     jest.clearAllMocks();
     mockRegistry.get.mockImplementation((type: string) => {
       if (type === 'PUSH') return mockPushStrategy;
-      throw new ApiException('TWO_FA_STRATEGY_NOT_FOUND');
+      throw new ApiException('TWOFA_STRATEGY_NOT_FOUND');
     });
   });
 
@@ -1219,7 +1219,7 @@ git commit -m "chore(api): Phase 0 회귀 검증 후 정리
 
 ## Self-Review 결과 박제
 
-- **Spec coverage:** §5.1 작업 범위(인터페이스/Registry/push 이관/backup-code 흡수/회귀 0) → Task 1–9 모두 매핑됨. ErrorCode 2종(`TWO_FA_STRATEGY_NOT_FOUND`, `TWO_FA_SETUP_NOT_SUPPORTED`)은 Task 1에서 처리.
+- **Spec coverage:** §5.1 작업 범위(인터페이스/Registry/push 이관/backup-code 흡수/회귀 0) → Task 1–9 모두 매핑됨. ErrorCode 2종(`TWOFA_STRATEGY_NOT_FOUND`, `TWOFA_SETUP_NOT_SUPPORTED`)은 Task 1에서 처리.
 - **Placeholder scan:** 모든 step에 실제 코드/명령. "TBD"/"적절히"/"비슷하게" 없음.
 - **Type consistency:** `TwoFaStrategyType`, `TWOFA_STRATEGY_TOKEN`, `TwoFaStrategy`, `TwoFaStrategyRegistry`, `PushTwoFaStrategy`, `BackupCodeTwoFaStrategy`는 정의된 이름과 사용처가 일관. `BackupCodeService.consume(userId, rawCode)` signature가 strategy에서 동일하게 호출됨.
 - **Scope:** Phase 0만 다룸. Phase 1·2는 본 plan 밖.

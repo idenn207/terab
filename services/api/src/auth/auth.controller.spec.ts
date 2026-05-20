@@ -183,12 +183,12 @@ describe('AuthController', () => {
   });
 
   describe('completeTwoFa', () => {
-    it('TWO_FA_CHALLENGE_NOT_FOUND가 발생하면 그대로 전파한다', async () => {
-      service.completeTwoFa.mockRejectedValue(new ApiException('TWO_FA_CHALLENGE_NOT_FOUND'));
+    it('TWOFA_CHALLENGE_NOT_FOUND가 발생하면 그대로 전파한다', async () => {
+      service.completeTwoFa.mockRejectedValue(new ApiException('TWOFA_CHALLENGE_NOT_FOUND'));
       const mockRes = { cookie: jest.fn(), clearCookie: jest.fn() } as unknown as Response;
 
       await expect(controller.completeTwoFa('ghost-id', mockRes)).rejects.toMatchObject({
-        code: 'TWO_FA_CHALLENGE_NOT_FOUND',
+        code: 'TWOFA_CHALLENGE_NOT_FOUND',
       });
     });
 
