@@ -49,6 +49,11 @@ export class BackupCodeService extends ServiceCore {
     await this.backupCodeRepository.markUsed(matchedId, new Date());
   }
 
+  async list(userId: string) {
+    const unused = await this.backupCodeRepository.findUnusedByUserId(userId);
+    return unused;
+  }
+
   private generateRawCodes(): string[] {
     return Array.from({ length: this.CODE_COUNT }, () => {
       const buf = randomBytes(this.CODE_BYTES);

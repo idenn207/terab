@@ -10,7 +10,7 @@ export class BackupCodeRepository extends RepositoryCore {
 
   async findUnusedByUserId(userId: string) {
     return this.conn
-      .select({ id: backupCodes.id, codeHash: backupCodes.codeHash })
+      .select({ id: backupCodes.id, codeHash: backupCodes.codeHash, createdAt: backupCodes.createdAt })
       .from(backupCodes)
       .where(and(eq(backupCodes.userId, userId), isNull(backupCodes.usedAt)));
   }

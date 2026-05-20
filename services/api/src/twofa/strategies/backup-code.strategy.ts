@@ -30,8 +30,10 @@ export class BackupCodeTwoFaStrategy implements TwoFaStrategy<never, never, Back
     return true;
   }
 
-  async list(_userId: string): Promise<TwoFaStrategyInstance[]> {
-    throw new ApiException('TWOFA_SETUP_NOT_SUPPORTED');
+  async list(userId: string): Promise<TwoFaStrategyInstance[]> {
+    const unused = await this.backupCodeService.list(userId);
+    if (unused.length === 0) return [];
+    return [{ id: 'backup-code', createdAt: unused[0].createdAt, lastUsedAt: null }];
   }
 
   async revoke(_userId: string, _id: string): Promise<void> {

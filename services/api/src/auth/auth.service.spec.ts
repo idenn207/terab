@@ -408,32 +408,4 @@ describe('AuthService', () => {
       expect(result).toHaveLength(8);
     });
   });
-
-  describe('completeTwoFa', () => {
-    it('챌린지가 APPROVED 상태가 아니면 TwoFaService에서 예외가 전파된다', async () => {
-      const { ApiException } = await import('@terab/common');
-      mockTwoFaService.claimApprovedChallenge.mockRejectedValue(new ApiException('TWOFA_CHALLENGE_NOT_FOUND'));
-
-      await expect(service.completeTwoFa('challenge-id')).rejects.toThrow(ApiException);
-    });
-
-    it('APPROVED 챌린지 완료 후 AUTHENTICATED 응답과 토큰을 반환한다', async () => {
-      mockTwoFaService.claimApprovedChallenge.mockResolvedValue('user-id');
-      mockUserService.findById.mockResolvedValue(mockUser);
-
-      const result = await service.completeTwoFa('challenge-id');
-
-      expect(mockTwoFaService.claimApprovedChallenge).toHaveBeenCalledWith('challenge-id');
-      expect(result.response.status).toBe('AUTHENTICATED');
-      expect(result.rawRefreshToken).toBe('mock-raw-refresh-token');
-    });
-
-    it('userId에 해당하는 사용자가 없으면 ApiException을 던진다', async () => {
-      const { ApiException } = await import('@terab/common');
-      mockTwoFaService.claimApprovedChallenge.mockResolvedValue('ghost-user-id');
-      mockUserService.findById.mockResolvedValue(null);
-
-      await expect(service.completeTwoFa('challenge-id')).rejects.toThrow(ApiException);
-    });
-  });
 });

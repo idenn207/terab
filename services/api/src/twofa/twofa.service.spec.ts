@@ -7,6 +7,8 @@ import { TwoFaStrategyRegistry } from './strategies/twofa-strategy.registry';
 import { TwoFaRepository } from './twofa.repository';
 import { TwoFaService } from './twofa.service';
 
+type AnyStrategy = unknown;
+
 const mockPushStrategy = {
   type: 'PUSH' as const,
   startSetup: jest.fn(),
@@ -18,7 +20,7 @@ const mockPushStrategy = {
 };
 
 const mockRegistry = {
-  get: jest.fn((type: string) => {
+  get: jest.fn<AnyStrategy, any[]>((type: string) => {
     if (type === 'PUSH') return mockPushStrategy;
     throw new ApiException('TWOFA_STRATEGY_NOT_FOUND');
   }),
@@ -200,6 +202,97 @@ describe('TwoFaService', () => {
       expect(mockTwoFaRepository.updateStatus).toHaveBeenCalledWith('old', 'EXPIRED');
       expect(result.challengeId).toBe('new');
       expect(result.options).toEqual(['11', '22', '33']);
+    });
+  });
+
+  describe('completeChallenge', () => {
+    it('type=PUSH면 claimApprovedChallenge에 위임', async () => {
+      mockTwoFaRepository.findById.mockResolvedValue({
+        id: 'c',
+        userId: 'u',
+        status: 'APPROVED',
+        expiresAt: new Date(Date.now() + 60_000),
+        options: '47,82,13',
+        correctNum: '47',
+      });
+      const userId = await service.completeChallenge('c', { type: 'PUSH' });
+      expect(userId).toBe('u');
+      expect(mockTwoFaRepository.updateStatus).toHaveBeenCalledWith('c', 'EXPIRED');
+    });
+
+    it('type=TOTP면 challenge가 PENDING이어야 하고, strategy.verifyResponse 호출 후 EXPIRED 처리', async () => {
+      mockTwoFaRepository.findById.mockResolvedValue({
+        id: 'c',
+        userId: 'u',
+        status: 'PENDING',
+        expiresAt: new Date(Date.now() + 60_000),
+        options: '47,82,13',
+        correctNum: '47',
+      });
+      const totpStrategy = { type: 'TOTP', verifyResponse: jest.fn().mockResolvedValue(true) };
+      mockRegistry.get.mockImplementation((t: string) => (t === 'TOTP' ? totpStrategy : mockPushStrategy));
+
+      const userId = await service.completeChallenge('c', { type: 'TOTP', code: '123456' });
+
+      expect(totpStrategy.verifyResponse).toHaveBeenCalledWith('u', 'c', { code: '123456' });
+      expect(userId).toBe('u');
+      expect(mockTwoFaRepository.updateStatus).toHaveBeenCalledWith('c', 'EXPIRED');
+    });
+
+    it('type=TOTP인데 challenge가 PENDING이 아니면 TWO_FA_CHALLENGE_NOT_FOUND', async () => {
+      mockTwoFaRepository.findById.mockResolvedValue({
+        id: 'c',
+        userId: 'u',
+        status: 'APPROVED',
+        expiresAt: new Date(Date.now() + 60_000),
+        options: '47,82,13',
+        correctNum: '47',
+      });
+      await expect(service.completeChallenge('c', { type: 'TOTP', code: '1' })).rejects.toMatchObject({
+        code: 'TWO_FA_CHALLENGE_NOT_FOUND',
+      });
+    });
+  });
+
+  describe('removeStrategy', () => {
+    it('마지막 push-외 strategy면 TWOFA_LAST_STRATEGY_CANNOT_REMOVE', async () => {
+      const totpStrategy = {
+        type: 'TOTP',
+        list: jest.fn().mockResolvedValue([{ id: 'totp-1', createdAt: new Date(), lastUsedAt: null }]),
+        revoke: jest.fn(),
+      };
+      const backupCodeStrategy = { type: 'BACKUP_CODE', list: jest.fn().mockResolvedValue([]), revoke: jest.fn() };
+      mockRegistry.get.mockImplementation((t: string) => {
+        if (t === 'TOTP') return totpStrategy;
+        if (t === 'BACKUP_CODE') return backupCodeStrategy;
+        return mockPushStrategy;
+      });
+
+      await expect(service.removeStrategy('u', 'TOTP', 'totp-1')).rejects.toMatchObject({
+        code: 'TWOFA_LAST_STRATEGY_CANNOT_REMOVE',
+      });
+      expect(totpStrategy.revoke).not.toHaveBeenCalled();
+    });
+
+    it('남은 strategy가 있으면 revoke 수행', async () => {
+      const totpStrategy = {
+        type: 'TOTP',
+        list: jest.fn().mockResolvedValue([{ id: 'totp-1', createdAt: new Date(), lastUsedAt: null }]),
+        revoke: jest.fn(),
+      };
+      const backupCodeStrategy = {
+        type: 'BACKUP_CODE',
+        list: jest.fn().mockResolvedValue([{ id: 'backup-code', createdAt: new Date(), lastUsedAt: null }]),
+        revoke: jest.fn(),
+      };
+      mockRegistry.get.mockImplementation((t: string) => {
+        if (t === 'TOTP') return totpStrategy;
+        if (t === 'BACKUP_CODE') return backupCodeStrategy;
+        return mockPushStrategy;
+      });
+
+      await service.removeStrategy('u', 'TOTP', 'totp-1');
+      expect(totpStrategy.revoke).toHaveBeenCalledWith('u', 'totp-1');
     });
   });
 });
