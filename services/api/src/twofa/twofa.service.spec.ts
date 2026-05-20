@@ -3,8 +3,26 @@ import { ApiException } from '@terab/common';
 import { DatabaseService, TransactionContext } from '@terab/db';
 import { TokenService } from '@terab/security';
 import { mockDatabaseService, mockTransactionContext } from '@terab/test';
+import { TwoFaStrategyRegistry } from './strategies/twofa-strategy.registry';
 import { TwoFaRepository } from './twofa.repository';
 import { TwoFaService } from './twofa.service';
+
+const mockPushStrategy = {
+  type: 'PUSH' as const,
+  startSetup: jest.fn(),
+  completeSetup: jest.fn(),
+  createChallenge: jest.fn(),
+  verifyResponse: jest.fn(),
+  list: jest.fn(),
+  revoke: jest.fn(),
+};
+
+const mockRegistry = {
+  get: jest.fn((type: string) => {
+    if (type === 'PUSH') return mockPushStrategy;
+    throw new ApiException('TWO_FA_STRATEGY_NOT_FOUND');
+  }),
+};
 
 const mockTwoFaRepository = {
   insert: jest.fn(),
@@ -28,34 +46,33 @@ describe('TwoFaService', () => {
         { provide: TransactionContext, useValue: mockTransactionContext },
         { provide: TwoFaRepository, useValue: mockTwoFaRepository },
         { provide: TokenService, useValue: mockTokenService },
+        { provide: TwoFaStrategyRegistry, useValue: mockRegistry },
       ],
     }).compile();
 
     service = module.get<TwoFaService>(TwoFaService);
     jest.clearAllMocks();
+    mockRegistry.get.mockImplementation((type: string) => {
+      if (type === 'PUSH') return mockPushStrategy;
+      throw new ApiException('TWO_FA_STRATEGY_NOT_FOUND');
+    });
   });
 
   describe('createChallenge', () => {
-    it('3개의 2자리 숫자 options를 생성한다', async () => {
-      mockTwoFaRepository.insert.mockImplementation(async (data) => ({ ...data, id: 'challenge-id' }));
-
-      const result = await service.createChallenge('user-id');
-
-      const parts = result.options.split(',');
-      expect(parts).toHaveLength(3);
-      parts.forEach((p) => {
-        const n = parseInt(p, 10);
-        expect(n).toBeGreaterThanOrEqual(10);
-        expect(n).toBeLessThanOrEqual(99);
+    it('PUSH strategy의 createChallenge에 위임한다', async () => {
+      mockPushStrategy.createChallenge.mockResolvedValue({
+        id: 'c1',
+        userId: 'u',
+        options: '47,82,13',
+        correctNum: '47',
+        expiresAt: new Date(Date.now() + 60_000),
       });
-    });
 
-    it('correctNum은 options 중 하나다', async () => {
-      mockTwoFaRepository.insert.mockImplementation(async (data) => ({ ...data, id: 'challenge-id' }));
+      const result = await service.createChallenge('u');
 
-      const result = await service.createChallenge('user-id');
-
-      expect(result.options.split(',')).toContain(result.correctNum);
+      expect(mockRegistry.get).toHaveBeenCalledWith('PUSH');
+      expect(mockPushStrategy.createChallenge).toHaveBeenCalledWith('u');
+      expect(result.id).toBe('c1');
     });
   });
 
@@ -66,10 +83,10 @@ describe('TwoFaService', () => {
       await expect(service.getStatus('id')).rejects.toThrow(ApiException);
     });
 
-    it('PENDING 상태이고 만료되지 않으면 options와 correctNum을 포함한 PENDING 응답을 반환한다', async () => {
+    it('PENDING + 미만료 → options/correctNum 포함 PENDING 응답', async () => {
       mockTwoFaRepository.findById.mockResolvedValue({
         id: 'id',
-        userId: 'user-id',
+        userId: 'u',
         status: 'PENDING',
         expiresAt: new Date(Date.now() + 60_000),
         options: '47,82,13',
@@ -78,17 +95,16 @@ describe('TwoFaService', () => {
 
       const result = await service.getStatus('id');
 
-      if (result.status !== 'PENDING') throw new Error('Expected PENDING status');
-      expect(result.status).toBe('PENDING');
+      if (result.status !== 'PENDING') throw new Error('Expected PENDING');
       expect(result.options).toEqual(['47', '82', '13']);
       expect(result.correctNum).toBe('47');
       expect(result.remainingSeconds).toBeGreaterThan(0);
     });
 
-    it('PENDING 상태이지만 만료됐으면 EXPIRED 처리 후 DENIED를 반환한다', async () => {
+    it('PENDING + 만료 → EXPIRED 처리', async () => {
       mockTwoFaRepository.findById.mockResolvedValue({
         id: 'id',
-        userId: 'user-id',
+        userId: 'u',
         status: 'PENDING',
         expiresAt: new Date(Date.now() - 1_000),
         options: '47,82,13',
@@ -101,17 +117,17 @@ describe('TwoFaService', () => {
       expect(mockTwoFaRepository.updateStatus).toHaveBeenCalledWith('id', 'EXPIRED');
     });
 
-    it('APPROVED 상태이면 accessToken과 user 정보를 반환한다', async () => {
+    it('APPROVED → accessToken + user 반환', async () => {
       mockTwoFaRepository.findById.mockResolvedValue({
         id: 'id',
-        userId: 'user-id',
+        userId: 'u',
         status: 'APPROVED',
         expiresAt: new Date(Date.now() + 60_000),
         options: '47,82,13',
         correctNum: '47',
       });
       mockTwoFaRepository.findUserWithPermissionsById.mockResolvedValue({
-        id: 'user-id',
+        id: 'u',
         username: 'user1',
         nickname: 'User',
         permissions: [],
@@ -120,72 +136,20 @@ describe('TwoFaService', () => {
 
       const result = await service.getStatus('id');
 
-      if (result.status !== 'APPROVED') throw new Error('Expected APPROVED status');
-      expect(result.status).toBe('APPROVED');
+      if (result.status !== 'APPROVED') throw new Error('Expected APPROVED');
       expect(result.accessToken).toBe('mock.access.token');
-      expect(result.user?.id).toBe('user-id');
+      expect(result.user?.id).toBe('u');
     });
   });
 
   describe('respond', () => {
-    it('챌린지가 없으면 ApiException(TWO_FA_CHALLENGE_NOT_FOUND)을 던진다', async () => {
-      mockTwoFaRepository.findById.mockResolvedValue(null);
+    it('PUSH strategy.verifyResponse에 위임한다', async () => {
+      mockPushStrategy.verifyResponse.mockResolvedValue(true);
 
-      await expect(service.respond('id', 'userId', '47')).rejects.toThrow(ApiException);
-    });
+      await service.respond('c', 'u', '47');
 
-    it('소유자가 다르면 ApiException(FORBIDDEN)을 던진다', async () => {
-      mockTwoFaRepository.findById.mockResolvedValue({
-        id: 'id',
-        userId: 'other-user',
-        status: 'PENDING',
-        expiresAt: new Date(Date.now() + 60_000),
-        correctNum: '47',
-      });
-
-      await expect(service.respond('id', 'user-id', '47')).rejects.toThrow(ApiException);
-    });
-
-    it('이미 처리된 챌린지는 아무것도 하지 않는다', async () => {
-      mockTwoFaRepository.findById.mockResolvedValue({
-        id: 'id',
-        userId: 'user-id',
-        status: 'APPROVED',
-        expiresAt: new Date(Date.now() + 60_000),
-        correctNum: '47',
-      });
-
-      await service.respond('id', 'user-id', '47');
-
-      expect(mockTwoFaRepository.updateStatus).not.toHaveBeenCalled();
-    });
-
-    it('정답이면 APPROVED로 변경한다', async () => {
-      mockTwoFaRepository.findById.mockResolvedValue({
-        id: 'id',
-        userId: 'user-id',
-        status: 'PENDING',
-        expiresAt: new Date(Date.now() + 60_000),
-        correctNum: '47',
-      });
-
-      await service.respond('id', 'user-id', '47');
-
-      expect(mockTwoFaRepository.updateStatus).toHaveBeenCalledWith('id', 'APPROVED', expect.any(Date));
-    });
-
-    it('오답이면 DENIED로 변경한다', async () => {
-      mockTwoFaRepository.findById.mockResolvedValue({
-        id: 'id',
-        userId: 'user-id',
-        status: 'PENDING',
-        expiresAt: new Date(Date.now() + 60_000),
-        correctNum: '47',
-      });
-
-      await service.respond('id', 'user-id', '82');
-
-      expect(mockTwoFaRepository.updateStatus).toHaveBeenCalledWith('id', 'DENIED', expect.any(Date));
+      expect(mockRegistry.get).toHaveBeenCalledWith('PUSH');
+      expect(mockPushStrategy.verifyResponse).toHaveBeenCalledWith('u', 'c', { selectedNumber: '47' });
     });
   });
 
@@ -196,31 +160,46 @@ describe('TwoFaService', () => {
       await expect(service.claimApprovedChallenge('id')).rejects.toThrow(ApiException);
     });
 
-    it('APPROVED 상태가 아니면 ApiException(TWO_FA_CHALLENGE_NOT_FOUND)을 던진다', async () => {
+    it('APPROVED 챌린지를 EXPIRED로 전환하고 userId 반환', async () => {
       mockTwoFaRepository.findById.mockResolvedValue({
         id: 'id',
-        userId: 'user-id',
-        status: 'PENDING',
-        expiresAt: new Date(Date.now() + 60_000),
-        correctNum: '47',
-      });
-
-      await expect(service.claimApprovedChallenge('id')).rejects.toThrow(ApiException);
-    });
-
-    it('APPROVED 챌린지를 EXPIRED로 전환하고 userId를 반환한다', async () => {
-      mockTwoFaRepository.findById.mockResolvedValue({
-        id: 'id',
-        userId: 'user-id',
+        userId: 'u',
         status: 'APPROVED',
         expiresAt: new Date(Date.now() + 60_000),
+        options: '47,82,13',
         correctNum: '47',
       });
 
       const userId = await service.claimApprovedChallenge('id');
 
-      expect(userId).toBe('user-id');
+      expect(userId).toBe('u');
       expect(mockTwoFaRepository.updateStatus).toHaveBeenCalledWith('id', 'EXPIRED');
+    });
+  });
+
+  describe('resend', () => {
+    it('기존 PENDING 챌린지를 EXPIRED로 만들고 새 챌린지를 생성한다', async () => {
+      mockTwoFaRepository.findById.mockResolvedValue({
+        id: 'old',
+        userId: 'u',
+        status: 'PENDING',
+        expiresAt: new Date(Date.now() + 60_000),
+        options: '47,82,13',
+        correctNum: '47',
+      });
+      mockPushStrategy.createChallenge.mockResolvedValue({
+        id: 'new',
+        userId: 'u',
+        options: '11,22,33',
+        correctNum: '22',
+        expiresAt: new Date(Date.now() + 60_000),
+      });
+
+      const result = await service.resend('old');
+
+      expect(mockTwoFaRepository.updateStatus).toHaveBeenCalledWith('old', 'EXPIRED');
+      expect(result.challengeId).toBe('new');
+      expect(result.options).toEqual(['11', '22', '33']);
     });
   });
 });

@@ -3,29 +3,26 @@ import { ApiException } from '@terab/common';
 import { DatabaseService, ServiceCore, TransactionContext } from '@terab/db';
 import { LogReplay } from '@terab/logger';
 import { TokenService } from '@terab/security';
-import { randomInt } from 'node:crypto';
 import { type ChallengeStatusResponse, ResendChallengeResponseDto } from './dto';
+import { TwoFaStrategyRegistry } from './strategies/twofa-strategy.registry';
 import { TwoFaRepository } from './twofa.repository';
 
 @Injectable()
 export class TwoFaService extends ServiceCore {
-  private CHALLENGE_EXPIRY_MS = 60_000; // 60s
   constructor(
     database: DatabaseService,
     txContext: TransactionContext,
     private readonly twoFaRepository: TwoFaRepository,
     private readonly tokenService: TokenService,
+    private readonly registry: TwoFaStrategyRegistry,
   ) {
     super(database, txContext);
   }
 
   @LogReplay()
   async createChallenge(userId: string) {
-    const optionNums = this.generateOptions();
-    const options = optionNums.join(',');
-    const correctNum = optionNums[randomInt(3)].toString();
-    const expiresAt = new Date(Date.now() + this.CHALLENGE_EXPIRY_MS);
-    return this.twoFaRepository.insert({ userId, options, correctNum, expiresAt });
+    const push = this.registry.get('PUSH');
+    return push.createChallenge(userId) as ReturnType<TwoFaRepository['insert']>;
   }
 
   async getStatus(challengeId: string): Promise<ChallengeStatusResponse> {
@@ -67,18 +64,8 @@ export class TwoFaService extends ServiceCore {
 
   @LogReplay()
   async respond(challengeId: string, userId: string, selectedNumber: string): Promise<void> {
-    const challenge = await this.twoFaRepository.findById(challengeId);
-    if (!challenge) throw new ApiException('TWO_FA_CHALLENGE_NOT_FOUND');
-    if (challenge.userId !== userId) throw new ApiException('FORBIDDEN');
-
-    // 이미 처리된 챌린지 - 브루트포스 방지: 맞음/틀림 미노출
-    if (challenge.status !== 'PENDING' || challenge.expiresAt <= new Date()) return;
-
-    if (challenge.correctNum === selectedNumber) {
-      await this.twoFaRepository.updateStatus(challengeId, 'APPROVED', new Date());
-    } else {
-      await this.twoFaRepository.updateStatus(challengeId, 'DENIED', new Date());
-    }
+    const push = this.registry.get('PUSH');
+    await push.verifyResponse(userId, challengeId, { selectedNumber });
   }
 
   @LogReplay()
@@ -98,13 +85,5 @@ export class TwoFaService extends ServiceCore {
     }
     const challenge = await this.createChallenge(old.userId);
     return { challengeId: challenge.id, options: challenge.options.split(','), expiresAt: challenge.expiresAt };
-  }
-
-  private generateOptions(): number[] {
-    const nums = new Set<number>();
-    while (nums.size < 3) {
-      nums.add(10 + randomInt(90));
-    }
-    return [...nums];
   }
 }
