@@ -30,10 +30,6 @@ describe('FileController', () => {
     jest.clearAllMocks();
   });
 
-  it('인스턴스가 생성된다', () => {
-    expect(controller).toBeDefined();
-  });
-
   describe('search', () => {
     it('FOLDER_NOT_FOUND가 발생하면 그대로 전파한다', async () => {
       service.search.mockRejectedValue(new ApiException('FOLDER_NOT_FOUND'));

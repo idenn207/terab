@@ -27,10 +27,6 @@ describe('UserService', () => {
     jest.clearAllMocks();
   });
 
-  it('인스턴스가 생성된다', () => {
-    expect(service).toBeDefined();
-  });
-
   describe('findById', () => {
     it('UserRepository.findById에 위임한다', async () => {
       mockUserRepository.findById.mockResolvedValue({ id: 'user-1' });

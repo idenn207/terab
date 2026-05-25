@@ -1,7 +1,7 @@
 import { Test } from '@nestjs/testing';
 import { ApiException } from '@terab/common';
 import { DatabaseService, TransactionContext } from '@terab/db';
-import { mockDatabaseService, mockTransactionContext } from '@terab/test';
+import { mockDatabaseService, mockTransactionContext, setupMockDbTransactionChain } from '@terab/test';
 import { DeviceService } from '../device/device.service';
 import { InvitationService } from '../invitation/invitation.service';
 import { TrustedDeviceService } from '../trusted-device/trusted-device.service';
@@ -84,6 +84,7 @@ describe('LoginService', () => {
 
     service = module.get(LoginService);
     jest.clearAllMocks();
+    setupMockDbTransactionChain();
   });
 
   describe('register', () => {
@@ -93,7 +94,7 @@ describe('LoginService', () => {
 
       await expect(
         service.register({ token: 'bad', username: 'a', nickname: 'A', password: 'p' }, res),
-      ).rejects.toMatchObject({ errorCode: 'INVITATION_NOT_FOUND' });
+      ).rejects.toMatchObject({ code: 'INVITATION_NOT_FOUND' });
     });
 
     it('username 중복 시 USERNAME_TAKEN 예외를 던진다', async () => {
@@ -104,7 +105,7 @@ describe('LoginService', () => {
 
       await expect(
         service.register({ token: 't', username: 'dup', nickname: 'D', password: 'p' }, res),
-      ).rejects.toMatchObject({ errorCode: 'USERNAME_TAKEN' });
+      ).rejects.toMatchObject({ code: 'USERNAME_TAKEN' });
     });
 
     it('insert 후 user가 조회되지 않으면 REGISTRATION_FAILED 예외를 던진다', async () => {
@@ -119,7 +120,7 @@ describe('LoginService', () => {
 
       await expect(
         service.register({ token: 't', username: 'a', nickname: 'A', password: 'p' }, res),
-      ).rejects.toMatchObject({ errorCode: 'REGISTRATION_FAILED' });
+      ).rejects.toMatchObject({ code: 'REGISTRATION_FAILED' });
     });
 
     it('정상 흐름 — accessToken + user + backupCodes 반환', async () => {
@@ -156,7 +157,7 @@ describe('LoginService', () => {
 
       await expect(
         service.login({ username: 'ghost', password: 'p' }, undefined, undefined, res),
-      ).rejects.toMatchObject({ errorCode: 'INVALID_CREDENTIALS' });
+      ).rejects.toMatchObject({ code: 'INVALID_CREDENTIALS' });
     });
 
     it('trustToken 검증 통과 시 AUTHENTICATED + 토큰 발급', async () => {
@@ -227,7 +228,7 @@ describe('LoginService', () => {
 
       await expect(
         service.loginWithBackupCode({ username: 'g', password: 'p', backupCode: 'c' }, res),
-      ).rejects.toMatchObject({ errorCode: 'INVALID_CREDENTIALS' });
+      ).rejects.toMatchObject({ code: 'INVALID_CREDENTIALS' });
     });
 
     it('정상 흐름 — backup-code 소비 후 토큰 발급', async () => {
@@ -256,7 +257,7 @@ describe('LoginService', () => {
       const res = { cookie: jest.fn() } as any;
 
       await expect(service.refresh('rt', res)).rejects.toMatchObject({
-        errorCode: 'REFRESH_TOKEN_INVALID',
+        code: 'REFRESH_TOKEN_INVALID',
       });
     });
 

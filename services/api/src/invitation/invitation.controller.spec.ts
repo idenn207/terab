@@ -28,10 +28,6 @@ describe('InvitationController', () => {
     jest.clearAllMocks();
   });
 
-  it('인스턴스가 생성된다', () => {
-    expect(controller).toBeDefined();
-  });
-
   describe('create', () => {
     it('현재 사용자 id와 expiresInDays로 service.create를 호출하고 결과를 반환한다', async () => {
       const expected = { token: 'tok-1', url: 'https://x/register/tok-1', expiresAt: new Date('2030-01-01') };

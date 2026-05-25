@@ -8,10 +8,6 @@ describe('PiiMasker', () => {
     masker = new PiiMasker();
   });
 
-  it('인스턴스가 생성된다', () => {
-    expect(masker).toBeDefined();
-  });
-
   describe('maskValue', () => {
     it('블랙리스트 키의 값을 *** 로 치환한다', () => {
       const result = masker.maskValue({ password: 'secret', name: 'kim' }, TRACE_LIMITS.MAX_ARG_SIZE_BYTES);

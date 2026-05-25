@@ -7,10 +7,6 @@ describe('RbacSeeder', () => {
     seeder = new RbacSeeder();
   });
 
-  it('인스턴스가 생성된다', () => {
-    expect(seeder).toBeDefined();
-  });
-
   describe('seed', () => {
     it('permissions·roles·role_permissions를 onConflictDoNothing으로 insert한다', async () => {
       const permsOnConflict = jest.fn().mockResolvedValue(undefined);

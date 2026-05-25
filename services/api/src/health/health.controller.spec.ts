@@ -24,10 +24,6 @@ describe('HealthController', () => {
     controller = module.get<HealthController>(HealthController);
   });
 
-  it('should be defined', () => {
-    expect(controller).toBeDefined();
-  });
-
   it('Server 상태와 DB 상태를 포함한 health check를 실행한다', async () => {
     const result = {
       status: 'ok',

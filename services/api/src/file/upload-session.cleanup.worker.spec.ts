@@ -1,4 +1,4 @@
-﻿import { getQueueToken } from '@nestjs/bullmq';
+import { getQueueToken } from '@nestjs/bullmq';
 import { Test } from '@nestjs/testing';
 import { createPinoLoggerProvider, mockPinoLogger } from '@terab/test';
 import { UploadSessionCleanupWorker } from './upload-session.cleanup.worker';
@@ -30,10 +30,6 @@ describe('UploadSessionCleanupWorker', () => {
     worker = module.get(UploadSessionCleanupWorker);
     Object.defineProperty(worker, 'worker', { value: mockBullmqWorker, configurable: true });
     jest.clearAllMocks();
-  });
-
-  it('인스턴스가 생성된다', () => {
-    expect(worker).toBeDefined();
   });
 
   describe('process', () => {

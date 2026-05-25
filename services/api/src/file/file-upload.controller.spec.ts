@@ -36,10 +36,6 @@ describe('FileUploadController', () => {
     jest.clearAllMocks();
   });
 
-  it('인스턴스가 생성된다', () => {
-    expect(controller).toBeDefined();
-  });
-
   describe('init', () => {
     const body = { name: 'test.png', size: 1024, mimeType: 'image/png' };
 

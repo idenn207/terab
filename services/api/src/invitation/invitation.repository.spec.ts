@@ -1,4 +1,4 @@
-﻿import { Test, TestingModule } from '@nestjs/testing';
+import { Test, TestingModule } from '@nestjs/testing';
 import { DatabaseService, TransactionContext } from '@terab/db';
 import {
   mockDatabaseService,
@@ -31,10 +31,6 @@ describe('InvitationRepository', () => {
         }),
       }),
     });
-  });
-
-  it('should be defined', () => {
-    expect(repo).toBeDefined();
   });
 
   describe('consume', () => {

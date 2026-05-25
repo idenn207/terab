@@ -31,10 +31,6 @@ describe('FolderController', () => {
     jest.clearAllMocks();
   });
 
-  it('인스턴스가 생성된다', () => {
-    expect(controller).toBeDefined();
-  });
-
   describe('getRoot', () => {
     it('현재 사용자 id로 service.getRoot를 호출하고 결과를 반환한다', async () => {
       service.getRoot.mockResolvedValue(mockFolderChildrenResponse);

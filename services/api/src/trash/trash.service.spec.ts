@@ -36,10 +36,6 @@ describe('TrashService', () => {
     jest.clearAllMocks();
   });
 
-  it('인스턴스가 생성된다', () => {
-    expect(service).toBeDefined();
-  });
-
   it('restore file은 파일이 없으면 FILE_NOT_FOUND를 던진다', async () => {
     mockTrashRepository.findDeletedFile.mockResolvedValue(null);
     await expect(service.restore('u1', 'id', 'file')).rejects.toThrow(ApiException);

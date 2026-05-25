@@ -20,10 +20,6 @@ describe('SessionRepository', () => {
     setupMockDbSelectChain();
   });
 
-  it('인스턴스가 생성된다', () => {
-    expect(repo).toBeDefined();
-  });
-
   describe('findActiveByHash', () => {
     const now = new Date('2025-01-01T00:00:00.000Z');
 
