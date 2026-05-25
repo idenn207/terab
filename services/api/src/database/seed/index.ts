@@ -1,1 +1,2 @@
-export * from './rbac.seed';
+export * from './owner.seeder';
+export * from './rbac.seeder';

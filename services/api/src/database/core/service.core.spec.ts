@@ -25,10 +25,6 @@ describe('ServiceCore', () => {
     service = new TestService(mockDb as unknown as DatabaseService, mockTxCtx as unknown as TransactionContext);
   });
 
-  it('인스턴스가 생성된다', () => {
-    expect(service).toBeDefined();
-  });
-
   it('tx 컨텍스트가 없으면 database.db.transaction을 호출한다', async () => {
     const fakeTx = {} as DrizzleTx;
     const fn = jest.fn().mockResolvedValue('result');

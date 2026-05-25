@@ -1,6 +1,12 @@
 import { Test } from '@nestjs/testing';
 import { DatabaseService, TransactionContext } from '@terab/db';
-import { mockDatabaseService, mockDbFor, mockDbLimit, mockTransactionContext, setupMockDbSelectChain } from '@terab/test';
+import {
+  mockDatabaseService,
+  mockDbFor,
+  mockDbLimit,
+  mockTransactionContext,
+  setupMockDbSelectChain,
+} from '@terab/test';
 import { UploadSessionRepository } from './upload-session.repository';
 
 describe('UploadSessionRepository', () => {
@@ -17,10 +23,6 @@ describe('UploadSessionRepository', () => {
     repo = module.get(UploadSessionRepository);
     jest.clearAllMocks();
     setupMockDbSelectChain();
-  });
-
-  it('인스턴스가 생성된다', () => {
-    expect(repo).toBeDefined();
   });
 
   it('findById는 일치하는 session이 없으면 null을 반환한다', async () => {

@@ -32,10 +32,6 @@ describe('FileDownloadController', () => {
     jest.clearAllMocks();
   });
 
-  it('인스턴스가 생성된다', () => {
-    expect(controller).toBeDefined();
-  });
-
   describe('downloadFile', () => {
     it('FILE_NOT_FOUND가 발생하면 그대로 전파한다', async () => {
       service.getDownloadStream.mockRejectedValue(new ApiException('FILE_NOT_FOUND'));
@@ -91,9 +87,9 @@ describe('FileDownloadController', () => {
       service.resolveZipFiles.mockRejectedValue(new ApiException('FILE_NOT_FOUND'));
       const mockRes = { set: jest.fn() } as unknown as Response;
 
-      await expect(
-        controller.downloadZip(mockAuthUser, { fileIds: [FILE_ID] }, mockRes),
-      ).rejects.toMatchObject({ code: 'FILE_NOT_FOUND' });
+      await expect(controller.downloadZip(mockAuthUser, { fileIds: [FILE_ID] }, mockRes)).rejects.toMatchObject({
+        code: 'FILE_NOT_FOUND',
+      });
     });
 
     it('ZIP 스트림과 Content 헤더를 설정하고 StreamableFile을 반환한다', async () => {

@@ -29,7 +29,7 @@ make mq           # MQ 개발 서버 실행
 **운영 (NAS)**
 
 ```bash
-make setup        # Docker Config/Secret 등록 (configs.env + secrets.env 필요)
+make setup        # Docker Secret 등록 (루트 secrets/ 디렉토리의 파일 기반 — JSON 등)
 make stack        # Docker Swarm 스택 배포
 make stack-update # API/Web 이미지 롤링 업데이트
 make stack-down   # 스택 제거
@@ -37,7 +37,7 @@ make stack-down   # 스택 제거
 
 ### 환경 설정
 
-각 서비스의 필요 환경변수는 루트의 `*.env.example` 파일을 참조한다.
+각 서비스의 필요 환경변수는 루트의 `*.env.example` 파일을 참조한다. 모든 환경변수는 `*.env` 파일로 관리하고, **파일 형태의 비밀(JSON 키 등)만** 루트 `secrets/` 디렉토리에 두어 Docker Secret으로 등록한다.
 
 | 파일 | 대상 서비스 |
 | --- | --- |
@@ -46,6 +46,8 @@ make stack-down   # 스택 제거
 | `web.env.example` | services/web |
 | `infra.env.example` | DB / Redis / MinIO |
 | `runner.env.example` | GitHub Actions Self-Hosted Runner |
+
+운영 환경에서 컨테이너는 `*.env` 파일을 그대로 마운트하여 환경변수를 주입받고, `secrets/` 디렉토리의 파일은 Docker Secret으로 등록돼 `/run/secrets/<filename>` 경로로 마운트된다.
 
 ## 디렉토리 구조
 
@@ -130,7 +132,7 @@ scripts/        # 빌드/배포 자동화 스크립트
 - 새 코드는 주변 코드의 네이밍, 구조, 패턴을 그대로 따른다
 - 요청 범위를 벗어난 리팩토링, 주석 추가, 기능 확장 금지
 - 기존 파일의 설정값(비밀번호, 포트 등)을 추측이나 예시값으로 덮어쓰기 금지
-- 보안에 민감한 파일(`*.env`, `secrets.*`, `application-*.properties`) 수정 전 반드시 확인
+- 보안에 민감한 파일(`*.env`, `secrets/**`) 수정 전 반드시 확인
 - **새 파일 생성 시 줄바꿈은 반드시 CRLF(`\r\n`)로 저장한다** — Windows 개발 환경 기본값. Write 도구는 LF를 기본으로 사용하므로, **파일 생성 후 반드시 CRLF 변환을 검증한다.**
   - 검증: `file {path}` 또는 PowerShell `(Get-Content -Raw {path}) -match "\r\n"` 로 EOL 확인
   - 변환: LF로 생성된 경우 PowerShell `-replace "(?<!\r)\n","\`r\`n"` 으로 즉시 보정
@@ -149,3 +151,18 @@ scripts/        # 빌드/배포 자동화 스크립트
 
 - 커밋은 사용자 명의로만 생성 (`Co-Authored-By` 태그 추가 금지)
 - 파괴적인 Git 명령(`reset --hard`, `push --force`, `branch -D`)은 사용자 명시 요청 시에만 실행
+
+## 개발 워크플로우 (ECC)
+
+신규 기능·리팩토링·문서 작업은 ECC 표준 흐름을 따른다.
+
+```
+/ecc:plan-prd  →  /ecc:plan  →  /ecc:prp-implement
+```
+
+- **PRD**: `.claude/prds/{slug}.prd.md` — Problem / Hypothesis / Scope / Acceptance / Delivery Milestones
+- **Plan**: `.claude/plans/{slug}.plan.md` — Files / Tasks / Validation / Risks
+- **구현**: `/ecc:prp-implement` 의 Task 별 TDD + Validation loop
+- 컨벤션·archive 정책은 [.claude/plans/README.md](.claude/plans/README.md) 참조
+- 레거시 superpowers 문서(2026-03 ~ 05)는 [docs/archive/superpowers/INDEX.md](docs/archive/superpowers/INDEX.md) 에서 주제별로 검색 (historical reference)
+- 주요 아키텍처 결정은 [docs/adr/INDEX.md](docs/adr/INDEX.md) 에 ADR 로 영속화한다 — 신규 결정 시 동일 형식(Nygard 5섹션)으로 추가

@@ -19,6 +19,9 @@ volumes/storage/
 .worktrees/
 .claude/*.local.*
 .claude/skills/
+.claude/PRPs/
+everything-claude-code/
+/ECC/
 
 # OS
 .DS_Store

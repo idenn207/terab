@@ -1,12 +1,6 @@
 import { Test } from '@nestjs/testing';
 import { ApiException } from '@terab/common';
-import {
-  FOLDER_ID,
-  PARENT_FOLDER_ID,
-  mockAuthUser,
-  mockFolderChildrenResponse,
-  mockFolderItem,
-} from '@terab/test';
+import { FOLDER_ID, PARENT_FOLDER_ID, mockAuthUser, mockFolderChildrenResponse, mockFolderItem } from '@terab/test';
 import { FolderController } from './folder.controller';
 import { FolderService } from './folder.service';
 
@@ -35,10 +29,6 @@ describe('FolderController', () => {
     controller = module.get(FolderController);
     service = module.get(FolderService);
     jest.clearAllMocks();
-  });
-
-  it('인스턴스가 생성된다', () => {
-    expect(controller).toBeDefined();
   });
 
   describe('getRoot', () => {

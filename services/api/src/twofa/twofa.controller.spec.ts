@@ -28,17 +28,13 @@ describe('TwoFaController', () => {
     jest.clearAllMocks();
   });
 
-  it('인스턴스가 생성된다', () => {
-    expect(controller).toBeDefined();
-  });
-
   describe('getStatus', () => {
-    it('TWO_FA_CHALLENGE_NOT_FOUND이 발생하면 그대로 전파한다', async () => {
-      service.getStatus.mockRejectedValue(new ApiException('TWO_FA_CHALLENGE_NOT_FOUND'));
+    it('TWOFA_CHALLENGE_NOT_FOUND이 발생하면 그대로 전파한다', async () => {
+      service.getStatus.mockRejectedValue(new ApiException('TWOFA_CHALLENGE_NOT_FOUND'));
 
       await expect(controller.getStatus('ghost-id')).rejects.toThrow(ApiException);
       await expect(controller.getStatus('ghost-id')).rejects.toMatchObject({
-        code: 'TWO_FA_CHALLENGE_NOT_FOUND',
+        code: 'TWOFA_CHALLENGE_NOT_FOUND',
       });
     });
 
@@ -60,8 +56,7 @@ describe('TwoFaController', () => {
     it('APPROVED 상태를 반환한다', async () => {
       const approved = {
         status: 'APPROVED' as const,
-        accessToken: 'access-token',
-        user: { id: mockAuthUser.userId, username: mockAuthUser.username, nickname: 'User One' },
+        userId: mockAuthUser.userId,
       };
       service.getStatus.mockResolvedValue(approved);
 
@@ -88,12 +83,14 @@ describe('TwoFaController', () => {
   });
 
   describe('respond', () => {
-    it('TWO_FA_CHALLENGE_NOT_FOUND이 발생하면 그대로 전파한다', async () => {
-      service.respond.mockRejectedValue(new ApiException('TWO_FA_CHALLENGE_NOT_FOUND'));
+    it('TWOFA_CHALLENGE_NOT_FOUND이 발생하면 그대로 전파한다', async () => {
+      service.respond.mockRejectedValue(new ApiException('TWOFA_CHALLENGE_NOT_FOUND'));
 
-      await expect(controller.respond(mockAuthUser, 'ghost-id', { selectedNumber: '47' })).rejects.toThrow(ApiException);
+      await expect(controller.respond(mockAuthUser, 'ghost-id', { selectedNumber: '47' })).rejects.toThrow(
+        ApiException,
+      );
       await expect(controller.respond(mockAuthUser, 'ghost-id', { selectedNumber: '47' })).rejects.toMatchObject({
-        code: 'TWO_FA_CHALLENGE_NOT_FOUND',
+        code: 'TWOFA_CHALLENGE_NOT_FOUND',
       });
     });
 
@@ -107,12 +104,12 @@ describe('TwoFaController', () => {
   });
 
   describe('resend', () => {
-    it('TWO_FA_CHALLENGE_NOT_FOUND이 발생하면 그대로 전파한다', async () => {
-      service.resend.mockRejectedValue(new ApiException('TWO_FA_CHALLENGE_NOT_FOUND'));
+    it('TWOFA_CHALLENGE_NOT_FOUND이 발생하면 그대로 전파한다', async () => {
+      service.resend.mockRejectedValue(new ApiException('TWOFA_CHALLENGE_NOT_FOUND'));
 
       await expect(controller.resend('ghost-id')).rejects.toThrow(ApiException);
       await expect(controller.resend('ghost-id')).rejects.toMatchObject({
-        code: 'TWO_FA_CHALLENGE_NOT_FOUND',
+        code: 'TWOFA_CHALLENGE_NOT_FOUND',
       });
     });
 

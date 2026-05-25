@@ -1,10 +1,6 @@
 import { buildLoggerParams } from './logger.config';
 
 describe('buildLoggerParams', () => {
-  it('인스턴스가 생성된다', () => {
-    expect(buildLoggerParams('dev', 30)).toBeDefined();
-  });
-
   describe('dev 환경', () => {
     let pinoHttp: Record<string, any>;
 

@@ -57,14 +57,12 @@ describe('Auth (e2e) — register invitation 롤백', () => {
   });
 
   it('이미 사용된 invitation 토큰으로 register 시도 시 409 CONFLICT를 반환하고 users 테이블에 row가 생성되지 않는다', async () => {
-    const res = await request(app.getHttpServer())
-      .post('/auth/register')
-      .send({
-        token: testToken,
-        username: testUsername,
-        nickname: 'rollback',
-        password: 'Password1234!',
-      });
+    const res = await request(app.getHttpServer()).post('/auth/register').send({
+      token: testToken,
+      username: testUsername,
+      nickname: 'rollback',
+      password: 'Password1234!',
+    });
 
     expect(res.status).toBe(409);
     expect(res.body.code).toBe('INVITATION_ALREADY_USED');

@@ -13,13 +13,7 @@ import {
 } from '@nestjs/common';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { ApiError, type AuthUser, CurrentUser } from '@terab/common';
-import {
-  FileItemDto,
-  FileSearchQueryDto,
-  FileSearchResponseDto,
-  MoveFileBodyDto,
-  RenameFileBodyDto,
-} from './dto';
+import { FileItemDto, FileSearchQueryDto, FileSearchResponseDto, MoveFileBodyDto, RenameFileBodyDto } from './dto';
 import { FileService } from './file.service';
 
 @Controller('files')
@@ -31,10 +25,7 @@ export class FileController {
   @ApiOperation({ summary: '파일 검색' })
   @ApiResponse({ status: HttpStatus.OK, type: FileSearchResponseDto })
   @ApiError('FOLDER_NOT_FOUND')
-  async search(
-    @CurrentUser() user: AuthUser,
-    @Query() query: FileSearchQueryDto,
-  ): Promise<FileSearchResponseDto> {
+  async search(@CurrentUser() user: AuthUser, @Query() query: FileSearchQueryDto): Promise<FileSearchResponseDto> {
     return this.fileService.search(user.userId, query);
   }
 
@@ -79,10 +70,7 @@ export class FileController {
   @ApiOperation({ summary: '파일 소프트 삭제' })
   @ApiResponse({ status: HttpStatus.NO_CONTENT })
   @ApiError('FILE_NOT_FOUND')
-  async remove(
-    @CurrentUser() user: AuthUser,
-    @Param('id', ParseUUIDPipe) id: string,
-  ): Promise<void> {
+  async remove(@CurrentUser() user: AuthUser, @Param('id', ParseUUIDPipe) id: string): Promise<void> {
     await this.fileService.remove(user.userId, id);
   }
 }

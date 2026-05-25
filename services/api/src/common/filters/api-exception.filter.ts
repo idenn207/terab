@@ -14,7 +14,7 @@ import { Response } from 'express';
 // reqId로 손수 묶어야 하는 분석 부담이 생긴다. filter는 응답 직렬화만 담당한다.
 //
 // (과거 4e62b7c에서 logger를 추가했다가 이 중복 문제로 롤백된 이력 있음.)
-// 자세한 근거: docs/superpowers/specs/2026-05-14-api-core-and-logging-consistency-design.md §5
+// 자세한 근거: docs/archive/superpowers/specs/2026-05-14-api-core-and-logging-consistency-design.md §5
 // ─────────────────────────────────────────────────────────────────
 @Catch()
 export class ApiExceptionFilter implements ExceptionFilter {

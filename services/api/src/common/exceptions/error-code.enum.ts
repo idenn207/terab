@@ -62,9 +62,29 @@ export const ErrorCode = {
     message: '유효하지 않은 백업 코드입니다.',
     status: HttpStatus.UNAUTHORIZED,
   },
-  TWO_FA_CHALLENGE_NOT_FOUND: {
+  TWOFA_CHALLENGE_NOT_FOUND: {
     message: '2FA 챌린지를 찾을 수 없습니다.',
     status: HttpStatus.NOT_FOUND,
+  },
+  TWOFA_STRATEGY_NOT_FOUND: {
+    message: '등록되지 않은 2FA 방식입니다.',
+    status: HttpStatus.NOT_FOUND,
+  },
+  TWOFA_SETUP_NOT_SUPPORTED: {
+    message: '해당 2FA 방식은 별도 등록 절차가 없습니다.',
+    status: HttpStatus.BAD_REQUEST,
+  },
+  TWOFA_TOTP_INVALID_CODE: {
+    message: 'TOTP 코드가 올바르지 않습니다.',
+    status: HttpStatus.BAD_REQUEST,
+  },
+  TWOFA_TOTP_LOCKED: {
+    message: 'TOTP 입력 실패 횟수가 한도를 초과해 잠겼습니다. 잠시 후 다시 시도하세요.',
+    status: HttpStatus.TOO_MANY_REQUESTS,
+  },
+  TWOFA_LAST_STRATEGY_CANNOT_REMOVE: {
+    message: '마지막 2FA 방식은 제거할 수 없습니다. backup code 또는 다른 방식을 먼저 추가하세요.',
+    status: HttpStatus.BAD_REQUEST,
   },
   DEVICE_NOT_FOUND: {
     message: '등록되지 않은 디바이스입니다.',

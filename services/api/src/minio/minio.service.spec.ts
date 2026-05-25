@@ -18,10 +18,6 @@ describe('MinioService', () => {
     service = module.get<MinioService>(MinioService);
   });
 
-  it('should be defined', () => {
-    expect(service).toBeDefined();
-  });
-
   describe('presigned 메서드', () => {
     it('presignedPutObject는 presignClient 호출 결과 URL을 반환한다', async () => {
       // presignClient는 private — spy로 접근

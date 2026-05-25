@@ -1,37 +1,21 @@
-import { ConfigService } from '@nestjs/config';
 import { Test } from '@nestjs/testing';
-import { ApiException } from '@terab/common';
 import { DatabaseService, TransactionContext } from '@terab/db';
 import { TokenService } from '@terab/security';
-import { mockConfigService, mockDatabaseService, mockDbTransaction, mockTransactionContext, mockUser, setupMockDbTransactionChain } from '@terab/test';
+import { mockDatabaseService, mockTransactionContext, mockUser, setupMockDbTransactionChain } from '@terab/test';
 import bcrypt from 'bcryptjs';
-import { DeviceService } from '../device/device.service';
-import { InvitationService } from '../invitation/invitation.service';
-import { TrustedDeviceService } from '../trusted-device/trusted-device.service';
-import { PushChallengePublisher } from '../twofa/push-challenge.publisher';
-import { TwoFaService } from '../twofa/twofa.service';
-import { AuthRepository } from './auth.repository';
+import { UserService } from '../user/user.service';
 import { AuthService } from './auth.service';
+import { RoleService } from './role/role.service';
+import { SessionService } from './session/session.service';
 
-jest.mock('bcryptjs', () => ({
-  ...jest.requireActual('bcryptjs'),
-  compare: jest.fn(),
-  hash: jest.fn(),
-}));
+const mockUserService = {
+  findById: jest.fn(),
+};
 
-const mockAuthRepository = {
-  findUserWithPermissionsByUsername: jest.fn(),
-  findUserWithPermissionsById: jest.fn(),
-  findActiveRefreshTokenByHash: jest.fn(),
-  insertRefreshToken: jest.fn(),
-  revokeRefreshTokenById: jest.fn(),
-  findUnusedBackupCodes: jest.fn(),
-  markBackupCodeUsed: jest.fn(),
-  findUserByUsername: jest.fn(),
-  findRoleByName: jest.fn(),
-  insertUser: jest.fn(),
-  insertUserRole: jest.fn(),
-  insertBackupCodes: jest.fn(),
+const mockRoleService = {
+  findByName: jest.fn(),
+  assignUserRole: jest.fn(),
+  getPermissionsByUserId: jest.fn(),
 };
 
 const mockTokenService = {
@@ -42,26 +26,10 @@ const mockTokenService = {
   refreshExpMs: 86400000,
 };
 
-const mockDeviceService = {
-  findPushTokensByUserId: jest.fn(),
-};
-
-const mockTwoFaService = {
-  createChallenge: jest.fn(),
-  claimApprovedChallenge: jest.fn(),
-};
-
-const mockTrustedDeviceService = {
-  verify: jest.fn(),
-};
-
-const mockInvitationService = {
-  validateOrThrow: jest.fn(),
-  consume: jest.fn(),
-};
-
-const mockPushChallengePublisher = {
-  publish: jest.fn(),
+const mockSessionService = {
+  issueForUser: jest.fn(),
+  rotate: jest.fn(),
+  revokeByRawToken: jest.fn(),
 };
 
 describe('AuthService', () => {
@@ -73,276 +41,251 @@ describe('AuthService', () => {
         AuthService,
         { provide: DatabaseService, useValue: mockDatabaseService },
         { provide: TransactionContext, useValue: mockTransactionContext },
-        { provide: AuthRepository, useValue: mockAuthRepository },
-        { provide: ConfigService, useValue: mockConfigService },
+        { provide: UserService, useValue: mockUserService },
+        { provide: RoleService, useValue: mockRoleService },
         { provide: TokenService, useValue: mockTokenService },
-        { provide: DeviceService, useValue: mockDeviceService },
-        { provide: TwoFaService, useValue: mockTwoFaService },
-        { provide: TrustedDeviceService, useValue: mockTrustedDeviceService },
-        { provide: InvitationService, useValue: mockInvitationService },
-        { provide: PushChallengePublisher, useValue: mockPushChallengePublisher },
+        { provide: SessionService, useValue: mockSessionService },
       ],
     }).compile();
 
     service = module.get(AuthService);
     jest.clearAllMocks();
     setupMockDbTransactionChain();
-    mockAuthRepository.insertRefreshToken.mockResolvedValue(undefined);
-    mockDeviceService.findPushTokensByUserId.mockResolvedValue([]);
-    mockInvitationService.validateOrThrow.mockResolvedValue({ token: 'valid-token' });
     mockTokenService.generateAccessToken.mockReturnValue('mock.access.token');
     mockTokenService.issueRefreshToken.mockReturnValue({
       rawRefreshToken: 'mock-raw-refresh-token',
       tokenHash: 'mock-token-hash',
       expiresAt: new Date(),
     });
+    mockSessionService.issueForUser.mockResolvedValue({
+      rawRefreshToken: 'mock-raw-refresh-token',
+      refreshTokenExpMs: 86400000,
+    });
+    mockSessionService.rotate.mockResolvedValue({
+      userId: 'rotated-user-id',
+      rawRefreshToken: 'rotated-raw-refresh-token',
+      refreshTokenExpMs: 86400000,
+    });
+    mockSessionService.revokeByRawToken.mockResolvedValue(undefined);
+    mockRoleService.getPermissionsByUserId.mockResolvedValue(mockUser.permissions);
+    mockRoleService.assignUserRole.mockResolvedValue(undefined);
   });
 
-  describe('register', () => {
-    const registerDto = {
-      token: '550e8400-e29b-41d4-a716-446655440000',
-      username: 'newuser',
-      nickname: '새유저',
-      password: 'password123',
-    };
-
-    it('초대 토큰이 유효하지 않으면 INVITATION_NOT_FOUND 예외를 던지고 user 생성을 호출하지 않는다', async () => {
-      mockInvitationService.validateOrThrow.mockRejectedValue(new ApiException('INVITATION_NOT_FOUND'));
-
-      await expect(service.register(registerDto)).rejects.toMatchObject({ code: 'INVITATION_NOT_FOUND' });
-      expect(mockAuthRepository.insertUser).not.toHaveBeenCalled();
-    });
-
-    it('USER role이 없으면 ROLE_NOT_FOUND 예외를 던진다', async () => {
-      mockAuthRepository.findRoleByName.mockResolvedValue(null);
-
-      await expect(service.register(registerDto)).rejects.toMatchObject({ code: 'ROLE_NOT_FOUND' });
-      expect(mockAuthRepository.insertUser).not.toHaveBeenCalled();
-    });
-
-    it('중복 username이면 USERNAME_TAKEN 예외를 던진다', async () => {
-      mockAuthRepository.findRoleByName.mockResolvedValue({ id: 'role-id' });
+  describe('hashPassword', () => {
+    it('peppered password를 bcrypt 해시로 반환한다', async () => {
       mockTokenService.pepperPassword.mockReturnValue('peppered');
-      mockAuthRepository.insertUser.mockRejectedValue({ code: '23505' });
-      (bcrypt.hash as jest.Mock).mockResolvedValue('hashed');
 
-      await expect(service.register(registerDto)).rejects.toMatchObject({ code: 'USERNAME_TAKEN' });
-    });
+      const result = await service.hashPassword('rawPw123');
 
-    it('invitation이 이미 사용되었으면 INVITATION_ALREADY_USED 예외를 던진다', async () => {
-      mockAuthRepository.findRoleByName.mockResolvedValue({ id: 'role-id' });
-      mockTokenService.pepperPassword.mockReturnValue('peppered');
-      mockAuthRepository.insertUser.mockResolvedValue({ id: 'new-user-1' });
-      mockAuthRepository.insertUserRole.mockResolvedValue(undefined);
-      mockAuthRepository.insertBackupCodes.mockResolvedValue(undefined);
-      mockInvitationService.consume.mockRejectedValue(new ApiException('INVITATION_ALREADY_USED'));
-      (bcrypt.hash as jest.Mock).mockResolvedValue('hashed');
-
-      await expect(service.register(registerDto)).rejects.toMatchObject({ code: 'INVITATION_ALREADY_USED' });
-    });
-
-    it('가입 직후 사용자 조회 실패 시 REGISTRATION_FAILED 예외를 던진다', async () => {
-      mockAuthRepository.findRoleByName.mockResolvedValue({ id: 'role-id' });
-      mockTokenService.pepperPassword.mockReturnValue('peppered');
-      mockAuthRepository.insertUser.mockResolvedValue({ id: 'new-user-1' });
-      mockAuthRepository.insertUserRole.mockResolvedValue(undefined);
-      mockAuthRepository.insertBackupCodes.mockResolvedValue(undefined);
-      mockInvitationService.consume.mockResolvedValue(undefined);
-      mockAuthRepository.findUserWithPermissionsById.mockResolvedValue(null);
-      (bcrypt.hash as jest.Mock).mockResolvedValue('hashed');
-
-      await expect(service.register(registerDto)).rejects.toMatchObject({ code: 'REGISTRATION_FAILED' });
-    });
-
-    it('성공 시 insertUser → insertUserRole → insertBackupCodes → invitationService.consume 순서로 호출한다', async () => {
-      mockAuthRepository.findRoleByName.mockResolvedValue({ id: 'role-id' });
-      mockTokenService.pepperPassword.mockReturnValue('peppered');
-      mockAuthRepository.insertUser.mockResolvedValue({ id: 'new-user-1' });
-      mockAuthRepository.insertUserRole.mockResolvedValue(undefined);
-      mockAuthRepository.insertBackupCodes.mockResolvedValue(undefined);
-      mockInvitationService.consume.mockResolvedValue(undefined);
-      mockAuthRepository.findUserWithPermissionsById.mockResolvedValue(mockUser);
-      (bcrypt.hash as jest.Mock).mockResolvedValue('hashed');
-
-      await service.register(registerDto);
-
-      const order = [
-        mockAuthRepository.insertUser.mock.invocationCallOrder[0],
-        mockAuthRepository.insertUserRole.mock.invocationCallOrder[0],
-        mockAuthRepository.insertBackupCodes.mock.invocationCallOrder[0],
-        mockInvitationService.consume.mock.invocationCallOrder[0],
-      ];
-      expect(order).toEqual([...order].sort((a, b) => a - b));
-      expect(mockInvitationService.consume).toHaveBeenCalledWith(registerDto.token, 'new-user-1');
-    });
-
-    it('성공 시 accessToken + user + backupCodes 8개를 반환한다', async () => {
-      mockAuthRepository.findRoleByName.mockResolvedValue({ id: 'role-id' });
-      mockTokenService.pepperPassword.mockReturnValue('peppered');
-      mockAuthRepository.insertUser.mockResolvedValue({ id: 'new-user-1' });
-      mockAuthRepository.insertUserRole.mockResolvedValue(undefined);
-      mockAuthRepository.insertBackupCodes.mockResolvedValue(undefined);
-      mockInvitationService.consume.mockResolvedValue(undefined);
-      mockAuthRepository.findUserWithPermissionsById.mockResolvedValue(mockUser);
-      (bcrypt.hash as jest.Mock).mockResolvedValue('hashed');
-
-      const result = await service.register(registerDto);
-
-      expect(result.accessToken).toBe('mock.access.token');
-      expect(result.backupCodes).toHaveLength(8);
-      expect(result.user.username).toBe('newuser');
-    });
-
-    it('성공 시 user 생성 + invitation consume이 트랜잭션 안에서 수행된다', async () => {
-      mockAuthRepository.findRoleByName.mockResolvedValue({ id: 'role-id' });
-      mockTokenService.pepperPassword.mockReturnValue('peppered');
-      mockAuthRepository.insertUser.mockResolvedValue({ id: 'new-user-1' });
-      mockAuthRepository.insertUserRole.mockResolvedValue(undefined);
-      mockAuthRepository.insertBackupCodes.mockResolvedValue(undefined);
-      mockInvitationService.consume.mockResolvedValue(undefined);
-      mockAuthRepository.findUserWithPermissionsById.mockResolvedValue(mockUser);
-      (bcrypt.hash as jest.Mock).mockResolvedValue('hashed');
-
-      await service.register(registerDto);
-
-      expect(mockDbTransaction).toHaveBeenCalled();
-      const txOrder = mockDbTransaction.mock.invocationCallOrder[0];
-      expect(mockAuthRepository.insertUser.mock.invocationCallOrder[0]).toBeGreaterThan(txOrder);
-      expect(mockAuthRepository.insertUserRole.mock.invocationCallOrder[0]).toBeGreaterThan(txOrder);
-      expect(mockAuthRepository.insertBackupCodes.mock.invocationCallOrder[0]).toBeGreaterThan(txOrder);
-      expect(mockInvitationService.consume.mock.invocationCallOrder[0]).toBeGreaterThan(txOrder);
+      expect(mockTokenService.pepperPassword).toHaveBeenCalledWith('rawPw123');
+      expect(result).toMatch(/^\$2[aby]\$/); // bcrypt prefix
     });
   });
 
-  describe('login', () => {
-    it('비밀번호 불일치 시 ApiException(INVALID_CREDENTIALS)을 던진다', async () => {
-      mockAuthRepository.findUserWithPermissionsByUsername.mockResolvedValue(mockUser);
-      (bcrypt.compare as jest.Mock).mockResolvedValue(false);
+  describe('validateCredentials', () => {
+    it('비밀번호가 일치하지 않으면 INVALID_CREDENTIALS 예외를 던진다', async () => {
+      mockTokenService.pepperPassword.mockReturnValue('peppered');
+      const user = { password: await bcrypt.hash('peppered-other', 10), active: true };
 
-      await expect(service.login({ username: 'user1', password: 'wrong' }, undefined, undefined)).rejects.toThrow(
-        ApiException,
+      await expect(service.validateCredentials(user, 'wrong')).rejects.toMatchObject({
+        code: 'INVALID_CREDENTIALS',
+      });
+    });
+
+    it('비활성 사용자면 ACCOUNT_DISABLED 예외를 던진다', async () => {
+      mockTokenService.pepperPassword.mockReturnValue('peppered');
+      const user = { password: await bcrypt.hash('peppered', 10), active: false };
+
+      await expect(service.validateCredentials(user, 'pw')).rejects.toMatchObject({
+        code: 'ACCOUNT_DISABLED',
+      });
+    });
+
+    it('정상 자격증명이면 예외 없이 반환한다', async () => {
+      mockTokenService.pepperPassword.mockReturnValue('peppered');
+      const user = { password: await bcrypt.hash('peppered', 10), active: true };
+
+      await expect(service.validateCredentials(user, 'pw')).resolves.toBeUndefined();
+    });
+  });
+
+  describe('assignDefaultRole', () => {
+    it('USER 역할이 없으면 ROLE_NOT_FOUND 예외를 던진다', async () => {
+      mockRoleService.findByName.mockResolvedValue(null);
+
+      await expect(service.assignDefaultRole('user-1')).rejects.toMatchObject({
+        code: 'ROLE_NOT_FOUND',
+      });
+    });
+
+    it('USER 역할을 사용자에게 할당한다', async () => {
+      mockRoleService.findByName.mockResolvedValue({ id: 'role-1' });
+      mockRoleService.assignUserRole.mockResolvedValue(undefined);
+
+      await service.assignDefaultRole('user-1');
+
+      expect(mockRoleService.findByName).toHaveBeenCalledWith('USER');
+      expect(mockRoleService.assignUserRole).toHaveBeenCalledWith('user-1', 'role-1');
+    });
+  });
+
+  describe('generateAccessToken', () => {
+    it('user에 대한 permissions를 조회하여 access token을 발급한다', async () => {
+      const user = { id: 'u1', username: 'alice', nickname: 'A', password: 'x', active: true } as any;
+      mockRoleService.getPermissionsByUserId.mockResolvedValue(['file:read']);
+      mockTokenService.generateAccessToken.mockReturnValue('JWT');
+
+      const token = await service.generateAccessToken(user);
+
+      expect(mockRoleService.getPermissionsByUserId).toHaveBeenCalledWith('u1');
+      expect(mockTokenService.generateAccessToken).toHaveBeenCalledWith('u1', 'alice', ['file:read']);
+      expect(token).toBe('JWT');
+    });
+  });
+
+  describe('cookie helpers', () => {
+    let res: { cookie: jest.Mock; clearCookie: jest.Mock };
+
+    beforeEach(() => {
+      res = { cookie: jest.fn(), clearCookie: jest.fn() };
+    });
+
+    it('setTrustCookie는 trustToken 쿠키를 설정한다', () => {
+      service.setTrustCookie(res as any, 'raw-tt', 30 * 24 * 60 * 60 * 1000);
+
+      expect(res.cookie).toHaveBeenCalledWith(
+        'trustToken',
+        'raw-tt',
+        expect.objectContaining({
+          httpOnly: true,
+          secure: true,
+          sameSite: 'strict',
+          maxAge: 30 * 24 * 60 * 60 * 1000,
+          path: '/',
+        }),
       );
     });
 
-    it('비활성 계정은 ApiException(ACCOUNT_DISABLED)을 던진다', async () => {
-      mockAuthRepository.findUserWithPermissionsByUsername.mockResolvedValue({ ...mockUser, active: false });
-      (bcrypt.compare as jest.Mock).mockResolvedValue(true);
+    it('clearTrustCookie는 trustToken 쿠키를 제거한다', () => {
+      service.clearTrustCookie(res as any);
 
-      await expect(service.login({ username: 'user1', password: 'any' }, undefined, undefined)).rejects.toThrow(
-        ApiException,
+      expect(res.clearCookie).toHaveBeenCalledWith(
+        'trustToken',
+        expect.objectContaining({
+          httpOnly: true,
+          secure: true,
+          sameSite: 'strict',
+          path: '/',
+        }),
       );
     });
+  });
 
-    it('존재하지 않는 사용자는 ApiException(INVALID_CREDENTIALS)을 던진다', async () => {
-      mockAuthRepository.findUserWithPermissionsByUsername.mockResolvedValue(null);
-
-      await expect(service.login({ username: 'ghost', password: 'any' }, undefined, undefined)).rejects.toThrow(
-        ApiException,
-      );
-    });
-
-    it('인증 성공 시 accessToken과 rawRefreshToken을 반환하고 TokenService를 호출한다', async () => {
-      mockAuthRepository.findUserWithPermissionsByUsername.mockResolvedValue(mockUser);
-      (bcrypt.compare as jest.Mock).mockResolvedValue(true);
-
-      const result = await service.login({ username: 'user1', password: 'correct' }, undefined, undefined);
-
-      if (result.response.status !== 'AUTHENTICATED') throw new Error('Expected AUTHENTICATED status');
-      expect(result.response.accessToken).toBe('mock.access.token');
-      expect(result.rawRefreshToken).toBe('mock-raw-refresh-token');
-      expect(mockTokenService.generateAccessToken).toHaveBeenCalledWith(
-        mockUser.id,
-        mockUser.username,
-        mockUser.permissions,
-      );
-      expect(mockTokenService.issueRefreshToken).toHaveBeenCalledTimes(1);
-      expect(mockAuthRepository.insertRefreshToken).toHaveBeenCalledTimes(1);
-    });
-
-    it('디바이스가 없으면 즉시 AUTHENTICATED를 반환한다', async () => {
-      mockAuthRepository.findUserWithPermissionsByUsername.mockResolvedValue(mockUser);
-      (bcrypt.compare as jest.Mock).mockResolvedValue(true);
-      mockTrustedDeviceService.verify.mockResolvedValue(false);
-      mockDeviceService.findPushTokensByUserId.mockResolvedValue([]);
-
-      const result = await service.login({ username: 'user1', password: 'pw' }, undefined, undefined);
-
-      expect(result.response.status).toBe('AUTHENTICATED');
-    });
-
-    it('신뢰기기 토큰이 유효하면 2FA 없이 AUTHENTICATED를 반환한다', async () => {
-      mockAuthRepository.findUserWithPermissionsByUsername.mockResolvedValue(mockUser);
-      (bcrypt.compare as jest.Mock).mockResolvedValue(true);
-      mockTrustedDeviceService.verify.mockResolvedValue(true);
-
-      const result = await service.login({ username: 'user1', password: 'pw' }, 'valid-trust-token', undefined);
-
-      expect(result.response.status).toBe('AUTHENTICATED');
-      expect(mockDeviceService.findPushTokensByUserId).not.toHaveBeenCalled();
-    });
-
-    it('디바이스가 있으면 2FA_REQUIRED를 반환한다', async () => {
-      mockAuthRepository.findUserWithPermissionsByUsername.mockResolvedValue(mockUser);
-      (bcrypt.compare as jest.Mock).mockResolvedValue(true);
-      mockTrustedDeviceService.verify.mockResolvedValue(false);
-      mockDeviceService.findPushTokensByUserId.mockResolvedValue(['push-token-abc']);
-      mockTwoFaService.createChallenge.mockResolvedValue({
-        id: 'challenge-id',
-        options: '47,82,13',
-        expiresAt: new Date(Date.now() + 60_000),
+  describe('issueTokenPair', () => {
+    it('accessToken을 발급하고 refresh token을 쿠키로 설정한다', async () => {
+      const user = { id: 'u1', username: 'alice', nickname: 'A', password: 'x', active: true } as any;
+      const res = { cookie: jest.fn() } as any;
+      mockRoleService.getPermissionsByUserId.mockResolvedValue(['file:read']);
+      mockTokenService.generateAccessToken.mockReturnValue('JWT');
+      mockSessionService.issueForUser.mockResolvedValue({
+        rawRefreshToken: 'raw-rt',
+        refreshTokenExpMs: 7 * 24 * 60 * 60 * 1000,
       });
 
-      const result = await service.login({ username: 'user1', password: 'pw' }, undefined, undefined);
+      const result = await service.issueTokenPair(user, res);
 
-      expect(result.response.status).toBe('2FA_REQUIRED');
-      expect(mockPushChallengePublisher.publish).toHaveBeenCalledWith(
-        expect.objectContaining({ pushToken: 'push-token-abc' }),
+      expect(result.accessToken).toBe('JWT');
+      expect(mockSessionService.issueForUser).toHaveBeenCalledWith('u1');
+      expect(res.cookie).toHaveBeenCalledWith(
+        'refreshToken',
+        'raw-rt',
+        expect.objectContaining({
+          httpOnly: true,
+          maxAge: 7 * 24 * 60 * 60 * 1000,
+        }),
       );
-    });
-
-    it('신뢰기기 토큰이 무효하고 디바이스가 있으면 2FA_REQUIRED를 반환한다', async () => {
-      mockAuthRepository.findUserWithPermissionsByUsername.mockResolvedValue(mockUser);
-      (bcrypt.compare as jest.Mock).mockResolvedValue(true);
-      mockTrustedDeviceService.verify.mockResolvedValue(false);
-      mockDeviceService.findPushTokensByUserId.mockResolvedValue(['push-token-abc']);
-      mockTwoFaService.createChallenge.mockResolvedValue({
-        id: 'challenge-id',
-        options: '47,82,13',
-        expiresAt: new Date(Date.now() + 60_000),
-      });
-
-      const result = await service.login({ username: 'user1', password: 'pw' }, 'invalid-trust-token', undefined);
-
-      expect(result.response.status).toBe('2FA_REQUIRED');
-      expect(mockTrustedDeviceService.verify).toHaveBeenCalledWith('invalid-trust-token', mockUser.id);
     });
   });
 
-  describe('completeTwoFa', () => {
-    it('챌린지가 APPROVED 상태가 아니면 TwoFaService에서 예외가 전파된다', async () => {
-      const { ApiException } = await import('@terab/common');
-      mockTwoFaService.claimApprovedChallenge.mockRejectedValue(new ApiException('TWO_FA_CHALLENGE_NOT_FOUND'));
-
-      await expect(service.completeTwoFa('challenge-id')).rejects.toThrow(ApiException);
+  describe('rotateRefreshToken', () => {
+    it('rawRt가 undefined면 REFRESH_TOKEN_INVALID 예외를 던진다', async () => {
+      const res = { cookie: jest.fn() } as any;
+      await expect(service.rotateRefreshToken(undefined, res)).rejects.toMatchObject({
+        code: 'REFRESH_TOKEN_INVALID',
+      });
+      expect(res.cookie).not.toHaveBeenCalled();
     });
 
-    it('APPROVED 챌린지 완료 후 AUTHENTICATED 응답과 토큰을 반환한다', async () => {
-      mockTwoFaService.claimApprovedChallenge.mockResolvedValue('user-id');
-      mockAuthRepository.findUserWithPermissionsById.mockResolvedValue(mockUser);
+    it('session 회전 후 새 RT를 쿠키로 설정하고 userId를 반환한다', async () => {
+      const res = { cookie: jest.fn() } as any;
+      mockSessionService.rotate.mockResolvedValue({
+        userId: 'u1',
+        rawRefreshToken: 'new-rt',
+        refreshTokenExpMs: 7 * 24 * 60 * 60 * 1000,
+      });
 
-      const result = await service.completeTwoFa('challenge-id');
+      const result = await service.rotateRefreshToken('old-rt', res);
 
-      expect(mockTwoFaService.claimApprovedChallenge).toHaveBeenCalledWith('challenge-id');
-      expect(result.response.status).toBe('AUTHENTICATED');
-      expect(result.rawRefreshToken).toBe('mock-raw-refresh-token');
+      expect(result).toEqual({ userId: 'u1' });
+      expect(res.cookie).toHaveBeenCalledWith(
+        'refreshToken',
+        'new-rt',
+        expect.objectContaining({
+          maxAge: 7 * 24 * 60 * 60 * 1000,
+        }),
+      );
+    });
+  });
+
+  describe('revokeRefreshToken', () => {
+    it('rawRt가 undefined여도 refresh 쿠키는 clear한다', async () => {
+      const res = { clearCookie: jest.fn() } as any;
+
+      await service.revokeRefreshToken(undefined, res);
+
+      expect(mockSessionService.revokeByRawToken).not.toHaveBeenCalled();
+      expect(res.clearCookie).toHaveBeenCalledWith('refreshToken', expect.any(Object));
     });
 
-    it('userId에 해당하는 사용자가 없으면 ApiException을 던진다', async () => {
-      const { ApiException } = await import('@terab/common');
-      mockTwoFaService.claimApprovedChallenge.mockResolvedValue('ghost-user-id');
-      mockAuthRepository.findUserWithPermissionsById.mockResolvedValue(null);
+    it('rawRt가 있으면 session revoke + 쿠키 clear', async () => {
+      const res = { clearCookie: jest.fn() } as any;
+      mockSessionService.revokeByRawToken.mockResolvedValue(undefined);
 
-      await expect(service.completeTwoFa('challenge-id')).rejects.toThrow(ApiException);
+      await service.revokeRefreshToken('rt', res);
+
+      expect(mockSessionService.revokeByRawToken).toHaveBeenCalledWith('rt');
+      expect(res.clearCookie).toHaveBeenCalledWith('refreshToken', expect.any(Object));
+    });
+  });
+
+  describe('issueAfterTwoFa', () => {
+    it('user가 없으면 TWOFA_CHALLENGE_NOT_FOUND 예외', async () => {
+      mockUserService.findById.mockResolvedValue(null);
+      const res = { cookie: jest.fn() } as any;
+
+      await expect(service.issueAfterTwoFa('ghost', res)).rejects.toMatchObject({
+        code: 'TWOFA_CHALLENGE_NOT_FOUND',
+      });
+    });
+
+    it('정상 흐름 — issueTokenPair → AUTHENTICATED', async () => {
+      mockUserService.findById.mockResolvedValue({
+        id: 'u1',
+        username: 'a',
+        nickname: 'A',
+        password: 'h',
+        active: true,
+      });
+
+      const res = { cookie: jest.fn() } as any;
+
+      const result = await service.issueAfterTwoFa('u1', res);
+
+      expect(result).toEqual({
+        status: 'AUTHENTICATED',
+        accessToken: 'mock.access.token',
+        user: { id: 'u1', username: 'a', nickname: 'A' },
+      });
     });
   });
 });

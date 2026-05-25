@@ -29,10 +29,6 @@ describe('DeviceController', () => {
     jest.clearAllMocks();
   });
 
-  it('인스턴스가 생성된다', () => {
-    expect(controller).toBeDefined();
-  });
-
   describe('list', () => {
     it('등록된 디바이스가 없으면 빈 배열을 반환한다', async () => {
       service.list.mockResolvedValue([]);
@@ -44,9 +40,7 @@ describe('DeviceController', () => {
     });
 
     it('등록된 디바이스 목록을 반환한다', async () => {
-      const devices = [
-        { id: randomUUID(), userAgent: 'Mozilla/5.0', createdAt: new Date('2026-01-01') },
-      ];
+      const devices = [{ id: randomUUID(), userAgent: 'Mozilla/5.0', createdAt: new Date('2026-01-01') }];
       service.list.mockResolvedValue(devices);
 
       const result = await controller.list(mockAuthUser);

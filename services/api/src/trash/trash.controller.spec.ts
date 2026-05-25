@@ -28,10 +28,6 @@ describe('TrashController', () => {
     jest.clearAllMocks();
   });
 
-  it('인스턴스가 생성된다', () => {
-    expect(controller).toBeDefined();
-  });
-
   describe('list', () => {
     it('빈 목록을 반환한다', async () => {
       service.list.mockResolvedValue({ items: [] });
@@ -102,7 +98,9 @@ describe('TrashController', () => {
     it('folder 타입 - FOLDER_NOT_FOUND 전파', async () => {
       service.permanentDelete.mockRejectedValue(new ApiException('FOLDER_NOT_FOUND'));
 
-      await expect(controller.permanentDelete(mockAuthUser, FOLDER_ID, { type: 'folder' })).rejects.toThrow(ApiException);
+      await expect(controller.permanentDelete(mockAuthUser, FOLDER_ID, { type: 'folder' })).rejects.toThrow(
+        ApiException,
+      );
       await expect(controller.permanentDelete(mockAuthUser, FOLDER_ID, { type: 'folder' })).rejects.toMatchObject({
         code: 'FOLDER_NOT_FOUND',
       });
