@@ -3,7 +3,7 @@ name: PR Auto Labeler
 on:
   pull_request:
     types: [opened, synchronize]
-    branches: [master]
+    branches: [master, v0.1]
 
 jobs:
   label:

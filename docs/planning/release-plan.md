@@ -42,8 +42,8 @@
 | ID | 개발 항목 | 요구사항 | 규모 | 비고 |
 |---|---|---|---|---|
 | DEV-001 | 프로젝트 구조 설정 (admin, mobile, notification 디렉토리) | 인프라 | S | 기존 api/web/nginx에 추가 |
-| DEV-002 | DB 스키마 설계 + Flyway 마이그레이션 | AUTH-01, AUTH-05, AUTH-06 | L | users, roles, permissions 등 RBAC 테이블 |
-| DEV-003 | 자체 로그인 API (ID+PW, JWT Access+Refresh) | AUTH-01 | L | bcrypt, Spring Security |
+| DEV-002 | DB 스키마 설계 + Drizzle 마이그레이션 | AUTH-01, AUTH-05, AUTH-06 | L | users, roles, permissions 등 RBAC 테이블 |
+| DEV-003 | 자체 로그인 API (ID+PW, JWT Access+Refresh) | AUTH-01 | L | bcrypt, NestJS Passport JWT Strategy |
 | DEV-004 | RBAC 권한 체계 + 기본 역할 시딩 | AUTH-05, AUTH-06 | L | OWNER/ADMIN/USER, 환경변수 초기 관리자 |
 | DEV-005 | Drive Web 초기 설정 (React 19 + Vite + Router) | AUTH-01 | M | Layout-A, Layout-C 구현 |
 | DEV-006 | 로그인 화면 (D-01) | AUTH-01 | M | Web + 모바일 공용 |
@@ -58,7 +58,7 @@
 
 | ID | 개발 항목 | 요구사항 | 규모 | 비고 |
 |---|---|---|---|---|
-| DEV-007 | Notification MS 구축 (MQ 연동, 이벤트 소비) | NOTIF-01 | XL | Spring Boot + RabbitMQ |
+| DEV-007 | Notification MS 구축 (MQ 연동, 이벤트 소비) | NOTIF-01 | XL | NestJS 11 + Redis(BullMQ) |
 | DEV-008 | FCM/APNs Push 채널 연동 | NOTIF-02 | L | Firebase 프로젝트, APNs 인증서 |
 | DEV-009 | Capacitor 하이브리드 앱 셸 | MOBILE-01 | XL | iOS/Android, 네이티브 브릿지 |
 | DEV-010 | Push 알림 수신 (모바일) | MOBILE-02 | L | Capacitor Push Notifications |
@@ -136,7 +136,7 @@
 | DEV-038 | 스토리지 대시보드 (A-08) | ADMIN-06 | M | 전체/사용자별 사용량 |
 | DEV-039 | 관리자 대시보드 (A-02) | ADMIN-06 | M | 요약 카드 + 최근 활동 |
 | DEV-040 | 권한 대시보드 (A-06 읽기전용) | ADMIN-18 | M | 기본 역할 목록 + 권한 확인 |
-| DEV-041 | Docker Compose 통합 | 인프라 | M | admin, notification, rabbitmq |
+| DEV-041 | Docker Swarm 통합 | 인프라 | M | admin, mq, redis |
 | DEV-042 | Nginx 도메인 라우팅 | 인프라 | S | admin.drive.skypark207.com |
 | DEV-043 | E2E 검증 + 버그 수정 | 전체 | L | 전체 플로우 통합 테스트 |
 
@@ -330,3 +330,4 @@ Phase 6 (Admin) ← Drive API 재사용, 마지막
 | 날짜 | 변경 내용 |
 |---|---|
 | 2026-03-22 | 초기 릴리스 계획 수립 (v0.1.0 ~ v0.2.0, DEV-001 ~ DEV-066) |
+| 2026-05-25 | NestJS 11 / Redis(BullMQ) / Drizzle / Docker Swarm 스택으로 정정 (워크스트림 3) |

@@ -37,9 +37,8 @@ export function usePushNotification() {
         else pendingTokenRef.current = token.value;
       });
 
-      const h2 = await PushNotifications.addListener('pushNotificationReceived', (notification) => {
+      const h2 = await PushNotifications.addListener('pushNotificationReceived', () => {
         // TODO: 포그라운드 수신 - 인앱 토스트 UI 추가
-        console.log('Push received (foreground):', notification.title);
       });
 
       const h3 = await PushNotifications.addListener('pushNotificationActionPerformed', (action) => {

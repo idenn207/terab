@@ -165,3 +165,4 @@ scripts/        # 빌드/배포 자동화 스크립트
 - **구현**: `/ecc:prp-implement` 의 Task 별 TDD + Validation loop
 - 컨벤션·archive 정책은 [.claude/plans/README.md](.claude/plans/README.md) 참조
 - 레거시 superpowers 문서(2026-03 ~ 05)는 [docs/archive/superpowers/INDEX.md](docs/archive/superpowers/INDEX.md) 에서 주제별로 검색 (historical reference)
+- 주요 아키텍처 결정은 [docs/adr/INDEX.md](docs/adr/INDEX.md) 에 ADR 로 영속화한다 — 신규 결정 시 동일 형식(Nygard 5섹션)으로 추가

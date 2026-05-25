@@ -15,9 +15,9 @@
   "permissions": {
     "additionalDirectories": ["C:\\_project\\my\\terab\\docs\\archive\\superpowers"]
   },
-  "model": "sonnet",
+  "model": "opus",
   "outputStyle": "Learning",
-  "effortLevel": "high",
+  "effortLevel": "xhigh",
   "autoUpdatesChannel": "latest"
 }
 
