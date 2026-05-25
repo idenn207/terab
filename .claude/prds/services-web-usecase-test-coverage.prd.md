@@ -1,8 +1,9 @@
 ---
 name: services-web-usecase-test-coverage
 description: services/web 의 use-case 훅 6개 (테스트 누락분) 에 단위 테스트 추가하여 ECC 80% 커버리지 기준 달성 + codegen migration 류 회귀의 자동 감지 기반 확보
-status: pending
+status: done
 created: 2026-05-25
+completed: 2026-05-25
 ---
 
 # PRD: services/web use-case 테스트 커버리지
@@ -73,7 +74,7 @@ created: 2026-05-25
 
 | # | Workstream | Status | Plan | Priority |
 |---|---|---|---|---|
-| 1 | use-case 6 개 단위 테스트 신설 | pending | [.claude/plans/services-web-usecase-test-coverage.plan.md](../plans/services-web-usecase-test-coverage.plan.md) | High |
+| 1 | use-case 6 개 단위 테스트 신설 | done | [.claude/plans/services-web-usecase-test-coverage.plan.md](../plans/services-web-usecase-test-coverage.plan.md) | High |
 
 ## Risks
 
