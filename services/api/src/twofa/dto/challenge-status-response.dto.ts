@@ -1,5 +1,4 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { UserDto } from '../../common/dto';
 
 export class ChallengeStatusPendingDto {
   @ApiProperty({ enum: ['PENDING'] })
@@ -16,9 +15,8 @@ export class ChallengeStatusApprovedDto {
   @ApiProperty({ enum: ['APPROVED'] })
   status!: 'APPROVED';
 
-  accessToken!: string;
-
-  user!: UserDto;
+  @ApiProperty({ format: 'uuid' })
+  userId!: string;
 }
 
 export class ChallengeStatusDeniedDto {

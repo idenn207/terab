@@ -60,8 +60,7 @@ describe('TwoFaController', () => {
     it('APPROVED 상태를 반환한다', async () => {
       const approved = {
         status: 'APPROVED' as const,
-        accessToken: 'access-token',
-        user: { id: mockAuthUser.userId, username: mockAuthUser.username, nickname: 'User One' },
+        userId: mockAuthUser.userId,
       };
       service.getStatus.mockResolvedValue(approved);
 

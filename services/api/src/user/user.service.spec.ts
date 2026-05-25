@@ -41,4 +41,23 @@ describe('UserService', () => {
       expect(result).toEqual({ id: 'user-1' });
     });
   });
+
+  describe('getCurrentUser', () => {
+    it('user가 없으면 INVALID_CREDENTIALS 예외', async () => {
+      mockUserRepository.findById.mockResolvedValue(null);
+      await expect(service.getCurrentUser('ghost')).rejects.toMatchObject({ code: 'INVALID_CREDENTIALS' });
+    });
+
+    it('UserDto 형태로 반환한다', async () => {
+      mockUserRepository.findById.mockResolvedValue({
+        id: 'u1',
+        username: 'a',
+        nickname: 'A',
+        password: 'h',
+        active: true,
+      });
+      const result = await service.getCurrentUser('u1');
+      expect(result).toEqual({ id: 'u1', username: 'a', nickname: 'A' });
+    });
+  });
 });

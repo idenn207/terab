@@ -1,9 +1,10 @@
 import { Test } from '@nestjs/testing';
-import { BackupCodeService } from '../backup-code.service';
+import { BackupCodeService } from '../backup-code/backup-code.service';
 import { BackupCodeTwoFaStrategy } from './backup-code.strategy';
 
 const mockBackupCodeService = {
   consume: jest.fn(),
+  list: jest.fn(),
 };
 
 describe('BackupCodeTwoFaStrategy', () => {
@@ -22,12 +23,11 @@ describe('BackupCodeTwoFaStrategy', () => {
     expect(strategy.type).toBe('BACKUP_CODE');
   });
 
-  describe('startSetup / completeSetup / createChallenge / list / revoke', () => {
+  describe('startSetup / completeSetup / createChallenge / revoke', () => {
     it('모두 TWOFA_SETUP_NOT_SUPPORTED를 던진다', async () => {
       await expect(strategy.startSetup('u')).rejects.toMatchObject({ code: 'TWOFA_SETUP_NOT_SUPPORTED' });
       await expect(strategy.completeSetup('u', {})).rejects.toMatchObject({ code: 'TWOFA_SETUP_NOT_SUPPORTED' });
       await expect(strategy.createChallenge('u')).rejects.toMatchObject({ code: 'TWOFA_SETUP_NOT_SUPPORTED' });
-      await expect(strategy.list('u')).rejects.toMatchObject({ code: 'TWOFA_SETUP_NOT_SUPPORTED' });
       await expect(strategy.revoke('u', 'x')).rejects.toMatchObject({ code: 'TWOFA_SETUP_NOT_SUPPORTED' });
     });
   });

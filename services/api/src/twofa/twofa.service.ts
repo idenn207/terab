@@ -2,8 +2,9 @@ import { Injectable } from '@nestjs/common';
 import { ApiException } from '@terab/common';
 import { DatabaseService, ServiceCore, TransactionContext } from '@terab/db';
 import { LogReplay } from '@terab/logger';
-import { TokenService } from '@terab/security';
+import type { Response } from 'express';
 import { AuthService } from '../auth/auth.service';
+import { LoginResponse } from '../auth/dto';
 import { type ChallengeStatusResponse, ResendChallengeResponseDto } from './dto';
 import { TwoFaStrategyType } from './strategies/twofa-strategy.interface';
 import { TwoFaStrategyRegistry } from './strategies/twofa-strategy.registry';
@@ -15,7 +16,6 @@ export class TwoFaService extends ServiceCore {
     database: DatabaseService,
     txContext: TransactionContext,
     private readonly twoFaRepository: TwoFaRepository,
-    private readonly tokenService: TokenService,
     private readonly authService: AuthService,
     private readonly registry: TwoFaStrategyRegistry,
   ) {
@@ -48,18 +48,7 @@ export class TwoFaService extends ServiceCore {
     }
 
     if (challenge.status === 'APPROVED') {
-      const user = await this.twoFaRepository.findUserWithPermissionsById(challenge.userId);
-      if (!user) throw new ApiException('TWOFA_CHALLENGE_NOT_FOUND');
-      const accessToken = this.tokenService.generateAccessToken(user.id, user.username, user.permissions);
-      return {
-        status: 'APPROVED',
-        accessToken,
-        user: {
-          id: user.id,
-          nickname: user.nickname,
-          username: user.username,
-        },
-      };
+      return { status: 'APPROVED', userId: challenge.userId };
     }
 
     return { status: 'DENIED' };
@@ -90,9 +79,6 @@ export class TwoFaService extends ServiceCore {
     return { challengeId: challenge.id, options: challenge.options.split(','), expiresAt: challenge.expiresAt };
   }
 
-  // constructor 매개변수 추가 (clientside):
-  // 새로 필요: TotpRepository(혹은 strategy를 직접 inject해도 됨)
-
   @LogReplay()
   async completeChallenge(challengeId: string, body: { type?: 'PUSH' | 'TOTP'; code?: string }): Promise<string> {
     const type: TwoFaStrategyType = body.type ?? 'PUSH';
@@ -121,31 +107,9 @@ export class TwoFaService extends ServiceCore {
     await strategy.revoke(userId, id);
   }
 
-  // async issueAuthenticatedResponse(userId: string): Promise<{
-  //   response: LoginResponse;
-  //   rawRefreshToken: string;
-  //   refreshTokenExpMs: number;
-  // }> {
-  //   // 기존 completeTwoFa의 token/Refresh 발급 로직을 그대로 이관.
-  //   // 구체 코드는 기존 completeTwoFa 본문을 옮기면 됨.
-  //   const user = await this.userService.findById(userId);
-  //   if (!user) throw new ApiException('TWOFA_CHALLENGE_NOT_FOUND');
-  //   const userPermissions = await this.authService.findUserWithPermissions(user);
-  //   const tokens = await this.authService.issueTokenPair(userPermissions);
-  //   return {
-  //     response: {
-  //       status: 'AUTHENTICATED',
-  //       accessToken: tokens.accessToken,
-  //       user: {
-  //         id: user.id,
-  //         username: user.username,
-  //         nickname: user.nickname,
-  //       },
-  //     },
-  //     rawRefreshToken: tokens.rawRefreshToken,
-  //     refreshTokenExpMs: tokens.refreshTokenExpMs,
-  //   };
-  // }
+  async issueAuthenticatedResponse(userId: string, res: Response): Promise<LoginResponse> {
+    return await this.authService.issueAfterTwoFa(userId, res);
+  }
 
   private async countRemainingNonPushStrategiesExcluding(
     userId: string,

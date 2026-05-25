@@ -1,8 +1,8 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { ApiException } from '@terab/common';
 import { DatabaseService, TransactionContext } from '@terab/db';
-import { TokenService } from '@terab/security';
 import { mockDatabaseService, mockTransactionContext } from '@terab/test';
+import { AuthService } from '../auth/auth.service';
 import { TwoFaStrategyRegistry } from './strategies/twofa-strategy.registry';
 import { TwoFaRepository } from './twofa.repository';
 import { TwoFaService } from './twofa.service';
@@ -33,8 +33,8 @@ const mockTwoFaRepository = {
   findUserWithPermissionsById: jest.fn(),
 };
 
-const mockTokenService = {
-  generateAccessToken: jest.fn(),
+const mockAuthService = {
+  issueAfterTwoFa: jest.fn(),
 };
 
 describe('TwoFaService', () => {
@@ -47,7 +47,7 @@ describe('TwoFaService', () => {
         { provide: DatabaseService, useValue: mockDatabaseService },
         { provide: TransactionContext, useValue: mockTransactionContext },
         { provide: TwoFaRepository, useValue: mockTwoFaRepository },
-        { provide: TokenService, useValue: mockTokenService },
+        { provide: AuthService, useValue: mockAuthService },
         { provide: TwoFaStrategyRegistry, useValue: mockRegistry },
       ],
     }).compile();
@@ -119,28 +119,20 @@ describe('TwoFaService', () => {
       expect(mockTwoFaRepository.updateStatus).toHaveBeenCalledWith('id', 'EXPIRED');
     });
 
-    it('APPROVED → accessToken + user 반환', async () => {
+    it('APPROVED 상태면 userId만 반환한다', async () => {
       mockTwoFaRepository.findById.mockResolvedValue({
-        id: 'id',
-        userId: 'u',
+        id: 'ch-1',
+        userId: 'u1',
         status: 'APPROVED',
-        expiresAt: new Date(Date.now() + 60_000),
-        options: '47,82,13',
-        correctNum: '47',
+        options: '1,2,3',
+        correctNum: '2',
+        expiresAt: new Date(Date.now() + 60000),
+        respondedAt: new Date(),
       });
-      mockTwoFaRepository.findUserWithPermissionsById.mockResolvedValue({
-        id: 'u',
-        username: 'user1',
-        nickname: 'User',
-        permissions: [],
-      });
-      mockTokenService.generateAccessToken.mockReturnValue('mock.access.token');
 
-      const result = await service.getStatus('id');
+      const result = await service.getStatus('ch-1');
 
-      if (result.status !== 'APPROVED') throw new Error('Expected APPROVED');
-      expect(result.accessToken).toBe('mock.access.token');
-      expect(result.user?.id).toBe('u');
+      expect(result).toEqual({ status: 'APPROVED', userId: 'u1' });
     });
   });
 

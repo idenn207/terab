@@ -5,11 +5,15 @@ import {
   mockDatabaseService,
   mockDbTransaction,
   mockTransactionContext,
+  mockUser,
   setupMockDbTransactionChain,
 } from '@terab/test';
 import bcrypt from 'bcryptjs';
+import { AuthService } from '../../auth/auth.service';
+import { UserService } from '../../user/user.service';
 import { BackupCodeRepository } from './backup-code.repository';
 import { BackupCodeService } from './backup-code.service';
+import { BackupCodeRegenerateBodyDto } from './dto';
 
 jest.mock('bcryptjs', () => ({
   ...jest.requireActual('bcryptjs'),
@@ -17,6 +21,8 @@ jest.mock('bcryptjs', () => ({
   hash: jest.fn(),
 }));
 
+const mockUserService = { findById: jest.fn() };
+const mockAuthService = { validateCredentials: jest.fn() };
 const mockBackupCodeRepository = {
   findUnusedByUserId: jest.fn(),
   insertMany: jest.fn(),
@@ -33,6 +39,8 @@ describe('BackupCodeService', () => {
         { provide: DatabaseService, useValue: mockDatabaseService },
         { provide: TransactionContext, useValue: mockTransactionContext },
         { provide: BackupCodeRepository, useValue: mockBackupCodeRepository },
+        { provide: UserService, useValue: mockUserService },
+        { provide: AuthService, useValue: mockAuthService },
       ],
     }).compile();
 
@@ -101,12 +109,13 @@ describe('BackupCodeService', () => {
 
   describe('regenerateForUser', () => {
     it('기존 unused 코드를 모두 markUsed로 폐기하고 새 8개를 발급한다', async () => {
+      const mockData: BackupCodeRegenerateBodyDto = { currentPassword: 'abcd' };
       mockBackupCodeRepository.findUnusedByUserId.mockResolvedValue([
         { id: 'bc-1', codeHash: 'h1' },
         { id: 'bc-2', codeHash: 'h2' },
       ]);
 
-      const result = await service.regenerateForUser('user-1');
+      const result = await service.regenerateForUser('user-1', mockData);
 
       expect(mockBackupCodeRepository.markUsed).toHaveBeenCalledTimes(2);
       expect(mockBackupCodeRepository.insertMany).toHaveBeenCalledTimes(1);
@@ -114,11 +123,15 @@ describe('BackupCodeService', () => {
     });
 
     it('폐기 + 재발급이 동일 트랜잭션 안에서 수행된다', async () => {
+      const mockData: BackupCodeRegenerateBodyDto = { currentPassword: mockUser.password };
+      mockUserService.findById.mockResolvedValue(mockUser);
+      mockAuthService.validateCredentials.mockResolvedValue(undefined);
       mockBackupCodeRepository.findUnusedByUserId.mockResolvedValue([{ id: 'bc-1', codeHash: 'h1' }]);
 
-      await service.regenerateForUser('user-1');
+      await service.regenerateForUser('user-1', mockData);
 
       expect(mockDbTransaction).toHaveBeenCalled();
+      expect(mockAuthService.validateCredentials).toHaveBeenCalledWith(mockUser, 'p');
       const txOrder = mockDbTransaction.mock.invocationCallOrder[0];
       expect(mockBackupCodeRepository.markUsed.mock.invocationCallOrder[0]).toBeGreaterThan(txOrder);
       expect(mockBackupCodeRepository.insertMany.mock.invocationCallOrder[0]).toBeGreaterThan(txOrder);

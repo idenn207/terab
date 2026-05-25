@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { ApiException } from '@terab/common';
-import { BackupCodeService } from '../backup-code.service';
+import { BackupCodeService } from '../backup-code/backup-code.service';
 import { TwoFaStrategy, TwoFaStrategyInstance, TwoFaStrategyType } from './twofa-strategy.interface';
 
 interface BackupCodeResponsePayload {

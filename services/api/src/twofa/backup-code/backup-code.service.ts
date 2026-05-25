@@ -3,7 +3,10 @@ import { ApiException } from '@terab/common';
 import { DatabaseService, ServiceCore, TransactionContext } from '@terab/db';
 import bcrypt from 'bcryptjs';
 import { randomBytes } from 'node:crypto';
+import { AuthService } from '../../auth/auth.service';
+import { UserService } from '../../user/user.service';
 import { BackupCodeRepository } from './backup-code.repository';
+import { BackupCodeRegenerateBodyDto } from './dto';
 
 @Injectable()
 export class BackupCodeService extends ServiceCore {
@@ -14,6 +17,8 @@ export class BackupCodeService extends ServiceCore {
   constructor(
     database: DatabaseService,
     txContext: TransactionContext,
+    private readonly userService: UserService,
+    private readonly authService: AuthService,
     private readonly backupCodeRepository: BackupCodeRepository,
   ) {
     super(database, txContext);
@@ -26,7 +31,11 @@ export class BackupCodeService extends ServiceCore {
     return rawCodes;
   }
 
-  async regenerateForUser(userId: string): Promise<string[]> {
+  async regenerateForUser(userId: string, data: BackupCodeRegenerateBodyDto): Promise<string[]> {
+    const dbUser = await this.userService.findById(userId);
+    if (!dbUser) throw new ApiException('INVALID_CREDENTIALS');
+    await this.authService.validateCredentials(dbUser, data.currentPassword);
+
     return this.runInTx(async () => {
       const now = new Date();
       const unused = await this.backupCodeRepository.findUnusedByUserId(userId);

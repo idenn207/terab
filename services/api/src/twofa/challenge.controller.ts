@@ -1,12 +1,15 @@
-import { Body, Controller, Get, HttpCode, HttpStatus, Param, ParseUUIDPipe, Post } from '@nestjs/common';
+import { Body, Controller, Get, HttpCode, HttpStatus, Param, ParseUUIDPipe, Post, Res } from '@nestjs/common';
 import { ApiExtraModels, ApiOperation, ApiResponse, ApiTags, getSchemaPath, refs } from '@nestjs/swagger';
 import { ApiError, type AuthUser, CurrentUser, Public } from '@terab/common';
+import type { Response } from 'express';
+import { AuthenticatedResponseDto, LoginResponse } from '../auth/dto';
 import {
   ChallengeStatusApprovedDto,
   ChallengeStatusDeniedDto,
   ChallengeStatusExpiredDto,
   ChallengeStatusPendingDto,
   type ChallengeStatusResponse,
+  CompleteChallengeBodyDto,
   ResendChallengeResponseDto,
   RespondChallengeBodyDto,
 } from './dto';
@@ -74,21 +77,21 @@ export class ChallengeController {
     return this.twoFaService.resend(id);
   }
 
-  // @Public()
-  // @Post(':id/complete')
-  // @HttpCode(HttpStatus.OK)
-  // @ApiOperation({ summary: '2FA 챌린지 완료 — type별 verify 후 토큰 발급' })
-  // @ApiResponse({
-  //   status: HttpStatus.OK,
-  //   type: AuthenticatedResponseDto,
-  // })
-  // @ApiError('TWOFA_CHALLENGE_NOT_FOUND', 'TWOFA_TOTP_INVALID_CODE', 'TWOFA_TOTP_LOCKED')
-  // async complete(
-  //   @Param('id', ParseUUIDPipe) id: string,
-  //   @Body() body: CompleteChallengeBodyDto,
-  // ): Promise<LoginResponse> {
-  //   const userId = await this.twoFaService.completeChallenge(id, body);
-  //   const { response, rawRefreshToken, refreshTokenExpMs } = await this.twoFaService.issueAuthenticatedResponse(userId);
-  //   return response;
-  // }
+  @Public()
+  @Post(':id/complete')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: '2FA 챌린지 완료 — type별 verify 후 토큰 발급' })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    type: AuthenticatedResponseDto,
+  })
+  @ApiError('TWOFA_CHALLENGE_NOT_FOUND', 'TWOFA_TOTP_INVALID_CODE', 'TWOFA_TOTP_LOCKED')
+  async complete(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() body: CompleteChallengeBodyDto,
+    @Res({ passthrough: true }) res: Response,
+  ): Promise<LoginResponse> {
+    const userId = await this.twoFaService.completeChallenge(id, body);
+    return this.twoFaService.issueAuthenticatedResponse(userId, res);
+  }
 }
