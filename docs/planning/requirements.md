@@ -150,11 +150,11 @@
 
 ```
 services/
-├── api/          # Spring Boot 백엔드 (드라이브 + 관리자 API 공용)
+├── api/          # NestJS 11 백엔드 (드라이브 + 관리자 API 공용)
 ├── web/          # React 프론트엔드 (드라이브) — drive.skypark207.com
 ├── admin/        # React 프론트엔드 (관리자) — admin.drive.skypark207.com
 ├── mobile/       # Capacitor 모바일 앱 (React WebView 래핑)
-├── notification/ # Notification MS (MQ 기반 Push/Email 전송)
+├── mq/           # MQ 서비스 (NestJS + BullMQ Worker, Push/Email 전송)
 └── nginx/        # 리버스 프록시 (도메인 라우팅)
 ```
 
@@ -163,3 +163,11 @@ services/
 - 초기 관리자 계정은 환경변수(`ADMIN_ID`, `ADMIN_PASSWORD`)로 자동 생성
 - 복수 관리자 지원 (관리자가 다른 사용자에게 ADMIN 역할 부여)
 - Notification MS는 MQ를 통해 API와 비동기 통신, Push(FCM/APNs) + 선택적 Email 처리
+
+---
+
+## 변경 이력
+
+| 날짜 | 변경 내용 |
+|---|---|
+| 2026-05-25 | NestJS 11 / Redis(BullMQ) / Drizzle / Docker Swarm 스택으로 정정 (워크스트림 3) |

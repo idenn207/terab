@@ -66,7 +66,7 @@ created: 2026-05-25
 |---|---|---|---|---|
 | 1 | superpowers → ECC 워크플로우 위임 (CLAUDE.md 갱신, README 작성, 워크플로우 표준화) | in-progress | `.claude/plans/docs-ecc-realignment.plan.md` | High |
 | 2 | 기존 문서 ECC 구조 정합화 (archive 이전, INDEX, frontmatter 컨벤션) | in-progress | `.claude/plans/docs-ecc-realignment.plan.md` | High |
-| 3 | 서비스 기획 최신화 (Spring → NestJS 격차 해소) | pending | (`.claude/plans/service-planning-refresh.plan.md` 예정) | High |
+| 3 | 서비스 기획 최신화 (Spring → NestJS 격차 해소) | in-progress | [.claude/plans/service-planning-refresh.plan.md](../plans/service-planning-refresh.plan.md) | High |
 | 4 | 코드 패턴 정리/재구조화 (services/api·web layer 룰 부합 점검) | pending | (`.claude/plans/code-pattern-cleanup.plan.md` 예정) | Medium |
 | 5 | 아키텍처 정리 (다이어그램·ADR 최신화) | pending | (`.claude/plans/architecture-refresh.plan.md` 예정) | Medium |
 
