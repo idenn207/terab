@@ -1,8 +1,9 @@
 ---
 name: superpowers-to-ecc-migration
 description: superpowers 플러그인 기반 워크플로우를 ECC 표준으로 전환하고 누적된 문서·기획·코드 패턴·아키텍처를 정합화
-status: in-progress
+status: done
 created: 2026-05-25
+completed: 2026-05-25
 ---
 
 # PRD: Superpowers → ECC 마이그레이션 (마스터)
@@ -64,11 +65,11 @@ created: 2026-05-25
 
 | # | Workstream | Status | Plan | Priority |
 |---|---|---|---|---|
-| 1 | superpowers → ECC 워크플로우 위임 (CLAUDE.md 갱신, README 작성, 워크플로우 표준화) | in-progress | `.claude/plans/docs-ecc-realignment.plan.md` | High |
-| 2 | 기존 문서 ECC 구조 정합화 (archive 이전, INDEX, frontmatter 컨벤션) | in-progress | `.claude/plans/docs-ecc-realignment.plan.md` | High |
-| 3 | 서비스 기획 최신화 (Spring → NestJS 격차 해소) | in-progress | [.claude/plans/service-planning-refresh.plan.md](../plans/service-planning-refresh.plan.md) | High |
+| 1 | superpowers → ECC 워크플로우 위임 (CLAUDE.md 갱신, README 작성, 워크플로우 표준화) | done | `.claude/plans/docs-ecc-realignment.plan.md` | High |
+| 2 | 기존 문서 ECC 구조 정합화 (archive 이전, INDEX, frontmatter 컨벤션) | done | `.claude/plans/docs-ecc-realignment.plan.md` | High |
+| 3 | 서비스 기획 최신화 (Spring → NestJS 격차 해소) | done | [.claude/plans/service-planning-refresh.plan.md](../plans/service-planning-refresh.plan.md) | High |
 | 4 | 코드 패턴 정리/재구조화 (services/api·web layer 룰 부합 점검) | done | [.claude/plans/code-pattern-cleanup.plan.md](../plans/code-pattern-cleanup.plan.md) | Medium |
-| 5 | 아키텍처 정리 (다이어그램·ADR 최신화) | in-progress | [.claude/plans/architecture-refresh.plan.md](../plans/architecture-refresh.plan.md) | Medium |
+| 5 | 아키텍처 정리 (다이어그램·ADR 최신화) | done | [.claude/plans/architecture-refresh.plan.md](../plans/architecture-refresh.plan.md) | Medium |
 
 ## Risks
 
