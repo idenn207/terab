@@ -2,9 +2,9 @@ name: Build & Push
 
 on:
   push:
-    branches: [master]
+    branches: [master, v0.1]
   pull_request:
-    branches: [master]
+    branches: [master, v0.1]
 
 env:
   REGISTRY: ghcr.io
@@ -157,10 +157,11 @@ jobs:
 
   # ─── NAS 배포 (Swarm rolling update) ────────────────────────────
   # NAS에 설치된 self-hosted runner가 job을 직접 실행 → SSH/포트 노출 불필요
+  # master 브랜치 push 에만 배포 — v0.1 push 는 빌드/이미지까지만 수행, 배포는 master merge 후
   deploy:
     name: Deploy to NAS
     needs: [build-and-push]
-    if: github.event_name == 'push'
+    if: github.event_name == 'push' && github.ref == 'refs/heads/master'
     runs-on: self-hosted
     environment:
       name: production-nas
