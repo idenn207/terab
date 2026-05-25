@@ -28,10 +28,6 @@ describe('TwoFaController', () => {
     jest.clearAllMocks();
   });
 
-  it('인스턴스가 생성된다', () => {
-    expect(controller).toBeDefined();
-  });
-
   describe('getStatus', () => {
     it('TWOFA_CHALLENGE_NOT_FOUND이 발생하면 그대로 전파한다', async () => {
       service.getStatus.mockRejectedValue(new ApiException('TWOFA_CHALLENGE_NOT_FOUND'));

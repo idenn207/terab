@@ -27,8 +27,6 @@ describe('TotpController', () => {
     jest.clearAllMocks();
   });
 
-  it('인스턴스가 생성된다', () => expect(controller).toBeDefined());
-
   describe('startSetup', () => {
     it('PENDING 상태면 secret + otpauthUri 반환', async () => {
       mockStrategy.startSetup.mockResolvedValue({ status: 'PENDING', secret: 's', otpauthUri: 'uri' });

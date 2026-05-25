@@ -19,10 +19,6 @@ describe('TotpRepository', () => {
     setupMockDbSelectChain();
   });
 
-  it('인스턴스가 생성된다', () => {
-    expect(repo).toBeDefined();
-  });
-
   describe('findByUserId', () => {
     it('userId에 등록된 TOTP가 없으면 null', async () => {
       mockDbLimit.mockResolvedValue([]);

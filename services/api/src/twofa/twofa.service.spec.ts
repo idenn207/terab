@@ -241,7 +241,7 @@ describe('TwoFaService', () => {
         correctNum: '47',
       });
       await expect(service.completeChallenge('c', { type: 'TOTP', code: '1' })).rejects.toMatchObject({
-        code: 'TWO_FA_CHALLENGE_NOT_FOUND',
+        code: 'TWOFA_CHALLENGE_NOT_FOUND',
       });
     });
   });
