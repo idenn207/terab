@@ -6,7 +6,7 @@ import { migrate } from 'drizzle-orm/node-postgres/migrator';
 import { join } from 'path';
 import { Pool } from 'pg';
 import * as schema from './schema';
-import { seedRbac } from './seed';
+import { OwnerSeeder, RbacSeeder } from './seed';
 
 @Injectable()
 export class DatabaseService implements OnModuleInit, OnModuleDestroy {
@@ -16,6 +16,8 @@ export class DatabaseService implements OnModuleInit, OnModuleDestroy {
   constructor(
     private readonly configService: ConfigService,
     private readonly queryLogger: DrizzleQueryLogger,
+    private readonly rbacSeeder: RbacSeeder,
+    private readonly ownerSeeder: OwnerSeeder,
   ) {
     this.pool = new Pool({
       connectionString: this.configService.getOrThrow<string>('DATABASE_URL'),
@@ -47,7 +49,9 @@ export class DatabaseService implements OnModuleInit, OnModuleDestroy {
   }
 
   private async seed(): Promise<void> {
-    await seedRbac(this.db);
+    // OwnerSeeder는 RbacSeeder가 OWNER role을 먼저 보장한 뒤 실행돼야 함
+    await this.rbacSeeder.seed(this.db);
+    await this.ownerSeeder.seed(this.db);
   }
 
   async onModuleDestroy(): Promise<void> {

@@ -1,370 +1,139 @@
-import { Injectable, OnModuleInit } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
+import { Injectable } from '@nestjs/common';
 import { ApiException } from '@terab/common';
-import { DatabaseService, ServiceCore, TransactionContext } from '@terab/db';
-import { LogReplay } from '@terab/logger';
+import { DatabaseService, ServiceCore, TransactionContext, Users$Select } from '@terab/db';
 import { TokenService } from '@terab/security';
 import bcrypt from 'bcryptjs';
-import { randomBytes } from 'node:crypto';
-import { UserDto } from '../common/dto';
-import { DeviceService } from '../device/device.service';
-import { InvitationService } from '../invitation/invitation.service';
-import { TrustedDeviceService } from '../trusted-device/trusted-device.service';
-import { PushChallengePublisher } from '../twofa/push-challenge.publisher';
-import { TwoFaService } from '../twofa/twofa.service';
-import { AuthRepository, UserWithPermissions } from './auth.repository';
-import {
-  BackupLoginBodyDto,
-  LoginBodyDto,
-  LoginResponse,
-  RegisterBodyDto,
-  RegisterResponseDto,
-} from './dto';
-
-interface AuthTokens {
-  accessToken: string;
-  rawRefreshToken: string;
-  refreshTokenExpMs: number;
-}
+import type { Response } from 'express';
+import { UserService } from '../user/user.service';
+import { LoginResponse } from './dto';
+import { RoleService } from './role/role.service';
+import { SessionService } from './session/session.service';
 
 @Injectable()
-export class AuthService extends ServiceCore implements OnModuleInit {
+export class AuthService extends ServiceCore {
   protected readonly BCRYPT_ROUNDS = 10;
+  private readonly REFRESH_TOKEN_COOKIE = 'refreshToken';
+  private readonly TRUST_TOKEN_COOKIE = 'trustToken';
+  private readonly COOKIE_PATH = '/';
 
   constructor(
     database: DatabaseService,
     txContext: TransactionContext,
-    private readonly pushChallengePublisher: PushChallengePublisher,
-    private readonly configService: ConfigService,
     private readonly tokenService: TokenService,
-    private readonly deviceService: DeviceService,
-    private readonly twoFaService: TwoFaService,
-    private readonly trustedDeviceService: TrustedDeviceService,
-    private readonly invitationService: InvitationService,
-    private readonly authRepository: AuthRepository,
+    private readonly sessionService: SessionService,
+    private readonly roleService: RoleService,
+    private readonly userService: UserService,
   ) {
     super(database, txContext);
   }
 
-  async onModuleInit(): Promise<void> {
-    await this.initOwnerAccount();
+  // ─── 사용자 정보 로직 ────────────────────────────────────────────────
+  async hashPassword(raw: string): Promise<string> {
+    const peppered = this.tokenService.pepperPassword(raw);
+    return bcrypt.hash(peppered, this.BCRYPT_ROUNDS);
   }
 
-  // ─── Register ────────────────────────────────────────────────────────
-
-  @LogReplay()
-  async register(
-    data: RegisterBodyDto,
-  ): Promise<RegisterResponseDto & Pick<AuthTokens, 'rawRefreshToken' | 'refreshTokenExpMs'>> {
-    await this.invitationService.validateOrThrow(data.token);
-
-    const userRole = await this.authRepository.findRoleByName('USER');
-    if (!userRole) throw new ApiException('ROLE_NOT_FOUND');
-
-    const pepperedPassword = this.tokenService.pepperPassword(data.password);
-    const hashedPassword = await bcrypt.hash(pepperedPassword, this.BCRYPT_ROUNDS);
-
-    const rawCodes = this.generateBackupCodes();
-    const codeHashes = await Promise.all(rawCodes.map((code) => bcrypt.hash(code, this.BCRYPT_ROUNDS)));
-
-    const newUser = await this.runInTx(async () => {
-      const inserted = await this.authRepository
-        .insertUser({
-          username: data.username,
-          nickname: data.nickname,
-          password: hashedPassword,
-        })
-        .catch((err: { code?: string }) => {
-          if (err.code === '23505') throw new ApiException('USERNAME_TAKEN');
-          throw err;
-        });
-      await this.authRepository.insertUserRole(inserted.id, userRole.id);
-      await this.authRepository.insertBackupCodes(inserted.id, codeHashes);
-      await this.invitationService.consume(data.token, inserted.id);
-      return inserted;
-    });
-
-    const userWithPermissions = await this.authRepository.findUserWithPermissionsById(newUser.id);
-    if (!userWithPermissions) throw new ApiException('REGISTRATION_FAILED');
-
-    const tokens = await this.issueTokenPair(userWithPermissions);
-
-    return {
-      accessToken: tokens.accessToken,
-      user: {
-        id: newUser.id,
-        username: data.username,
-        nickname: data.nickname,
-      },
-      backupCodes: rawCodes,
-      rawRefreshToken: tokens.rawRefreshToken,
-      refreshTokenExpMs: tokens.refreshTokenExpMs,
-    };
+  async assignDefaultRole(userId: string): Promise<void> {
+    const role = await this.roleService.findByName('USER');
+    if (!role) throw new ApiException('ROLE_NOT_FOUND');
+    await this.roleService.assignUserRole(userId, role.id);
   }
 
-  // ─── Login ───────────────────────────────────────────────────────────
-
-  @LogReplay({ captureResult: true })
-  async login(
-    data: LoginBodyDto,
-    trustToken: string | undefined,
-    _userAgent: string | undefined,
-  ): Promise<
-    {
-      response: LoginResponse;
-    } & Partial<Pick<AuthTokens, 'rawRefreshToken' | 'refreshTokenExpMs'>>
-  > {
-    const user = await this.authRepository.findUserWithPermissionsByUsername(data.username);
-    if (!user) throw new ApiException('INVALID_CREDENTIALS');
-    await this.validateCredentials(user, data.password);
-
-    // 신뢰기기 쿠키 유효 시 2FA 스킵
-    if (trustToken && (await this.trustedDeviceService.verify(trustToken, user.id))) {
-      const tokens = await this.issueTokenPair(user);
-      return {
-        response: {
-          status: 'AUTHENTICATED',
-          accessToken: tokens.accessToken,
-          user: {
-            id: user.id,
-            username: user.username,
-            nickname: user.nickname,
-          },
-        },
-        rawRefreshToken: tokens.rawRefreshToken,
-        refreshTokenExpMs: tokens.refreshTokenExpMs,
-      };
-    }
-
-    // pushToken 없으면 2FA 스킵
-    const pushTokens = await this.deviceService.findPushTokensByUserId(user.id);
-    if (pushTokens.length === 0) {
-      const tokens = await this.issueTokenPair(user);
-      return {
-        response: {
-          status: 'AUTHENTICATED',
-          accessToken: tokens.accessToken,
-          user: {
-            id: user.id,
-            username: user.username,
-            nickname: user.nickname,
-          },
-        },
-        rawRefreshToken: tokens.rawRefreshToken,
-        refreshTokenExpMs: tokens.refreshTokenExpMs,
-      };
-    }
-
-    // 2FA 챌린지 생성 + BullMQ 발행
-    const challenge = await this.twoFaService.createChallenge(user.id);
-    await Promise.all(
-      pushTokens.map((pushToken) =>
-        this.pushChallengePublisher.publish({
-          userId: user.id,
-          pushToken,
-          challengeId: challenge.id,
-          options: challenge.options,
-          expiresAt: challenge.expiresAt.toISOString(),
-        }),
-      ),
-    );
-
-    return {
-      response: {
-        status: '2FA_REQUIRED',
-        challengeId: challenge.id,
-        options: challenge.options.split(','),
-        expiresAt: challenge.expiresAt,
-      },
-    };
-  }
-
-  async completeTwoFa(challengeId: string): Promise<
-    {
-      response: LoginResponse;
-    } & Pick<AuthTokens, 'rawRefreshToken' | 'refreshTokenExpMs'>
-  > {
-    const userId = await this.twoFaService.claimApprovedChallenge(challengeId);
-    const user = await this.authRepository.findUserWithPermissionsById(userId);
-    if (!user) throw new ApiException('TWO_FA_CHALLENGE_NOT_FOUND');
-    const tokens = await this.issueTokenPair(user);
-    return {
-      response: {
-        status: 'AUTHENTICATED',
-        accessToken: tokens.accessToken,
-        user: {
-          id: user.id,
-          username: user.username,
-          nickname: user.nickname,
-        },
-      },
-      rawRefreshToken: tokens.rawRefreshToken,
-      refreshTokenExpMs: tokens.refreshTokenExpMs,
-    };
-  }
-
-  async loginWithBackupCode(data: BackupLoginBodyDto): Promise<
-    {
-      response: LoginResponse;
-    } & Pick<AuthTokens, 'rawRefreshToken' | 'refreshTokenExpMs'>
-  > {
-    const user = await this.authRepository.findUserWithPermissionsByUsername(data.username);
-    if (!user) throw new ApiException('INVALID_CREDENTIALS');
-    await this.validateCredentials(user, data.password);
-    await this.verifyAndConsumeBackupCode(user.id, data.backupCode);
-
-    const tokens = await this.issueTokenPair(user);
-    return {
-      response: {
-        status: 'AUTHENTICATED',
-        accessToken: tokens.accessToken,
-        user: {
-          id: user.id,
-          username: user.username,
-          nickname: user.nickname,
-        },
-      },
-      rawRefreshToken: tokens.rawRefreshToken,
-      refreshTokenExpMs: tokens.refreshTokenExpMs,
-    };
-  }
-
-  // ─── Refresh ─────────────────────────────────────────────────────────
-
-  @LogReplay({ captureResult: true })
-  async refresh(rawRefreshToken: string | undefined): Promise<
-    {
-      response: LoginResponse;
-    } & Pick<AuthTokens, 'rawRefreshToken' | 'refreshTokenExpMs'>
-  > {
-    if (!rawRefreshToken) throw new ApiException('REFRESH_TOKEN_INVALID');
-
-    const now = new Date();
-    const tokenHash = this.tokenService.hashToken(rawRefreshToken);
-    // UUID 기반 토큰은 userId 클레임이 없으므로 family invalidation 불가
-    // TODO: RT를 JWT로 변경하면 subject에서 userId 추출 후 전체 폐기 가능
-    const matched = await this.authRepository.findActiveRefreshTokenByHash(tokenHash, now);
-
-    if (!matched) {
-      throw new ApiException('REFRESH_TOKEN_INVALID');
-    }
-
-    await this.authRepository.revokeRefreshTokenById(matched.id, now);
-
-    const user = await this.authRepository.findUserWithPermissionsById(matched.userId);
-    if (!user) throw new ApiException('REFRESH_TOKEN_INVALID');
-
-    const tokens = await this.issueTokenPair(user);
-    return {
-      response: {
-        status: 'AUTHENTICATED',
-        accessToken: tokens.accessToken,
-        user: {
-          id: user.id,
-          username: user.username,
-          nickname: user.nickname,
-        },
-      },
-      rawRefreshToken: tokens.rawRefreshToken,
-      refreshTokenExpMs: tokens.refreshTokenExpMs,
-    };
-  }
-
-  // ─── Logout ──────────────────────────────────────────────────────────
-
-  @LogReplay()
-  async logout(rawRefreshToken: string | undefined): Promise<void> {
-    if (!rawRefreshToken) return;
-    const now = new Date();
-    const tokenHash = this.tokenService.hashToken(rawRefreshToken);
-    const matched = await this.authRepository.findActiveRefreshTokenByHash(tokenHash, now);
-    if (matched) {
-      await this.authRepository.revokeRefreshTokenById(matched.id, now);
-    }
-  }
-
-  // ─── Me ──────────────────────────────────────────────────────────────
-
-  async getCurrentUser(userId: string): Promise<UserDto> {
-    const user = await this.authRepository.findUserWithPermissionsById(userId);
-    if (!user) throw new ApiException('INVALID_CREDENTIALS');
-    return {
-      id: user.id,
-      username: user.username,
-      nickname: user.nickname,
-    };
-  }
-
-  // ─── 내부 인증 로직 ──────────────────────────────────────────────────
-  private async validateCredentials(user: UserWithPermissions, rawPassword: string): Promise<void> {
+  async validateCredentials(user: Pick<Users$Select, 'password' | 'active'>, rawPassword: string): Promise<void> {
     const pepperedPassword = this.tokenService.pepperPassword(rawPassword);
     const valid = await bcrypt.compare(pepperedPassword, user.password);
     if (!valid) throw new ApiException('INVALID_CREDENTIALS');
     if (!user.active) throw new ApiException('ACCOUNT_DISABLED');
   }
 
-  // ─── 내부 비즈니스 로직 ──────────────────────────────────────────────
+  // ─── 인증 토큰 로직 ──────────────────────────────────────────────────
+  async generateAccessToken(user: Users$Select): Promise<string> {
+    const permissions = await this.roleService.getPermissionsByUserId(user.id);
+    return this.tokenService.generateAccessToken(user.id, user.username, permissions);
+  }
 
-  private async issueTokenPair(user: UserWithPermissions): Promise<AuthTokens> {
-    const accessToken = this.tokenService.generateAccessToken(user.id, user.username, user.permissions);
-    const { rawRefreshToken, tokenHash, expiresAt } = this.tokenService.issueRefreshToken();
-    const refreshTokenExpMs = this.tokenService.refreshExpMs;
-    await this.authRepository.insertRefreshToken({ userId: user.id, tokenHash: tokenHash, expiresAt: expiresAt });
+  async issueTokenPair(user: Users$Select, res: Response): Promise<{ accessToken: string }> {
+    const accessToken = await this.generateAccessToken(user);
+    const { rawRefreshToken, refreshTokenExpMs } = await this.sessionService.issueForUser(user.id);
+    this.setRefreshCookie(res, rawRefreshToken, refreshTokenExpMs);
+    return { accessToken };
+  }
+
+  async rotateRefreshToken(rawRt: string | undefined, res: Response): Promise<{ userId: string }> {
+    if (!rawRt) throw new ApiException('REFRESH_TOKEN_INVALID');
+    const rotated = await this.sessionService.rotate(rawRt);
+    this.setRefreshCookie(res, rotated.rawRefreshToken, rotated.refreshTokenExpMs);
+    return { userId: rotated.userId };
+  }
+
+  async revokeRefreshToken(rawRt: string | undefined, res: Response): Promise<void> {
+    if (rawRt) {
+      await this.sessionService.revokeByRawToken(rawRt);
+    }
+    this.clearRefreshCookie(res);
+  }
+
+  // ─── 2FA ──────────────────────────────────────────────────────────
+  async issueAfterTwoFa(userId: string, res: Response): Promise<LoginResponse> {
+    const user = await this.userService.findById(userId);
+    if (!user) throw new ApiException('TWOFA_CHALLENGE_NOT_FOUND');
+    const { accessToken } = await this.issueTokenPair(user, res);
     return {
+      status: 'AUTHENTICATED',
       accessToken,
-      rawRefreshToken,
-      refreshTokenExpMs,
+      user: { id: user.id, username: user.username, nickname: user.nickname },
     };
   }
 
-  private async verifyAndConsumeBackupCode(userId: string, inputCode: string): Promise<void> {
-    const codes = await this.authRepository.findUnusedBackupCodes(userId);
-    // 타이밍 오라클 방지 — 매칭 여부와 무관하게 모든 코드를 순회
-    let matchedId: string | null = null;
-    for (const code of codes) {
-      const match = await bcrypt.compare(inputCode, code.codeHash);
-      if (match && matchedId === null) {
-        matchedId = code.id;
-      }
-    }
-    if (matchedId === null) throw new ApiException('BACKUP_CODE_INVALID');
-    await this.authRepository.markBackupCodeUsed(matchedId, new Date());
-  }
-
-  private generateBackupCodes(): string[] {
-    return Array.from({ length: 8 }, () => {
-      const buf = randomBytes(4);
-      const hex = buf.toString('hex').toUpperCase();
-      return `${hex.slice(0, 4)}-${hex.slice(4)}`;
+  // ─── Cookie 설정 ──────────────────────────────────────────────────
+  setTrustCookie(res: Response, rawToken: string, maxAgeMs: number): void {
+    res.cookie(this.TRUST_TOKEN_COOKIE, rawToken, {
+      httpOnly: true,
+      secure: true,
+      sameSite: 'strict',
+      maxAge: maxAgeMs,
+      path: this.COOKIE_PATH,
     });
   }
 
-  // ─── Owner 계정 초기화 ───────────────────────────────────────────────
-
-  private async initOwnerAccount(): Promise<void> {
-    const ownerPassword = this.configService.get<string>('OWNER_PASSWORD');
-    if (!ownerPassword) return;
-
-    const ownerUsername = this.configService.get<string>('OWNER_USERNAME') ?? 'owner';
-    const ownerNickname = this.configService.get<string>('OWNER_NICKNAME') ?? 'Owner';
-
-    const existing = await this.authRepository.findUserByUsername(ownerUsername);
-    if (existing) return;
-
-    const ownerRole = await this.authRepository.findRoleByName('OWNER');
-    if (!ownerRole) throw new Error('OWNER role 없음 — 마이그레이션 실행 여부를 확인하세요');
-
-    const hashedPassword = await bcrypt.hash(this.tokenService.pepperPassword(ownerPassword), this.BCRYPT_ROUNDS);
-    try {
-      const newUser = await this.authRepository.insertUser({
-        username: ownerUsername,
-        nickname: ownerNickname,
-        password: hashedPassword,
-      });
-      await this.authRepository.insertUserRole(newUser.id, ownerRole.id);
-    } catch (err) {
-      if ((err as { code?: string }).code !== '23505') throw err;
-      // 동시 기동 시 UNIQUE 충돌 무시 (다른 인스턴스가 먼저 생성)
-    }
+  clearTrustCookie(res: Response): void {
+    res.clearCookie(this.TRUST_TOKEN_COOKIE, {
+      httpOnly: true,
+      secure: true,
+      sameSite: 'strict',
+      path: this.COOKIE_PATH,
+    });
   }
+
+  private setRefreshCookie(res: Response, rawToken: string, maxAgeMs: number): void {
+    res.cookie(this.REFRESH_TOKEN_COOKIE, rawToken, {
+      httpOnly: true,
+      secure: true,
+      sameSite: 'strict',
+      maxAge: maxAgeMs,
+      path: this.COOKIE_PATH,
+    });
+  }
+
+  private clearRefreshCookie(res: Response): void {
+    res.clearCookie(this.REFRESH_TOKEN_COOKIE, {
+      httpOnly: true,
+      secure: true,
+      sameSite: 'strict',
+      path: this.COOKIE_PATH,
+    });
+  }
+
+  // // ─── 사용자+권한 합성 ────────────────────────────────────────────────
+  // async findUserWithPermissions(user: Users$Select): Promise<UserWithPermissions> {
+  //   const permissions = await this.roleService.getPermissionsByUserId(user.id);
+  //   return {
+  //     id: user.id,
+  //     username: user.username,
+  //     nickname: user.nickname,
+  //     password: user.password,
+  //     active: user.active,
+  //     permissions,
+  //   };
+  // }
 }

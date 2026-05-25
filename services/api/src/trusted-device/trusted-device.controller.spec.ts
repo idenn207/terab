@@ -3,8 +3,16 @@ import { ApiException } from '@terab/common';
 import { mockAuthUser } from '@terab/test';
 import type { Response } from 'express';
 import { randomUUID } from 'node:crypto';
+import { AuthService } from '../auth/auth.service';
 import { TrustedDeviceController } from './trusted-device.controller';
 import { TrustedDeviceService } from './trusted-device.service';
+
+const mockAuthService = { setTrustCookie: jest.fn() };
+const mockTrustedDeviceService = {
+  list: jest.fn(),
+  register: jest.fn(),
+  revoke: jest.fn(),
+};
 
 describe('TrustedDeviceController', () => {
   let controller: TrustedDeviceController;
@@ -16,15 +24,8 @@ describe('TrustedDeviceController', () => {
     const module = await Test.createTestingModule({
       controllers: [TrustedDeviceController],
       providers: [
-        {
-          provide: TrustedDeviceService,
-          useValue: {
-            list: jest.fn(),
-            register: jest.fn(),
-            revoke: jest.fn(),
-            trustDurationMs: TRUST_DURATION_MS,
-          },
-        },
+        { provide: TrustedDeviceService, useValue: mockTrustedDeviceService },
+        { provide: AuthService, useValue: mockAuthService },
       ],
     }).compile();
 
@@ -48,9 +49,7 @@ describe('TrustedDeviceController', () => {
     });
 
     it('등록된 신뢰기기 목록을 반환한다', async () => {
-      const devices = [
-        { id: randomUUID(), userAgent: 'Mozilla/5.0', createdAt: new Date('2026-01-01') },
-      ];
+      const devices = [{ id: randomUUID(), userAgent: 'Mozilla/5.0', createdAt: new Date('2026-01-01') }];
       service.list.mockResolvedValue(devices);
 
       const result = await controller.list(mockAuthUser);
@@ -61,26 +60,15 @@ describe('TrustedDeviceController', () => {
   });
 
   describe('register', () => {
-    it('service.register를 호출하고 trustToken 쿠키를 설정한다', async () => {
-      const rawToken = 'raw-trust-token';
-      service.register.mockResolvedValue(rawToken);
-      const res = { cookie: jest.fn() } as unknown as Response;
+    it('신뢰기기 등록 후 AuthService.setTrustCookie를 호출한다', async () => {
+      mockTrustedDeviceService.register.mockResolvedValue('raw-tt');
+      Object.defineProperty(mockTrustedDeviceService, 'trustDurationMs', { value: 30 * 24 * 60 * 60 * 1000 });
+      const res = {} as any;
 
-      const result = await controller.register(mockAuthUser, 'Mozilla/5.0', res);
+      await controller.register(mockAuthUser, 'UA-1', res);
 
-      expect(service.register).toHaveBeenCalledWith(mockAuthUser.userId, 'Mozilla/5.0');
-      expect(res.cookie).toHaveBeenCalledWith(
-        'trustToken',
-        rawToken,
-        expect.objectContaining({
-          httpOnly: true,
-          secure: true,
-          sameSite: 'strict',
-          maxAge: TRUST_DURATION_MS,
-          path: '/',
-        }),
-      );
-      expect(result).toBeUndefined();
+      expect(mockTrustedDeviceService.register).toHaveBeenCalledWith(mockAuthUser.userId, 'UA-1');
+      expect(mockAuthService.setTrustCookie).toHaveBeenCalledWith(res, 'raw-tt', 30 * 24 * 60 * 60 * 1000);
     });
 
     it('user-agent 헤더가 없어도 정상 처리한다', async () => {

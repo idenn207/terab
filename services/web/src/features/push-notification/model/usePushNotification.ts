@@ -45,7 +45,7 @@ export function usePushNotification() {
       const h3 = await PushNotifications.addListener('pushNotificationActionPerformed', (action) => {
         const data = action.notification.data as { type?: string; challengeId?: string } | undefined;
         if (data?.type === '2FA_CHALLENGE' && data.challengeId) {
-          // TODO: /auth/2fa/:challengeId 라우팅 추가
+          // TODO: /2fa/:challengeId 라우팅 추가
         }
       });
 

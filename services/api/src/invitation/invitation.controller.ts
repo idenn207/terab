@@ -3,11 +3,7 @@ import { Throttle } from '@nestjs/throttler';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { ApiError, type AuthUser, CurrentUser, Public, RequirePermission } from '@terab/common';
 import { InvitationService } from './invitation.service';
-import {
-  CreateInvitationBodyDto,
-  InvitationResponseDto,
-  ValidateInvitationResponseDto,
-} from './dto';
+import { CreateInvitationBodyDto, InvitationResponseDto, ValidateInvitationResponseDto } from './dto';
 
 @Controller('invitations')
 @ApiTags('Invitation')
@@ -18,10 +14,7 @@ export class InvitationController {
   @Post()
   @ApiOperation({ summary: '초대장 생성' })
   @ApiResponse({ status: HttpStatus.CREATED, type: InvitationResponseDto })
-  async create(
-    @CurrentUser() user: AuthUser,
-    @Body() body: CreateInvitationBodyDto,
-  ): Promise<InvitationResponseDto> {
+  async create(@CurrentUser() user: AuthUser, @Body() body: CreateInvitationBodyDto): Promise<InvitationResponseDto> {
     return this.invitationService.create(user.userId, body.expiresInDays);
   }
 

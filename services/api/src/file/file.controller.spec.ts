@@ -57,9 +57,9 @@ describe('FileController', () => {
     it('FILE_NOT_FOUND가 발생하면 그대로 전파한다', async () => {
       service.rename.mockRejectedValue(new ApiException('FILE_NOT_FOUND'));
 
-      await expect(
-        controller.rename(mockAuthUser, FILE_ID, { name: 'new.txt' }),
-      ).rejects.toMatchObject({ code: 'FILE_NOT_FOUND' });
+      await expect(controller.rename(mockAuthUser, FILE_ID, { name: 'new.txt' })).rejects.toMatchObject({
+        code: 'FILE_NOT_FOUND',
+      });
     });
 
     it('파일 이름을 변경하고 결과를 반환한다', async () => {
@@ -77,17 +77,17 @@ describe('FileController', () => {
     it('FILE_NOT_FOUND가 발생하면 그대로 전파한다', async () => {
       service.move.mockRejectedValue(new ApiException('FILE_NOT_FOUND'));
 
-      await expect(
-        controller.move(mockAuthUser, FILE_ID, { folderId: FOLDER_ID }),
-      ).rejects.toMatchObject({ code: 'FILE_NOT_FOUND' });
+      await expect(controller.move(mockAuthUser, FILE_ID, { folderId: FOLDER_ID })).rejects.toMatchObject({
+        code: 'FILE_NOT_FOUND',
+      });
     });
 
     it('FOLDER_NOT_FOUND가 발생하면 그대로 전파한다', async () => {
       service.move.mockRejectedValue(new ApiException('FOLDER_NOT_FOUND'));
 
-      await expect(
-        controller.move(mockAuthUser, FILE_ID, { folderId: FOLDER_ID }),
-      ).rejects.toMatchObject({ code: 'FOLDER_NOT_FOUND' });
+      await expect(controller.move(mockAuthUser, FILE_ID, { folderId: FOLDER_ID })).rejects.toMatchObject({
+        code: 'FOLDER_NOT_FOUND',
+      });
     });
 
     it('파일을 다른 폴더로 이동하고 결과를 반환한다', async () => {
@@ -105,17 +105,17 @@ describe('FileController', () => {
     it('FILE_NOT_FOUND가 발생하면 그대로 전파한다', async () => {
       service.copy.mockRejectedValue(new ApiException('FILE_NOT_FOUND'));
 
-      await expect(
-        controller.copy(mockAuthUser, FILE_ID, { folderId: null }),
-      ).rejects.toMatchObject({ code: 'FILE_NOT_FOUND' });
+      await expect(controller.copy(mockAuthUser, FILE_ID, { folderId: null })).rejects.toMatchObject({
+        code: 'FILE_NOT_FOUND',
+      });
     });
 
     it('FOLDER_NOT_FOUND가 발생하면 그대로 전파한다', async () => {
       service.copy.mockRejectedValue(new ApiException('FOLDER_NOT_FOUND'));
 
-      await expect(
-        controller.copy(mockAuthUser, FILE_ID, { folderId: FOLDER_ID }),
-      ).rejects.toMatchObject({ code: 'FOLDER_NOT_FOUND' });
+      await expect(controller.copy(mockAuthUser, FILE_ID, { folderId: FOLDER_ID })).rejects.toMatchObject({
+        code: 'FOLDER_NOT_FOUND',
+      });
     });
 
     it('파일을 복사하고 결과를 반환한다', async () => {

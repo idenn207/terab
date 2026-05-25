@@ -8,13 +8,7 @@ import { extname } from 'node:path';
 import { Readable } from 'node:stream';
 import { FolderService } from '../folder/folder.service';
 import { MinioService } from '../minio/minio.service';
-import {
-  FileItemDto,
-  FileSearchQueryDto,
-  FileSearchResponseDto,
-  MoveFileBodyDto,
-  RenameFileBodyDto,
-} from './dto';
+import { FileItemDto, FileSearchQueryDto, FileSearchResponseDto, MoveFileBodyDto, RenameFileBodyDto } from './dto';
 import { FileRepository } from './file.repository';
 
 @Injectable()
@@ -94,7 +88,14 @@ export class FileService extends ServiceCore {
     await this.minioService.copyObject(file.minioKey, newKey);
     // DB insert 실패 시 MinIO에 생성된 복사본을 정리하여 orphan 방지
     const row = await this.fileRepository
-      .insert({ userId, folderId: body.folderId, name: file.name, minioKey: newKey, size: file.size, mimeType: file.mimeType })
+      .insert({
+        userId,
+        folderId: body.folderId,
+        name: file.name,
+        minioKey: newKey,
+        size: file.size,
+        mimeType: file.mimeType,
+      })
       .catch(async (err) => {
         await this.minioService.removeObject(newKey).catch(() => undefined);
         throw err;
@@ -113,7 +114,11 @@ export class FileService extends ServiceCore {
 
   async search(userId: string, query: FileSearchQueryDto): Promise<FileSearchResponseDto> {
     if (query.scope === 'folder' && !query.folderId) throw new ApiException('FOLDER_NOT_FOUND');
-    const rows = await this.fileRepository.search(userId, query.q, query.scope === 'folder' ? query.folderId : undefined);
+    const rows = await this.fileRepository.search(
+      userId,
+      query.q,
+      query.scope === 'folder' ? query.folderId : undefined,
+    );
     return { files: rows.map((r) => this.fileRepository.toFileItem(r)) };
   }
 }

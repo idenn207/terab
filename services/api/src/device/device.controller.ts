@@ -44,10 +44,7 @@ export class DeviceController {
   @ApiOperation({ summary: '디바이스 삭제' })
   @ApiResponse({ status: HttpStatus.NO_CONTENT })
   @ApiError('DEVICE_NOT_FOUND')
-  async remove(
-    @CurrentUser() user: AuthUser,
-    @Param('id', ParseUUIDPipe) id: string,
-  ): Promise<void> {
+  async remove(@CurrentUser() user: AuthUser, @Param('id', ParseUUIDPipe) id: string): Promise<void> {
     await this.deviceService.remove(id, user.userId);
   }
 }

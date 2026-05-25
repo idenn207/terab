@@ -27,7 +27,7 @@ export class FcmService implements OnModuleInit {
         challengeId: job.challengeId,
         options: job.options,
         expiresAt: job.expiresAt,
-        deeplink: `/auth/2fa/${job.challengeId}`,
+        deeplink: `/2fa/${job.challengeId}`,
       },
       notification: {
         title: '로그인 승인 요청',

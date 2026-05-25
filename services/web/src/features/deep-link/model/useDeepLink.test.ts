@@ -35,9 +35,9 @@ describe('useDeepLink', () => {
     renderHook(() => useDeepLink(), { wrapper: MemoryRouter });
 
     await waitFor(() => capturedCallback !== null);
-    capturedCallback!({ url: 'https://drive.skypark207.com/auth/2fa/abc123' });
+    capturedCallback!({ url: 'https://drive.skypark207.com/2fa/abc123' });
 
-    expect(mockNavigate).toHaveBeenCalledWith('/auth/2fa/abc123');
+    expect(mockNavigate).toHaveBeenCalledWith('/2fa/abc123');
   });
 
   it('초대 링크 딥링크도 pathname으로 navigate를 호출한다', async () => {

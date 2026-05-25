@@ -1,12 +1,7 @@
 import { Body, Controller, HttpStatus, Param, ParseUUIDPipe, Post } from '@nestjs/common';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { ApiError, type AuthUser, CurrentUser } from '@terab/common';
-import {
-  FileItemDto,
-  UploadCompleteBodyDto,
-  UploadInitBodyDto,
-  UploadInitResponseDto,
-} from './dto';
+import { FileItemDto, UploadCompleteBodyDto, UploadInitBodyDto, UploadInitResponseDto } from './dto';
 import { UploadSessionService } from './upload-session.service';
 
 @Controller('files')
@@ -18,10 +13,7 @@ export class FileUploadController {
   @ApiOperation({ summary: '파일 업로드 세션 생성 (presigned URL 발급)' })
   @ApiResponse({ status: HttpStatus.CREATED, type: UploadInitResponseDto })
   @ApiError('FOLDER_NOT_FOUND', 'FILE_TOO_LARGE')
-  async init(
-    @CurrentUser() user: AuthUser,
-    @Body() body: UploadInitBodyDto,
-  ): Promise<UploadInitResponseDto> {
+  async init(@CurrentUser() user: AuthUser, @Body() body: UploadInitBodyDto): Promise<UploadInitResponseDto> {
     return this.uploadSessionService.init(user.userId, body);
   }
 

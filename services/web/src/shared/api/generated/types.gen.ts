@@ -346,7 +346,7 @@ export type AuthControllerCompleteTwoFaData = {
 
 export type AuthControllerCompleteTwoFaErrors = {
   /**
-   * `TWO_FA_CHALLENGE_NOT_FOUND` — 2FA 챌린지를 찾을 수 없습니다.
+   * `TWOFA_CHALLENGE_NOT_FOUND` — 2FA 챌린지를 찾을 수 없습니다.
    */
   404: ErrorResponseDto;
 };
@@ -489,7 +489,7 @@ export type TwoFaControllerGetStatusData = {
 
 export type TwoFaControllerGetStatusErrors = {
   /**
-   * `TWO_FA_CHALLENGE_NOT_FOUND` — 2FA 챌린지를 찾을 수 없습니다.
+   * `TWOFA_CHALLENGE_NOT_FOUND` — 2FA 챌린지를 찾을 수 없습니다.
    */
   404: ErrorResponseDto;
 };
@@ -529,7 +529,7 @@ export type TwoFaControllerRespondErrors = {
    */
   403: ErrorResponseDto;
   /**
-   * `TWO_FA_CHALLENGE_NOT_FOUND` — 2FA 챌린지를 찾을 수 없습니다.
+   * `TWOFA_CHALLENGE_NOT_FOUND` — 2FA 챌린지를 찾을 수 없습니다.
    */
   404: ErrorResponseDto;
 };
@@ -553,7 +553,7 @@ export type TwoFaControllerResendData = {
 
 export type TwoFaControllerResendErrors = {
   /**
-   * `TWO_FA_CHALLENGE_NOT_FOUND` — 2FA 챌린지를 찾을 수 없습니다.
+   * `TWOFA_CHALLENGE_NOT_FOUND` — 2FA 챌린지를 찾을 수 없습니다.
    */
   404: ErrorResponseDto;
 };
