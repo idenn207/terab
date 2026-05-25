@@ -13,7 +13,7 @@ NAS 플랫폼은 독립적인 마이크로서비스로 구성되며, 각 서비�
 
 ### 서비스 간 원칙
 
-- 각 서비스는 **독립 배포 가능** (별도 Docker Compose 또는 별도 컨테이너)
+- 각 서비스는 **독립 배포 가능** (별도 Docker Stack 또는 별도 컨테이너)
 - Admin은 **서비스별 독립** — 통합 Admin은 지양 (서비스 간 결합도 방지)
 - **사용자/인증/권한은 공통 관심사** — Media 추가 시점에 Auth 서비스 분리 검토
 - 서비스 간 통신은 **REST API 연동** (동기) 또는 이벤트 기반 (비동기, 향후)
@@ -25,7 +25,7 @@ NAS 플랫폼은 독립적인 마이크로서비스로 구성되며, 각 서비�
 | 시점 | 구조 | 이유 |
 |------|------|------|
 | **v0.1 (현재)** | API Gateway 없음. Frontend Nginx → Drive API 직접 프록시 | 백엔드가 1개뿐, Gateway는 불필요한 복잡도 |
-| **서비스 확장 시** | API Gateway 도입 (Spring Cloud Gateway 또는 Nginx 기반) | 서비스별 라우팅, 인증 통합, Rate Limit, 로깅 중앙화 |
+| **서비스 확장 시** | API Gateway 도입 (Nginx 기반 또는 NestJS Gateway 패턴) | 서비스별 라우팅, 인증 통합, Rate Limit, 로깅 중앙화 |
 
 서비스 확장 시 구조 변화:
 
@@ -53,20 +53,25 @@ graph TB
     subgraph Frontend["프론트엔드 (Vite 빌드 → Nginx 정적 서빙)"]
         Web["Drive Web<br/>(React 19 + 내부 Nginx)<br/>drive.skypark207.com"]
         Admin["Admin Web<br/>(React 19 + 내부 Nginx)<br/>admin.drive.skypark207.com"]
+        WebCodegen["shared/api/generated/<br/>(hey-api SDK + TanStack Query)"]
     end
 
     subgraph Backend["백엔드"]
-        API["Spring Boot API<br/>(Java 21)<br/>드라이브 + 관리자 API 공용"]
+        API["NestJS API<br/>(Node 24 / NestJS 11)<br/>Swagger /json 노출 (dev only)<br/>드라이브 + 관리자 API 공용"]
     end
 
-    subgraph Notification["알림 서비스"]
-        MQ["Message Queue"]
-        NotifMS["Notification MS<br/>(Push + Email)"]
+    subgraph MQService["MQ 서비스"]
+        Redis[(Redis<br/>BullMQ backend)]
+        MQ["services/mq Worker<br/>(NestJS 11 + BullMQ)<br/>Push + Email 라우팅"]
     end
 
     subgraph Storage["스토리지"]
         DB[(PostgreSQL 16<br/>메타데이터)]
         MinIO[(MinIO<br/>파일 스토리지)]
+    end
+
+    subgraph DevTime["개발 타임 (codegen)"]
+        CodegenWeb["@hey-api/openapi-ts<br/>(services/web)"]
     end
 
     subgraph Future["확장 예정"]
@@ -80,13 +85,22 @@ graph TB
 
     Web -->|"/api/** 프록시"| API
     Admin -->|"/api/** 프록시"| API
+    Web -.->|"uses (codegen 산출)"| WebCodegen
+    Admin -.->|"uses (codegen 산출)"| WebCodegen
+
     API --> DB
     API --> MinIO
-    API -->|"이벤트 발행"| MQ
-    MQ --> NotifMS
-    NotifMS -->|"FCM/APNs"| MobileApp
+    API -->|"이벤트 큐잉"| Redis
+    Redis -->|"job 소비"| MQ
+    MQ -->|"FCM/APNs"| MobileApp
+
+    API -.->|"GET /json (dev)"| CodegenWeb
+    CodegenWeb -.->|"코드젠 산출"| WebCodegen
+
     Media -.->|"API 연동"| API
 ```
+
+> **codegen 파이프라인**: dev 환경에서 NestJS API 가 `/json` 으로 OpenAPI 문서를 노출하고, services/web 의 `@hey-api/openapi-ts` 가 이를 소비하여 SDK + TypeScript 타입 + TanStack Query options 를 `shared/api/generated/` 에 생성한다. 상세 결정 근거: [ADR-0001](../adr/0001-ts-rest-removal-swagger-migration.md).
 
 > **설계 원칙**: 메인 Nginx는 도메인 라우팅만 담당. `/api/**` 요청은 각 프론트엔드 컨테이너 내부 Nginx가 백엔드로 프록시. 외부에서 API 서버에 직접 접근 불가.
 
@@ -113,13 +127,27 @@ graph LR
     end
 
     subgraph ApiContainer["api 컨테이너"]
-        Spring["Spring Boot :8080"]
+        Api["NestJS :8080"]
+    end
+
+    subgraph MqContainer["mq 컨테이너"]
+        MqWorker["NestJS BullMQ Worker<br/>(FCM/APNs + Email 라우팅)"]
+    end
+
+    subgraph StorageGroup["스토리지 백엔드"]
+        RedisDB[(Redis<br/>BullMQ backend)]
+        Postgres[(PostgreSQL 16)]
+        Minio[(MinIO)]
     end
 
     MN -->|"drive.skypark207.com"| WN
     MN -->|"admin.drive.skypark207.com"| AN
-    ApiProxy --> Spring
-    AApiProxy --> Spring
+    ApiProxy --> Api
+    AApiProxy --> Api
+    Api --> Postgres
+    Api --> Minio
+    Api -->|"이벤트 큐잉"| RedisDB
+    RedisDB -->|"job 소비"| MqWorker
 ```
 
 ### 프론트엔드 Docker 빌드
@@ -174,6 +202,7 @@ sequenceDiagram
     participant A as API Server
     participant DB as PostgreSQL
     participant S as MinIO
+    participant Dev as 개발자
 
     Note over U,S: 정적 파일 요청
     U->>N: GET drive.skypark207.com/dashboard
@@ -202,20 +231,31 @@ sequenceDiagram
     A-->>W: 파일 데이터
     W-->>N: 응답 전달
     N-->>U: 파일 다운로드
+
+    Note over Dev,A: codegen 워크플로우 (개발 타임)
+    Dev->>A: 1. API DTO/엔드포인트 변경 후 dev 서버 reload
+    Dev->>W: 2. npm --prefix services/web run openapi:codegen
+    W->>A: GET /json (OpenAPI 문서)
+    A-->>W: OpenAPI JSON
+    W->>W: shared/api/generated/ 갱신<br/>(SDK + 타입 + TanStack Query options)
+    Dev->>Dev: generated diff + 사용처 갱신 + 동시 commit
 ```
+
+> codegen 결정 근거: [ADR-0001](../adr/0001-ts-rest-removal-swagger-migration.md).
 
 ## 인증 흐름
 
-> **인증 체계:** ID + PW → Push 2FA (GitHub 스타일 숫자 매칭) + 신뢰기기(30일) + 생체인증(앱)
+> **인증 체계:** ID + PW → 2FA Strategy (Push 숫자 매칭 / TOTP / Backup Code) + 신뢰기기(30일) + 생체인증(앱)
 
 ```mermaid
 sequenceDiagram
     participant U as 사용자 (PC)
     participant W as Web 컨테이너
     participant A as API Server
+    participant Reg as TwoFaStrategyRegistry
     participant DB as PostgreSQL
-    participant MQ as Message Queue
-    participant N as Notification MS
+    participant Redis as Redis (BullMQ)
+    participant MQ as services/mq Worker
     participant M as 모바일 앱
 
     Note over U,M: 1단계: 자격증명 입력
@@ -228,22 +268,40 @@ sequenceDiagram
         A-->>W: Access Token + Refresh Token
         W-->>U: 로그인 완료 → /drive
     else 비신뢰기기
-        Note over U,M: 2단계: Push 2FA (숫자 매칭)
-        A->>A: 챌린지 생성 (2자리 숫자)
-        A->>MQ: 2FA 푸시 요청 발행
-        MQ->>N: 푸시 전달
-        N->>M: FCM/APNs Push 알림
-        A-->>W: challengeId + 챌린지 숫자
-        W-->>U: 2FA 대기 화면 (숫자 표시 + WebSocket 대기)
+        Note over U,M: 2단계: Strategy 라우팅
+        A->>Reg: get(strategyType)
+        Reg-->>A: 선택된 Strategy 인스턴스
+        A->>A: strategy.createChallenge(userId)
 
-        M->>A: POST /api/auth/2fa/verify (숫자 입력 + approve/deny)
-        A->>A: 숫자 매칭 검증
-        alt 승인
-            A-->>W: WebSocket → JWT 발급
-            W-->>U: 로그인 완료 → /drive
-        else 거부
-            A-->>W: WebSocket → 거부 통보
-            W-->>U: "로그인이 거부되었습니다"
+        alt strategy = PUSH
+            A->>Redis: 2FA 푸시 job 큐잉
+            Redis->>MQ: job 소비
+            MQ->>M: FCM/APNs Push 알림 (2자리 숫자)
+            A-->>W: challengeId + 챌린지 숫자
+            W-->>U: 2FA 대기 화면 (숫자 표시 + WebSocket 대기)
+            M->>A: POST /api/twofa/verify (숫자 + approve/deny)
+            A->>A: strategy.verifyResponse — 숫자 매칭
+            alt 승인
+                A-->>W: WebSocket → JWT 발급
+                W-->>U: 로그인 완료 → /drive
+            else 거부
+                A-->>W: WebSocket → 거부 통보
+                W-->>U: "로그인이 거부되었습니다"
+            end
+        else strategy = TOTP
+            A-->>W: challengeId
+            W-->>U: TOTP 코드 입력 화면
+            U->>W: 6자리 코드
+            W->>A: POST /api/twofa/verify
+            A->>A: strategy.verifyResponse — RFC 6238 + lockout 검사
+            A-->>W: JWT 발급 (or 실패)
+        else strategy = BACKUP_CODE
+            A-->>W: challengeId
+            W-->>U: Backup Code 입력 화면
+            U->>W: 백업 코드
+            W->>A: POST /api/twofa/verify
+            A->>A: strategy.verifyResponse — bcrypt 비교 + 1회용 소비
+            A-->>W: JWT 발급 (or 실패)
         end
     end
 
@@ -257,6 +315,8 @@ sequenceDiagram
     M->>A: Refresh Token으로 세션 갱신
     A-->>M: 새 Access Token
 ```
+
+> Strategy 패턴 결정 근거: [ADR-0002](../adr/0002-twofa-strategy-pattern.md).
 
 ## 알림 서비스 아키텍처
 
@@ -274,16 +334,23 @@ sequenceDiagram
 ```mermaid
 sequenceDiagram
     participant API as Drive API
-    participant MQ as Message Queue
-    participant NS as Notification MS
+    participant Redis as Redis (BullMQ)
+    participant NS as services/mq Worker
     participant FCM as FCM/APNs
     participant App as 모바일 앱
 
-    API->>MQ: 알림 이벤트 발행 (type, payload, targets)
-    MQ->>NS: 이벤트 소비
+    API->>Redis: 알림 job 큐잉 (type, payload, targets)
+    Redis->>NS: job 소비
     NS->>NS: 채널 라우팅 (Push/Email)
     NS->>FCM: Push 전송 요청
-    FCM->>App: Push 알림 전달
+
+    alt FCM 성공
+        FCM->>App: Push 알림 전달
+        NS-->>Redis: job 완료
+    else FCM 실패 (5xx / 네트워크)
+        NS-->>Redis: job 실패 → BullMQ backoff 재시도
+        Note over Redis,NS: exponential backoff (기본 3회)
+    end
 ```
 
 ## 권한 체계 (RBAC)
@@ -357,39 +424,55 @@ sequenceDiagram
 
     U->>W: API 요청 (Bearer Token)
     W->>A: /api/** 프록시
-    A->>A: JWT에서 userId 추출
-    A->>DB: 사용자 → 역할 → 권한 조회
-    DB-->>A: 권한 목록 [file:read, file:write, ...]
-    A->>A: 요청에 필요한 권한 확인
-    alt 권한 있음
-        A-->>W: 200 OK
-    else 권한 없음
-        A-->>W: 403 Forbidden
+
+    alt @Public() 라우트
+        Note over A: JwtAuthGuard 우회 + Authorization 헤더 무시
+        A-->>W: 200 OK (인증 검증 생략)
+    else 비공개 라우트
+        A->>A: JwtAuthGuard — Bearer 검증<br/>JWT 에서 userId 추출
+        A->>A: PermissionGuard — @RequirePermission 메타 조회
+        A->>DB: 사용자 → 역할 → 권한 조회
+        DB-->>A: 권한 목록 [file:read, file:write, ...]
+        A->>A: 요청 핸들러가 요구하는 권한과 비교
+        alt 권한 있음
+            A-->>W: 200 OK
+        else 권한 없음
+            A-->>W: 403 Forbidden
+        end
     end
     W-->>U: 응답
 ```
+
+> Guard 체인 (`JwtAuthGuard` → `PermissionGuard`) 은 `AppModule` 의 `APP_GUARD` provider 로 글로벌 등록된다. `@Public()` 데코레이터는 가드 우회 + OpenAPI security 비움을 동시에 합성한다 — 상세 컨벤션은 [services/api/CLAUDE.md](../../services/api/CLAUDE.md) §"`src/common/` 분류 기준" 참조.
 
 ## 배포 구조
 
 ```mermaid
 graph LR
     subgraph NAS["NAS (Docker Host)"]
-        subgraph DC["Docker Compose"]
+        subgraph DS["Docker Swarm"]
             NG["nginx<br/>(메인 리버스 프록시)"]
             WEB["web<br/>(Vite 빌드 + 내부 Nginx)"]
             ADM["admin<br/>(Vite 빌드 + 내부 Nginx)"]
-            API["api<br/>(Spring Boot)"]
+            API["api<br/>(NestJS 11)"]
             PG["postgresql"]
             MIO["minio"]
-            RMQ["rabbitmq<br/>(Message Queue)"]
-            NotifMS["notification<br/>(Notification MS)"]
+            Redis["redis<br/>(BullMQ)"]
+            MQ["mq<br/>(MQ Worker / BullMQ)"]
             WT["watchtower"]
+        end
+
+        subgraph Secrets["Docker Secrets"]
+            Sec1["firebase-credentials.json"]
+            Sec2["ghcr-token"]
+            SecN["기타 file-based secret"]
         end
     end
 
     subgraph CI["GitHub Actions"]
         Build["Build & Push"]
         Release["Release (semver)"]
+        Runner["self-hosted runner<br/>(별도 호스트)"]
     end
 
     subgraph Registry["ghcr.io"]
@@ -397,10 +480,15 @@ graph LR
     end
 
     Release -->|"태그 생성"| Build
-    Build -->|"이미지 Push"| IMG
+    Build -->|"runner 실행"| Runner
+    Runner -->|"이미지 Push"| IMG
     WT -->|"12h 주기 폴링"| IMG
-    WT -->|"이미지 변경 시 재시작"| DC
+    WT -->|"이미지 변경 시 재시작"| DS
+    WT -.->|"pull 인증"| Sec2
+    MQ -.->|"FCM 인증"| Sec1
 ```
+
+> Docker Secret 은 루트 `secrets/` 디렉토리의 파일 기반 비밀(JSON 키 등)을 `make setup` 으로 swarm 에 등록한 결과이며, 컨테이너 내부에서는 `/run/secrets/<filename>` 경로로 마운트된다 (CLAUDE.md §환경 설정 참조).
 
 ## 주요 설계 결정
 
@@ -412,10 +500,31 @@ graph LR
 | API 서버 수 | 1개 (공용) | 소규모 사용자(1~5명), 관리자 API는 권한 검증으로 보호 |
 | 프론트엔드 분리 | Web / Admin 별도 컨테이너 | 배포 독립성, 번들 크기 최적화, 보안 경계 분리 |
 | 파일 스토리지 | MinIO (S3 호환) | NAS 로컬 저장 + S3 API 호환으로 향후 마이그레이션 용이 |
-| 인증 | ID + PW + Push 2FA (필수) | GitHub 스타일 숫자 매칭, 신뢰기기 30일, 앱 생체인증 |
+| 인증 | ID + PW + 2FA Strategy (필수) | Push(숫자 매칭) / TOTP / Backup Code Strategy 라우팅, 신뢰기기 30일, 앱 생체인증 |
 | 모바일 앱 | Capacitor (React WebView + 네이티브 브릿지) | 동일 코드베이스, Push/생체인증/파일시스템 네이티브 접근 |
-| 알림 서비스 | Notification MS (MQ 기반 독립 서비스) | 비동기 처리, Push(FCM/APNs) + 선택적 Email |
+| 알림 서비스 | services/mq Worker (BullMQ 기반 독립 서비스) | 비동기 처리, Push(FCM/APNs) + 선택적 Email, BullMQ backoff 재시도 |
 | 실시간 통신 | WebSocket/SSE (2FA 승인 전달) | PC 브라우저에서 모바일 승인 결과 실시간 수신 |
 | 권한 체계 | RBAC (역할 기반 접근 제어) | 개별 권한(`리소스:액션`) + 역할(권한 묶음) + 커스텀 역할 지원 |
 | 도메인 라우팅 | 메인 Nginx 서브도메인 분기 | admin.drive.skypark207.com / drive.skypark207.com 분리, SSL 통합 관리 |
 | 초기 관리자 | 환경변수 자동 생성 (OWNER 역할) | 설치 시 즉시 사용 가능, 추가 관리자는 UI에서 부여 |
+| API 클라이언트 | Swagger + hey-api codegen + TanStack Query | NestJS swagger plugin 의 class-validator 자동 합성, OpenAPI 표준 생태계 진입 |
+
+### 주요 결정의 ADR
+
+위 표의 일부 결정은 별도 ADR 로 영속화되어 있다. 결정 시점의 맥락·대안·결과를 확인하려면 아래 링크를 참고한다.
+
+| 결정 | ADR |
+|---|---|
+| API 클라이언트 생성 전략 (Swagger + hey-api + TanStack Query) | [ADR-0001](../adr/0001-ts-rest-removal-swagger-migration.md) |
+| 2FA 방식 (Strategy 패턴, TOTP / Push / Backup Code) | [ADR-0002](../adr/0002-twofa-strategy-pattern.md) |
+
+> 전체 ADR 목록: [docs/adr/INDEX.md](../adr/INDEX.md)
+
+---
+
+## 변경 이력
+
+| 날짜 | 변경 내용 |
+|---|---|
+| 2026-05-25 | NestJS 11 / Redis(BullMQ) / Drizzle / Docker Swarm 스택으로 정정 (워크스트림 3) |
+| 2026-05-25 | mermaid 다이어그램 7개 재설계 (codegen 파이프라인·Strategy 라우팅·BullMQ retry·Guard 체인·Docker Secret) + ADR-0001·0002 신설 (워크스트림 5) |
