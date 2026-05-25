@@ -151,3 +151,17 @@ scripts/        # 빌드/배포 자동화 스크립트
 
 - 커밋은 사용자 명의로만 생성 (`Co-Authored-By` 태그 추가 금지)
 - 파괴적인 Git 명령(`reset --hard`, `push --force`, `branch -D`)은 사용자 명시 요청 시에만 실행
+
+## 개발 워크플로우 (ECC)
+
+신규 기능·리팩토링·문서 작업은 ECC 표준 흐름을 따른다.
+
+```
+/ecc:plan-prd  →  /ecc:plan  →  /ecc:prp-implement
+```
+
+- **PRD**: `.claude/prds/{slug}.prd.md` — Problem / Hypothesis / Scope / Acceptance / Delivery Milestones
+- **Plan**: `.claude/plans/{slug}.plan.md` — Files / Tasks / Validation / Risks
+- **구현**: `/ecc:prp-implement` 의 Task 별 TDD + Validation loop
+- 컨벤션·archive 정책은 [.claude/plans/README.md](.claude/plans/README.md) 참조
+- 레거시 superpowers 문서(2026-03 ~ 05)는 [docs/archive/superpowers/INDEX.md](docs/archive/superpowers/INDEX.md) 에서 주제별로 검색 (historical reference)

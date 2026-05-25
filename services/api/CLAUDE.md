@@ -144,7 +144,7 @@ npm run db:push       # 마이그레이션 적용 (개발 환경)
 
 ## Swagger / DTO 컨벤션
 
-> 본 컨벤션은 ts-rest 제거 마이그레이션(2026-05-16) 완료 시점에 박제됨. 원본은 `docs/superpowers/finish-specs/2026-05-16-ts-rest-removal-swagger-migration-design.md` §6.A.
+> 본 컨벤션은 ts-rest 제거 마이그레이션(2026-05-16) 완료 시점에 박제됨. 원본은 `docs/archive/superpowers/specs/2026-05-16-ts-rest-removal-swagger-migration-design.md` §6.A.
 
 ### Controller 데코레이터
 
