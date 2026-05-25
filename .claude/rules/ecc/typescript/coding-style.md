@@ -177,7 +177,17 @@ async function loadUser(userId: string): Promise<User> {
 
 ## Input Validation
 
-Use Zod for schema-based validation and infer types from the schema:
+Use schema-based validation at every system boundary. The choice of library depends on the runtime context.
+
+| Context | Library | Why |
+|---|---|---|
+| NestJS request DTO | `class-validator` + `class-transformer` | NestJS `ValidationPipe` standard; `@nestjs/swagger` plugin's `classValidatorShim` auto-synthesizes OpenAPI metadata from the validators |
+| Browser forms | React Hook Form `register()` options, or Zod when complex shapes are needed | RHF native integration; avoids a second resolver layer for simple field rules |
+| Generic external input (scripts, utils, edge handlers, server-only validators) | Zod | Strong type inference, no framework coupling |
+
+Whichever library is in use, the principle is the same: **never trust external data**, fail fast, and produce a clear error.
+
+### Zod example (generic external input)
 
 ```typescript
 import { z } from 'zod'
@@ -190,6 +200,35 @@ const userSchema = z.object({
 type UserInput = z.infer<typeof userSchema>
 
 const validated: UserInput = userSchema.parse(input)
+```
+
+### class-validator example (NestJS request DTO)
+
+```typescript
+import { IsEmail, IsInt, Max, Min } from 'class-validator'
+
+export class CreateUserDto {
+  @IsEmail()
+  email!: string
+
+  @IsInt()
+  @Min(0)
+  @Max(150)
+  age!: number
+}
+```
+
+### React Hook Form example (browser form)
+
+```typescript
+const { register, handleSubmit } = useForm<CreateUserDto>()
+
+<input
+  {...register('email', {
+    required: true,
+    pattern: /^[^@\s]+@[^@\s]+\.[^@\s]+$/,
+  })}
+/>
 ```
 
 ## Console.log
