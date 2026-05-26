@@ -15,7 +15,7 @@ describe('useTwoFactorPolling', () => {
 
   it('마운트 시 상태를 조회하고 PENDING이면 options를 설정한다', async () => {
     server.use(
-      http.get('/api/auth/2fa/challenge/:id/status', () =>
+      http.get('/api/2fa/challenge/:id/status', () =>
         HttpResponse.json({
           status: 'PENDING',
           options: ['47', '82', '13'],
