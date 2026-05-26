@@ -179,7 +179,7 @@ so I can **클라우드 서비스 의존 없이 내 NAS만으로 모바일↔PC 
 |---|---|---|---|---|---|---|
 | 1 | Design Spike | 디자인 방향 결정, 디자인 토큰 정리, 모바일/데스크톱 컴포넌트 구조 검토, UseCase 시나리오 N개 확정 | in-progress | - | - | [phase1-design-spike](../plans/services-web-feature-parity-phase1-design-spike.plan.md) |
 | 2 | Domain Skeleton | `entities/file`, `entities/folder`, `entities/trash` 추가. drive 페이지 widgets 분해 (`widgets/drive-layout`, `widgets/drive-sidebar`) | pending | - | 1 | - |
-| 3 | MVP Must - Upload | `features/file-upload` 모바일 카메라/갤러리, 진행률, Capacitor 호환성 검증 | done | with 4, 5 | 2 | [phase3-mvp-must-upload](../plans/services-web-feature-parity-phase3-mvp-must-upload.plan.md) |
+| 3 | MVP Must - Upload | `features/file-upload` 모바일 카메라/갤러리, 진행률, Capacitor 호환성 검증 | pending | with 4, 5 | 2 | - |
 | 4 | MVP Must - List/Preview/Download | `features/file-preview`, `features/file-download`, `pages/drive` 목록 뷰 | pending | with 3, 5 | 2 | - |
 | 5 | MVP Must - Invitation | `features/invitation-issue`, 발급 코드 표시 UI | pending | with 3, 4 | 2 | - |
 | 6 | MVP Verification | MVP 시나리오 완주 검증 (모바일↔PC, Capacitor Android), UseCase E2E N개 작성 | pending | - | 3, 4, 5 | - |
