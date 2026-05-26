@@ -1,0 +1,93 @@
+/**
+ * Design Tokens — Phase 1 Design Spike
+ *
+ * Tailwind 4 @theme 블록 단일 진입점. 키 이름이 그대로 utility class 로 노출.
+ * 예: --color-surface → bg-surface / text-surface / border-surface
+ *
+ * 카테고리:
+ *   1) typography (font / text)
+ *   2) color
+ *   3) spacing (safe-area 포함)
+ *   4) radius
+ *   5) motion
+ *
+ * 주의:
+ *   - zinc-* utility 는 Tailwind 기본 팔레트로 유지 (Phase 2 Catalyst 제거 시 일괄 교체)
+ *   - 다크모드 토큰 분기는 @custom-variant dark 가 index.css 에 위치
+ */
+@theme {
+  /* ──────────────────────────────────────────────────────────────
+   * 1) Typography — Inter 우선, OpenType cv11 적용
+   * ────────────────────────────────────────────────────────────── */
+  --font-sans: 'Inter', sans-serif, system-ui;
+  --font-sans--font-feature-settings: 'cv11';
+
+  --text-xs: clamp(0.75rem, 0.71rem + 0.18vw, 0.8125rem);
+  --text-sm: clamp(0.875rem, 0.835rem + 0.2vw, 0.9375rem);
+  --text-base: clamp(1rem, 0.96rem + 0.2vw, 1.0625rem);
+  --text-lg: clamp(1.125rem, 1.08rem + 0.22vw, 1.1875rem);
+  --text-xl: clamp(1.25rem, 1.18rem + 0.34vw, 1.375rem);
+  --text-2xl: clamp(1.5rem, 1.36rem + 0.7vw, 1.875rem);
+  --text-3xl: clamp(1.875rem, 1.6rem + 1.4vw, 2.5rem);
+
+  /* ──────────────────────────────────────────────────────────────
+   * 2) Color — oklch 기반, 의미 단위. zinc-* 는 Tailwind 기본 유지
+   * ────────────────────────────────────────────────────────────── */
+  /* surface — 배경 계층 (light / dark) */
+  --color-surface: oklch(99% 0 0);
+  --color-surface-muted: oklch(96% 0 0);
+  --color-surface-elevated: oklch(100% 0 0);
+
+  /* text — 본문 / 보조 / 비활성 */
+  --color-text: oklch(18% 0 0);
+  --color-text-muted: oklch(45% 0 0);
+  --color-text-subtle: oklch(62% 0 0);
+
+  /* border — 분리선 */
+  --color-border: oklch(90% 0 0);
+  --color-border-strong: oklch(82% 0 0);
+
+  /* accent — 단일 brand. 파일 액션(업로드/다운로드 강조) */
+  --color-accent: oklch(58% 0.18 255);
+  --color-accent-hover: oklch(52% 0.2 255);
+  --color-accent-soft: oklch(95% 0.04 255);
+  --color-accent-fg: oklch(99% 0 0);
+
+  /* semantic — 상태 표현 */
+  --color-success: oklch(62% 0.16 150);
+  --color-warning: oklch(72% 0.16 70);
+  --color-danger: oklch(58% 0.2 25);
+  --color-danger-soft: oklch(96% 0.03 25);
+
+  /* ──────────────────────────────────────────────────────────────
+   * 3) Spacing — safe-area + section rhythm
+   * ────────────────────────────────────────────────────────────── */
+  --spacing-safe-top: env(safe-area-inset-top);
+  --spacing-safe-bottom: env(safe-area-inset-bottom);
+  --spacing-safe-left: env(safe-area-inset-left);
+  --spacing-safe-right: env(safe-area-inset-right);
+
+  --spacing-section: clamp(2rem, 1.5rem + 2.5vw, 4rem);
+  --spacing-gutter: clamp(1rem, 0.85rem + 0.75vw, 1.5rem);
+
+  /* ──────────────────────────────────────────────────────────────
+   * 4) Radius
+   * ────────────────────────────────────────────────────────────── */
+  --radius-xs: 0.25rem;
+  --radius-sm: 0.375rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 0.75rem;
+  --radius-xl: 1rem;
+  --radius-pill: 9999px;
+
+  /* ──────────────────────────────────────────────────────────────
+   * 5) Motion — duration + easing
+   * ────────────────────────────────────────────────────────────── */
+  --motion-duration-fast: 120ms;
+  --motion-duration-normal: 220ms;
+  --motion-duration-slow: 360ms;
+
+  --motion-ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --motion-ease-in-out: cubic-bezier(0.45, 0, 0.55, 1);
+  --motion-ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+}
