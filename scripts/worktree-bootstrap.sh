@@ -2,9 +2,10 @@
 # worktree-bootstrap.sh
 #   새 git worktree 를 로컬 개발에 즉시 쓸 수 있도록 부트스트랩한다.
 #   1) repo root 의 api.env / mq.env / web.env 를 worktree 로 복사 (덮어쓰지 않음)
-#   2) repo root 의 secrets/ 를 worktree 에 심볼릭 링크 (이미 있으면 skip)
-#   3) worktree 안에서 `make setup-local` 실행 (services/*/.env 심볼릭 링크)
-#   4) services/{api,mq,web} 에서 `npm ci` 실행
+#   2) repo root 의 services/web/android/local.properties 를 worktree 로 복사 (Android SDK 위치 박제, 덮어쓰지 않음)
+#   3) repo root 의 secrets/ 를 worktree 에 심볼릭 링크 (이미 있으면 skip)
+#   4) worktree 안에서 `make setup-local` 실행 (services/*/.env 심볼릭 링크)
+#   5) services/{api,mq,web} 에서 `npm ci` 실행
 #
 # 사용법:
 #   scripts/worktree-bootstrap.sh <worktree-path>
@@ -44,7 +45,7 @@ echo "[worktree-bootstrap] worktree : $WT_ABS"
 echo ""
 
 # ─── 1) env 파일 복사 (worktree 에 이미 있으면 보존) ──────────────────────
-echo "[1/4] env 파일 복사"
+echo "[1/5] env 파일 복사"
 for f in api.env mq.env web.env; do
   if [ ! -f "$ROOT/$f" ]; then
     echo "  · $f 원본 없음 — skip"
@@ -59,8 +60,22 @@ for f in api.env mq.env web.env; do
 done
 echo ""
 
-# ─── 2) secrets/ 심볼릭 링크 ────────────────────────────────────────────
-echo "[2/4] secrets/ 심볼릭 링크"
+# ─── 2) android/local.properties 복사 (Android SDK 위치 박제) ────────────
+# .gitignore 된 파일이라 worktree 마다 별도 생성 필요. main 에 있으면 그대로 복사.
+echo "[2/5] android/local.properties 복사"
+LOCAL_PROPS="services/web/android/local.properties"
+if [ ! -f "$ROOT/$LOCAL_PROPS" ]; then
+  echo "  · 원본 없음 — skip (Android SDK 미설치 또는 main 워크트리 미설정)"
+elif [ -e "$WT_ABS/$LOCAL_PROPS" ]; then
+  echo "  · 이미 존재 — skip"
+else
+  cp "$ROOT/$LOCAL_PROPS" "$WT_ABS/$LOCAL_PROPS"
+  echo "  ✓ $LOCAL_PROPS 복사"
+fi
+echo ""
+
+# ─── 3) secrets/ 심볼릭 링크 ────────────────────────────────────────────
+echo "[3/5] secrets/ 심볼릭 링크"
 if [ ! -d "$ROOT/secrets" ]; then
   echo "  · 원본 secrets/ 없음 — skip"
 elif [ -e "$WT_ABS/secrets" ]; then
@@ -77,13 +92,13 @@ else
 fi
 echo ""
 
-# ─── 3) make setup-local ────────────────────────────────────────────────
-echo "[3/4] make setup-local (services/*/.env 심볼릭 링크)"
+# ─── 4) make setup-local ────────────────────────────────────────────────
+echo "[4/5] make setup-local (services/*/.env 심볼릭 링크)"
 ( cd "$WT_ABS" && make setup-local )
 echo ""
 
-# ─── 4) npm ci per service ──────────────────────────────────────────────
-echo "[4/4] npm ci (api / mq / web)"
+# ─── 5) npm ci per service ──────────────────────────────────────────────
+echo "[5/5] npm ci (api / mq / web)"
 for svc in api mq web; do
   svc_dir="$WT_ABS/services/$svc"
   if [ ! -d "$svc_dir" ]; then
