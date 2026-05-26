@@ -1,43 +1,7 @@
 @import 'tailwindcss';
+@import './shared/styles/tokens.css';
+
 @custom-variant dark (&:where(.dark, .dark *)); /* 다크모드 설정 */
-
-/* @layer guide {
-  * {
-    outline: 1px solid gray;
-  }
-  header {
-    outline: 2px solid red;
-  }
-  section {
-    outline: 2px solid blue;
-  }
-  div {
-    outline: 1px solid green;
-  }
-  nav {
-    outline: 2px solid orange;
-  }
-
-  .header {
-    background: rgba(255, 0, 0, 0.1);
-  }
-  .section {
-    background: rgba(0, 0, 255, 0.1);
-  }
-  .card {
-    background: rgba(0, 255, 0, 0.1);
-  }
-} */
-
-@theme {
-  /* 기존 'theme.extend' 내용을 작성 */
-  --font-sans: 'Inter', sans-serif, system-ui;
-  --font-sans--font-feature-settings: 'cv11';
-
-  /* 모바일 */
-  --spacing-safe-top: env(safe-area-inset-top);
-  --spacing-safe-bottom: env(safe-area-inset-bottom);
-}
 
 html {
   @apply bg-white lg:bg-zinc-100 dark:bg-zinc-900 dark:lg:bg-zinc-950;
