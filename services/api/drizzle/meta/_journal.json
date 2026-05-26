@@ -43,6 +43,13 @@
       "when": 1779273310114,
       "tag": "0005_create_two_fa_totp",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1779822889016,
+      "tag": "0006_dashing_hiroim",
+      "breakpoints": true
     }
   ]
 }
