@@ -359,3 +359,82 @@ find services/web/src/features/file-upload -name "*.ts" -o -name "*.tsx" | xargs
 - Phase 2 PR: #47 — 도메인 entities + drive widgets + DrivePage 분해
 - Phase 2 GOTCHA: PR #47 description "Phase 3+ 영향" 섹션
 - ECC 컨벤션: [.claude/plans/README.md](README.md)
+
+---
+
+## Implementation Report (2026-05-26)
+
+`/ecc:prp-implement` 로 본 plan 의 코드 작업 전체와 자동 검증을 처리한 결과. **Capacitor 실기 검증 (Task 6)** 만 사용자 수동 spike 로 남아 있어 frontmatter `status` 는 `in-progress` 로 유지한다.
+
+### Task 결과
+
+| # | Task | 상태 | 메모 |
+|---|---|---|---|
+| 1 | `api/mutation.ts` invalidation | Done | `[{ _id: 'folderControllerGetChildren' }]` partial match. `mutation.test.tsx` 신설 + GREEN |
+| 2 | `upload-parts.ts` onProgress | Done | part 완료마다 `Math.round((completed / total) * 100)` emit. 신규 case 2 개 GREEN |
+| 3 | `useUploadFile.ts` onProgress 전달 | Done | `UploadFileInput.file` 타입을 `globalThis.File` 로 명시 (Phase 2 GOTCHA 방어) |
+| 4 | `ui/UploadButton.tsx` 신설 | Done | hidden `<input type="file" accept="image/*" capture="environment">` + Catalyst `<Button>` + 시멘틱 `<progress>` + `role="alert"`. 컴포넌트 테스트 5 case GREEN |
+| 5 | `index.ts` re-export + DrivePage mount | Done | 슬라이스 barrel `UploadButton` 추가, `features/index.ts` 에 `file-upload` re-export, `DrivePage` 의 `data-region="main"` 안에 mount. DrivePage 테스트 2 case 신설 GREEN |
+| 6 | Capacitor 실기 spike | **사용자 수동 대기** | `npm --prefix services/web run cap:sync && npm --prefix services/web run cap:android` → 카메라/갤러리 picker 실기 확인 필요 |
+| 7 | PRD Phase 3 row 갱신 | Done | `e27aee7` plan 신설 커밋에서 이미 `pending → in-progress` + Plan 링크 적용 완료 |
+
+### Validation Results
+
+| Level | 결과 | 비고 |
+|---|---|---|
+| Type Check | Pass | `npm run build` 의 `tsc -b` 단계 통과 |
+| Lint | N/A | 본 repo 는 별도 lint script 없음 (tsc strict 가 lint 역할) |
+| Unit Tests | 63 / 63 PASS | 슬라이스 전용 17 + 전체 회귀 통과. Phase 2 기준 known FAIL 0 건으로 개선 |
+| Build | Pass (1.29s) | `vite build` 통과. bundle 크기 변동 미미 |
+| grep audit | Pass | `entities/file` import 0 건, `File` 토큰이 `globalThis.File` / `new File(...)` 외 등장 0 건 |
+| CRLF | Pass | 신규/수정 파일 12 개 모두 100% CRLF |
+| Capacitor 실기 | 미수행 | Task 6 사용자 수동 |
+
+### Files Changed
+
+| 파일 | Action | 메모 |
+|---|---|---|
+| `services/web/src/features/file-upload/api/mutation.ts` | UPDATE | `useQueryClient` + `onSuccess` invalidation |
+| `services/web/src/features/file-upload/api/mutation.test.tsx` | CREATE | invalidate spy 검증 1 case |
+| `services/web/src/features/file-upload/model/upload-parts.ts` | UPDATE | `onProgress` 콜백 + `globalThis.File` 명시 |
+| `services/web/src/features/file-upload/model/upload-parts.test.ts` | UPDATE | `onProgress` 호출 횟수/마지막값 case + 미지정 호환 case |
+| `services/web/src/features/file-upload/model/useUploadFile.ts` | UPDATE | `UploadFileInput.onProgress` 추가 + `uploadParts` 4 번째 인자 전달 |
+| `services/web/src/features/file-upload/model/useUploadFile.test.ts` | UPDATE | 4-arg 호출로 assertion 갱신 + `onProgress` 전달 case |
+| `services/web/src/features/file-upload/ui/UploadButton.tsx` | CREATE | 본 phase 핵심. 46 라인 |
+| `services/web/src/features/file-upload/ui/UploadButton.test.tsx` | CREATE | RTL 5 case (클릭, mutate, isPending, alert, progressbar) |
+| `services/web/src/features/file-upload/index.ts` | UPDATE | `UploadButton` re-export |
+| `services/web/src/features/index.ts` | UPDATE | `export * from './file-upload'` 추가 |
+| `services/web/src/pages/drive/ui/DrivePage.tsx` | UPDATE | `<UploadButton />` mount + import |
+| `services/web/src/pages/drive/ui/DrivePage.test.tsx` | CREATE | region marker 2 case (main 안 UploadButton, secondary 빈 자리) |
+
+총 12 파일 (CREATE 4 / UPDATE 8) — 추정치 (CREATE 2 / UPDATE 8) 대비 CREATE 2 건 증가 (mutation 단위 테스트 + DrivePage 페이지 테스트는 plan 텍스트에 암묵 포함이었음).
+
+### Deviations from Plan
+
+- **mutation.test 확장자**: plan 은 `api/mutation.test.ts`. 실제는 `api/mutation.test.tsx` 로 신설 — `<QueryClientProvider>` JSX 사용 위해 `.tsx` 가 가독성 우수. 위치/동작 동일.
+- **DrivePage.test.tsx**: plan 은 "없으면 신설" 옵션. 본 구현은 신설 (기존 0 건). 2 case 추가 — main 안 UploadButton 렌더, secondary 비어있음.
+
+### Issues Encountered
+
+- **Fact-Forcing Gate (GateGuard)**: 본 워크트리는 모든 Bash / Write / Edit 시도에 GateGuard hook 이 facts 4 종을 요구해 진행 흐름을 늦췄지만, 변경의 명시화 효과는 있음. `ECC_GATEGUARD=off` 또는 `ECC_DISABLED_HOOKS=pre:bash:gateguard-fact-force,pre:edit-write:gateguard-fact-force` 로 우회 가능. 본 세션은 우회하지 않고 facts 명시 후 진행.
+- **세션 비용 hook**: 누적 $50+ 시점부터 PostToolUse hook 이 매 tool use 마다 critical 알림. 사용자 합의로 무시 진행. 본 세션 최종 비용은 별도 보고.
+
+### 사용자에게 남은 작업 — Task 6 (Capacitor 실기 spike)
+
+```bash
+cd .worktrees/phase3-file-upload/services/web
+npm run cap:sync
+npm run cap:android
+```
+
+1. 에뮬레이터 또는 실기 Android 에서 `/drive` 진입
+2. UploadButton 탭 → OS picker 가 카메라/갤러리 선택지를 띄우는지 확인
+3. 사진 1 장 촬영 → 진행률 0→100 → 성공 alert 까지 완주
+4. 결과 분류:
+   - **성공** = PRD Open Question 4 에 "기본 fetch + 표준 capture input 만으로 소형 파일 업로드 OK" 박제 + 본 plan frontmatter `status: in-progress → done` + PRD Phase 3 row `in-progress → done`
+   - **실패** = `@capacitor/camera` 도입 commit 추가 후 동일 검증 + 결과 박제
+
+### Next Steps
+
+- Capacitor 실기 spike 완료 후 본 plan frontmatter `status: done` + PRD row `done` 갱신 → PR 작성
+- 30 일 경과 후 `docs/archive/superpowers/plans/` 로 `git mv` archive (plans/README §"archive 정책")

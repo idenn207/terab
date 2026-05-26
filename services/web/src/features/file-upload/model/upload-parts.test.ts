@@ -39,4 +39,33 @@ describe('uploadParts', () => {
     await expect(uploadParts(file, [{ partNumber: 1, uploadUrl: 'https://x' }], { 'Content-Type': 'application/octet-stream' })).rejects.toThrow();
     expect(fetchMock).toHaveBeenCalledTimes(3); // 1 + 2 retries
   });
+
+  it('onProgress 는 part 완료마다 호출되고 마지막 호출은 100 이다', async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      headers: new Headers({ ETag: '"e"' }),
+    }) as any;
+    const file = new File([new Uint8Array(3 * 1024)], 'a.bin');
+    const onProgress = vi.fn();
+    const parts = [
+      { partNumber: 1, uploadUrl: 'https://x/1' },
+      { partNumber: 2, uploadUrl: 'https://x/2' },
+      { partNumber: 3, uploadUrl: 'https://x/3' },
+    ];
+
+    await uploadParts(file, parts, { 'Content-Type': 'application/octet-stream' }, onProgress);
+
+    expect(onProgress).toHaveBeenCalledTimes(3);
+    expect(onProgress).toHaveBeenLastCalledWith(100);
+  });
+
+  it('onProgress 미지정이어도 정상 동작한다', async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      headers: new Headers({ ETag: '"e"' }),
+    }) as any;
+    const file = new File([new Uint8Array(10)], 'a.bin');
+    const result = await uploadParts(file, [{ partNumber: 1, uploadUrl: 'https://x' }], { 'Content-Type': 'application/octet-stream' });
+    expect(result).toHaveLength(1);
+  });
 });
