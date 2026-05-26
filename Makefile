@@ -156,6 +156,8 @@ android: build-android
 
 .PHONY: android-dev
 android-dev: build-android-dev
+	adb reverse tcp:5173 tcp:5173   # vite dev server
+	adb reverse tcp:9000 tcp:9000   # MinIO
 	cd services/web && npm run cap:android:dev
 
 .PHONY: android-prod

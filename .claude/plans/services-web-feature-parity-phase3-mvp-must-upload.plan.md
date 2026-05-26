@@ -1,8 +1,9 @@
 ---
 name: services-web-feature-parity-phase3-mvp-must-upload
 description: services/web 기능 패리티 PRD 의 Phase 3 — `features/file-upload/ui` 신설 + 진행률 콜백 + complete invalidation + Capacitor 호환성 spike
-status: in-progress
+status: done
 created: 2026-05-26
+completed: 2026-05-27
 ---
 
 # Plan: services/web Feature Parity — Phase 3 MVP Must Upload
@@ -22,6 +23,7 @@ so that **PC 에서 즉시 확인·다운로드 (Phase 4) 가 가능한 좌변 �
 **현재 상태**: `features/file-upload/{api,model}` 만 존재하고 `ui/` 가 비어 있다. `useUploadFile` 훅은 init → multipart PUT → complete 까지 오케스트레이션하지만 (1) 진행률을 외부에 전달하지 못하고, (2) complete 후 어떤 query 도 invalidate 하지 않는다. 또 UI 진입점 (UploadButton) 이 없어 사용자가 트리거할 방법이 없다.
 
 **목표 상태**:
+
 - `features/file-upload/ui/UploadButton.tsx` 신설 → `<input type="file" capture>` 트리거 + 진행률 표시 + 성공/실패 토스트
 - `useUploadFile` 에 `onProgress` 콜백 추가 (uploadParts 에서 part 완료마다 누적 % 전달)
 - `useUploadCompleteMutation` 에 `folderControllerGetChildren` invalidation 등록
@@ -42,13 +44,13 @@ so that **PC 에서 즉시 확인·다운로드 (Phase 4) 가 가능한 좌변 �
 
 ### Touchpoints
 
-| Surface | Before | After | Notes |
-|---|---|---|---|
-| `/drive` 진입점 | 빈 `<section data-region="main">` | UploadButton 1개 + 진행률 영역 | Phase 4 도착 시 `widgets/drive-toolbar` 로 흡수, 본 phase 는 직접 mount |
-| 모바일 picker | 없음 | `<input type="file" accept="image/*" capture="environment">` 클릭 → OS picker (카메라/갤러리 선택) | Capacitor Android WebView 호환 검증 포인트 |
-| 진행률 표시 | 없음 | 0~100% 텍스트 + progressbar (`<progress>` 시멘틱 태그) | 단일 파일 기준. 5MB 단일 part 라면 사실상 0→100 점프 가능 — 그래도 표시 |
-| 성공 피드백 | 없음 | "업로드 완료" 토스트 (또는 inline alert role) | 토스트 유틸 부재 시 inline `<p role="alert">` 최소 형태 |
-| 실패 피드백 | 없음 | "업로드 실패: {error.message}" + 재시도 버튼 | uploadParts 의 자체 재시도 (3회) 이후 단계 실패 |
+| Surface         | Before                            | After                                                                                              | Notes                                                                   |
+| --------------- | --------------------------------- | -------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------- |
+| `/drive` 진입점 | 빈 `<section data-region="main">` | UploadButton 1개 + 진행률 영역                                                                     | Phase 4 도착 시 `widgets/drive-toolbar` 로 흡수, 본 phase 는 직접 mount |
+| 모바일 picker   | 없음                              | `<input type="file" accept="image/*" capture="environment">` 클릭 → OS picker (카메라/갤러리 선택) | Capacitor Android WebView 호환 검증 포인트                              |
+| 진행률 표시     | 없음                              | 0~100% 텍스트 + progressbar (`<progress>` 시멘틱 태그)                                             | 단일 파일 기준. 5MB 단일 part 라면 사실상 0→100 점프 가능 — 그래도 표시 |
+| 성공 피드백     | 없음                              | "업로드 완료" 토스트 (또는 inline alert role)                                                      | 토스트 유틸 부재 시 inline `<p role="alert">` 최소 형태                 |
+| 실패 피드백     | 없음                              | "업로드 실패: {error.message}" + 재시도 버튼                                                       | uploadParts 의 자체 재시도 (3회) 이후 단계 실패                         |
 
 ### Anti-Template Check (web/design-quality.md)
 
@@ -62,63 +64,63 @@ so that **PC 에서 즉시 확인·다운로드 (Phase 4) 가 가능한 좌변 �
 
 ## Mandatory Reading
 
-| Priority | File | Lines | Why |
-|---|---|---|---|
-| P0 | [.claude/prds/services-web-feature-parity.prd.md](../prds/services-web-feature-parity.prd.md) | Phase 3 row + Open Question 4 + Risks 표 | Phase 3 의 success signal · large-file open question · Capacitor risk 출처 |
-| P0 | [services/web/src/features/file-upload/api/mutation.ts](../../services/web/src/features/file-upload/api/mutation.ts) | all | 현재 wrapper — invalidation 등록 위치. `fileUploadControllerCompleteMutation` 단일 진입점 |
-| P0 | [services/web/src/features/file-upload/model/useUploadFile.ts](../../services/web/src/features/file-upload/model/useUploadFile.ts) | all | 현재 오케스트레이터. `onProgress` 콜백 시그니처 확장 대상 |
-| P0 | [services/web/src/features/file-upload/model/upload-parts.ts](../../services/web/src/features/file-upload/model/upload-parts.ts) | 14-52 | part 완료마다 progress emit 지점. 동시성 4개 queue 구조 그대로 보존 |
-| P0 | [services/web/src/features/file-upload/index.ts](../../services/web/src/features/file-upload/index.ts) | all | `UploadButton` re-export 추가 대상 |
-| P0 | [services/web/src/pages/drive/ui/DrivePage.tsx](../../services/web/src/pages/drive/ui/DrivePage.tsx) | all | Phase 2 가 깐 region marker `data-region="main"`. UploadButton mount 지점 |
-| P0 | [services/web/src/entities/file/model/types.ts](../../services/web/src/entities/file/model/types.ts) | all | **GOTCHA 출처**: `type File = FileItemDto`. upload 슬라이스에서 import 금지 (globalThis File 충돌) |
-| P0 | [services/web/CLAUDE.md](../../services/web/CLAUDE.md) | 22-39, 57-80, 304-400 | Widgets vs Features 판정 / codegen `api/` 세그먼트 규칙 / TanStack × Zustand 컨벤션 |
-| P0 | [services/web/src/shared/api/generated/types.gen.ts](../../services/web/src/shared/api/generated/types.gen.ts) | 174-205 | `UploadInitBodyDto` / `UploadInitResponseDto` / `UploadCompletePartDto` / `UploadCompleteBodyDto` |
-| P1 | [services/web/src/features/login-by-credentials/ui/LoginForm.tsx](../../services/web/src/features/login-by-credentials/ui/LoginForm.tsx) | all | 슬라이스 UI 패턴 reference — `shared/ui/` 컴포넌트 + react-hook-form / mutation hook 조합 |
-| P1 | [services/web/src/features/file-upload/model/useUploadFile.test.ts](../../services/web/src/features/file-upload/model/useUploadFile.test.ts) | all | 기존 mock 패턴 — `vi.hoisted` + `mockInitMutate` / `mockCompleteMutate` / `mockUploadParts`. progress test 추가 시 동일 구조 답습 |
-| P1 | [services/web/src/features/file-upload/model/upload-parts.test.ts](../../services/web/src/features/file-upload/model/upload-parts.test.ts) | all | 기존 fetch mock 패턴 — onProgress 콜백 검증 테스트 추가 시 reference |
-| P1 | [services/web/src/widgets/drive-layout/ui/DriveLayout.tsx](../../services/web/src/widgets/drive-layout/ui/DriveLayout.tsx) | all | `<Outlet />` 구조 + topbar layout — UploadButton 이 DriveLayout 의 topbar 가 아닌 children 영역에 들어가는지 확인 |
-| P1 | [services/web/src/shared/api/generated/@tanstack/react-query.gen.ts](../../services/web/src/shared/api/generated/@tanstack/react-query.gen.ts) | 600-625 | `folderControllerGetChildren` queryKey 자동 생성 (invalidation 대상) — `[{ _id: 'folderControllerGetChildren' }]` 매칭 부분 |
-| P2 | [services/web/CLAUDE.md](../../services/web/CLAUDE.md) | 402-451 | Capacitor Android 빌드 흐름 + `cap:sync` — 실기 검증 명령어 reference |
-| P2 | [.claude/rules/ecc/web/design-quality.md](../rules/ecc/web/design-quality.md) | "Component Checklist" | UploadButton 4/10 quality 항목 충족 검증 |
-| P2 | PR #47 — Phase 2 description | "Phase 3+ 영향" 섹션 | 도메인 File / GOTCHA / region marker 사용 가이드 박제 |
+| Priority | File                                                                                                                                           | Lines                                    | Why                                                                                                                               |
+| -------- | ---------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| P0       | [.claude/prds/services-web-feature-parity.prd.md](../prds/services-web-feature-parity.prd.md)                                                  | Phase 3 row + Open Question 4 + Risks 표 | Phase 3 의 success signal · large-file open question · Capacitor risk 출처                                                        |
+| P0       | [services/web/src/features/file-upload/api/mutation.ts](../../services/web/src/features/file-upload/api/mutation.ts)                           | all                                      | 현재 wrapper — invalidation 등록 위치. `fileUploadControllerCompleteMutation` 단일 진입점                                         |
+| P0       | [services/web/src/features/file-upload/model/useUploadFile.ts](../../services/web/src/features/file-upload/model/useUploadFile.ts)             | all                                      | 현재 오케스트레이터. `onProgress` 콜백 시그니처 확장 대상                                                                         |
+| P0       | [services/web/src/features/file-upload/model/upload-parts.ts](../../services/web/src/features/file-upload/model/upload-parts.ts)               | 14-52                                    | part 완료마다 progress emit 지점. 동시성 4개 queue 구조 그대로 보존                                                               |
+| P0       | [services/web/src/features/file-upload/index.ts](../../services/web/src/features/file-upload/index.ts)                                         | all                                      | `UploadButton` re-export 추가 대상                                                                                                |
+| P0       | [services/web/src/pages/drive/ui/DrivePage.tsx](../../services/web/src/pages/drive/ui/DrivePage.tsx)                                           | all                                      | Phase 2 가 깐 region marker `data-region="main"`. UploadButton mount 지점                                                         |
+| P0       | [services/web/src/entities/file/model/types.ts](../../services/web/src/entities/file/model/types.ts)                                           | all                                      | **GOTCHA 출처**: `type File = FileItemDto`. upload 슬라이스에서 import 금지 (globalThis File 충돌)                                |
+| P0       | [services/web/CLAUDE.md](../../services/web/CLAUDE.md)                                                                                         | 22-39, 57-80, 304-400                    | Widgets vs Features 판정 / codegen `api/` 세그먼트 규칙 / TanStack × Zustand 컨벤션                                               |
+| P0       | [services/web/src/shared/api/generated/types.gen.ts](../../services/web/src/shared/api/generated/types.gen.ts)                                 | 174-205                                  | `UploadInitBodyDto` / `UploadInitResponseDto` / `UploadCompletePartDto` / `UploadCompleteBodyDto`                                 |
+| P1       | [services/web/src/features/login-by-credentials/ui/LoginForm.tsx](../../services/web/src/features/login-by-credentials/ui/LoginForm.tsx)       | all                                      | 슬라이스 UI 패턴 reference — `shared/ui/` 컴포넌트 + react-hook-form / mutation hook 조합                                         |
+| P1       | [services/web/src/features/file-upload/model/useUploadFile.test.ts](../../services/web/src/features/file-upload/model/useUploadFile.test.ts)   | all                                      | 기존 mock 패턴 — `vi.hoisted` + `mockInitMutate` / `mockCompleteMutate` / `mockUploadParts`. progress test 추가 시 동일 구조 답습 |
+| P1       | [services/web/src/features/file-upload/model/upload-parts.test.ts](../../services/web/src/features/file-upload/model/upload-parts.test.ts)     | all                                      | 기존 fetch mock 패턴 — onProgress 콜백 검증 테스트 추가 시 reference                                                              |
+| P1       | [services/web/src/widgets/drive-layout/ui/DriveLayout.tsx](../../services/web/src/widgets/drive-layout/ui/DriveLayout.tsx)                     | all                                      | `<Outlet />` 구조 + topbar layout — UploadButton 이 DriveLayout 의 topbar 가 아닌 children 영역에 들어가는지 확인                 |
+| P1       | [services/web/src/shared/api/generated/@tanstack/react-query.gen.ts](../../services/web/src/shared/api/generated/@tanstack/react-query.gen.ts) | 600-625                                  | `folderControllerGetChildren` queryKey 자동 생성 (invalidation 대상) — `[{ _id: 'folderControllerGetChildren' }]` 매칭 부분       |
+| P2       | [services/web/CLAUDE.md](../../services/web/CLAUDE.md)                                                                                         | 402-451                                  | Capacitor Android 빌드 흐름 + `cap:sync` — 실기 검증 명령어 reference                                                             |
+| P2       | [.claude/rules/ecc/web/design-quality.md](../rules/ecc/web/design-quality.md)                                                                  | "Component Checklist"                    | UploadButton 4/10 quality 항목 충족 검증                                                                                          |
+| P2       | PR #47 — Phase 2 description                                                                                                                   | "Phase 3+ 영향" 섹션                     | 도메인 File / GOTCHA / region marker 사용 가이드 박제                                                                             |
 
 ## External Documentation
 
-| Topic | Source | Key Takeaway |
-|---|---|---|
-| `<input type="file" capture>` 표준 동작 | MDN — Web/HTML/Element/input/file#capture | `capture="environment"` 는 OS picker 에 카메라 우선 옵션. Android WebView 8.0+ 표준 지원. iOS 는 별도 |
-| Capacitor 카메라 플러그인 (fallback) | capacitorjs.com/docs/apis/camera | 표준 input 미동작 시 `@capacitor/camera` 설치 → `MainActivity.java` 에 plugin 등록. 본 phase 는 spike 결과에 따라 적용 여부 결정 |
-| TanStack Query invalidation 패턴 | tanstack.com/query/latest/docs/framework/react/guides/query-invalidation | hey-api codegen 의 자동 queryKey 는 `[{ _id: 'xxxControllerYyy', ...options }]` 구조. partial match 로 prefix invalidation 가능 |
-| File API `slice` + 진행률 | MDN — Web/API/Blob/slice | 현재 `upload-parts.ts` 가 이미 사용. part 완료 시점에 누적 partNumber/totalParts 로 % 산출 |
+| Topic                                   | Source                                                                   | Key Takeaway                                                                                                                     |
+| --------------------------------------- | ------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------- |
+| `<input type="file" capture>` 표준 동작 | MDN — Web/HTML/Element/input/file#capture                                | `capture="environment"` 는 OS picker 에 카메라 우선 옵션. Android WebView 8.0+ 표준 지원. iOS 는 별도                            |
+| Capacitor 카메라 플러그인 (fallback)    | capacitorjs.com/docs/apis/camera                                         | 표준 input 미동작 시 `@capacitor/camera` 설치 → `MainActivity.java` 에 plugin 등록. 본 phase 는 spike 결과에 따라 적용 여부 결정 |
+| TanStack Query invalidation 패턴        | tanstack.com/query/latest/docs/framework/react/guides/query-invalidation | hey-api codegen 의 자동 queryKey 는 `[{ _id: 'xxxControllerYyy', ...options }]` 구조. partial match 로 prefix invalidation 가능  |
+| File API `slice` + 진행률               | MDN — Web/API/Blob/slice                                                 | 현재 `upload-parts.ts` 가 이미 사용. part 완료 시점에 누적 partNumber/totalParts 로 % 산출                                       |
 
 ---
 
 ## Patterns to Mirror
 
-| Category | Source | Pattern |
-|---|---|---|
-| 슬라이스 UI 컴포넌트 | [services/web/src/features/login-by-credentials/ui/LoginForm.tsx](../../services/web/src/features/login-by-credentials/ui/LoginForm.tsx):1-60 | `function ComponentName()` 최상위 선언 + `shared/ui` 컴포넌트 import + `model/` 훅 사용 + `role="alert"` 인라인 에러 |
-| `api/mutation.ts` invalidation 등록 | services/web/CLAUDE.md L370-381 ("Query Invalidation") | `useQueryClient()` + `onSuccess: () => queryClient.invalidateQueries({ queryKey: [{ _id: 'getFiles' }] })` (본 phase 는 `'folderControllerGetChildren'`) |
-| mutation hook 시그니처 확장 | 신규 (기존 reference 없음) | 옵션 객체로 `onProgress?: (percent: number) => void` 추가 — 호출자가 선택적으로 구독 |
-| 테스트 mock 구조 | [services/web/src/features/file-upload/model/useUploadFile.test.ts](../../services/web/src/features/file-upload/model/useUploadFile.test.ts):6-15 | `vi.hoisted(() => ({ mock... }))` + `vi.mock('../api/mutation', () => ({ useXxxMutation: () => ({ mutateAsync: mock... }) }))` |
-| 컴포넌트 테스트 (RHF + mutation) | [services/web/src/features/login-by-credentials/ui/LoginForm.test.tsx](../../services/web/src/features/login-by-credentials/ui/LoginForm.test.tsx) | 동일 슬라이스 reference — vitest + `@testing-library/react` |
+| Category                            | Source                                                                                                                                             | Pattern                                                                                                                                                  |
+| ----------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 슬라이스 UI 컴포넌트                | [services/web/src/features/login-by-credentials/ui/LoginForm.tsx](../../services/web/src/features/login-by-credentials/ui/LoginForm.tsx):1-60      | `function ComponentName()` 최상위 선언 + `shared/ui` 컴포넌트 import + `model/` 훅 사용 + `role="alert"` 인라인 에러                                     |
+| `api/mutation.ts` invalidation 등록 | services/web/CLAUDE.md L370-381 ("Query Invalidation")                                                                                             | `useQueryClient()` + `onSuccess: () => queryClient.invalidateQueries({ queryKey: [{ _id: 'getFiles' }] })` (본 phase 는 `'folderControllerGetChildren'`) |
+| mutation hook 시그니처 확장         | 신규 (기존 reference 없음)                                                                                                                         | 옵션 객체로 `onProgress?: (percent: number) => void` 추가 — 호출자가 선택적으로 구독                                                                     |
+| 테스트 mock 구조                    | [services/web/src/features/file-upload/model/useUploadFile.test.ts](../../services/web/src/features/file-upload/model/useUploadFile.test.ts):6-15  | `vi.hoisted(() => ({ mock... }))` + `vi.mock('../api/mutation', () => ({ useXxxMutation: () => ({ mutateAsync: mock... }) }))`                           |
+| 컴포넌트 테스트 (RHF + mutation)    | [services/web/src/features/login-by-credentials/ui/LoginForm.test.tsx](../../services/web/src/features/login-by-credentials/ui/LoginForm.test.tsx) | 동일 슬라이스 reference — vitest + `@testing-library/react`                                                                                              |
 
 ---
 
 ## Files to Change
 
-| File | Action | Why |
-|---|---|---|
-| `services/web/src/features/file-upload/api/mutation.ts` | UPDATE | `useUploadCompleteMutation` 에 `useQueryClient` + `invalidateQueries({ queryKey: [{ _id: 'folderControllerGetChildren' }] })` 등록 |
-| `services/web/src/features/file-upload/model/upload-parts.ts` | UPDATE | 함수 시그니처에 `onProgress?: (percent: number) => void` 추가. part 완료마다 `(done / total) * 100` 계산해 emit |
-| `services/web/src/features/file-upload/model/useUploadFile.ts` | UPDATE | `UploadFileInput` 에 `onProgress?` 추가. `uploadParts` 호출 시 전달 + `file: globalThis.File` 명시 |
-| `services/web/src/features/file-upload/ui/UploadButton.tsx` | CREATE | 본 phase 핵심. `<input type="file" accept="image/*" capture="environment">` 트리거 + 진행률 표시 + 성공/실패 alert. `useUploadFile()` 사용 |
-| `services/web/src/features/file-upload/ui/UploadButton.test.tsx` | CREATE | RTL 컴포넌트 테스트 — useUploadFile mock + input change event + 진행률/완료/실패 UI 단계 검증 |
-| `services/web/src/features/file-upload/index.ts` | UPDATE | `UploadButton` re-export 추가 |
-| `services/web/src/features/file-upload/model/upload-parts.test.ts` | UPDATE | `onProgress` 콜백 호출 횟수/값 검증 1~2 case 추가 |
-| `services/web/src/features/file-upload/model/useUploadFile.test.ts` | UPDATE | `onProgress` 전달 검증 1 case 추가 |
-| `services/web/src/pages/drive/ui/DrivePage.tsx` | UPDATE | `data-region="main"` 영역에 `<UploadButton />` 1개 mount. Phase 4 가 도착하면 widget 으로 흡수 예정 |
-| `.claude/prds/services-web-feature-parity.prd.md` | UPDATE | Phase 3 row `pending` → `in-progress` + Plan 칼럼에 본 plan 링크 |
+| File                                                                | Action | Why                                                                                                                                        |
+| ------------------------------------------------------------------- | ------ | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| `services/web/src/features/file-upload/api/mutation.ts`             | UPDATE | `useUploadCompleteMutation` 에 `useQueryClient` + `invalidateQueries({ queryKey: [{ _id: 'folderControllerGetChildren' }] })` 등록         |
+| `services/web/src/features/file-upload/model/upload-parts.ts`       | UPDATE | 함수 시그니처에 `onProgress?: (percent: number) => void` 추가. part 완료마다 `(done / total) * 100` 계산해 emit                            |
+| `services/web/src/features/file-upload/model/useUploadFile.ts`      | UPDATE | `UploadFileInput` 에 `onProgress?` 추가. `uploadParts` 호출 시 전달 + `file: globalThis.File` 명시                                         |
+| `services/web/src/features/file-upload/ui/UploadButton.tsx`         | CREATE | 본 phase 핵심. `<input type="file" accept="image/*" capture="environment">` 트리거 + 진행률 표시 + 성공/실패 alert. `useUploadFile()` 사용 |
+| `services/web/src/features/file-upload/ui/UploadButton.test.tsx`    | CREATE | RTL 컴포넌트 테스트 — useUploadFile mock + input change event + 진행률/완료/실패 UI 단계 검증                                              |
+| `services/web/src/features/file-upload/index.ts`                    | UPDATE | `UploadButton` re-export 추가                                                                                                              |
+| `services/web/src/features/file-upload/model/upload-parts.test.ts`  | UPDATE | `onProgress` 콜백 호출 횟수/값 검증 1~2 case 추가                                                                                          |
+| `services/web/src/features/file-upload/model/useUploadFile.test.ts` | UPDATE | `onProgress` 전달 검증 1 case 추가                                                                                                         |
+| `services/web/src/pages/drive/ui/DrivePage.tsx`                     | UPDATE | `data-region="main"` 영역에 `<UploadButton />` 1개 mount. Phase 4 가 도착하면 widget 으로 흡수 예정                                        |
+| `.claude/prds/services-web-feature-parity.prd.md`                   | UPDATE | Phase 3 row `pending` → `in-progress` + Plan 칼럼에 본 plan 링크                                                                           |
 
 **총 10 파일 (CREATE 2, UPDATE 8). 800 라인 제한 — UploadButton 추정 80~120 라인.**
 
@@ -147,9 +149,9 @@ features/file-upload/
 
 ```ts
 export interface UploadFileInput {
-  file: globalThis.File;  // GOTCHA: 도메인 File alias 와 충돌 방지 — 명시적 globalThis.File
+  file: globalThis.File; // GOTCHA: 도메인 File alias 와 충돌 방지 — 명시적 globalThis.File
   folderId?: string;
-  onProgress?: (percent: number) => void;  // 0~100 정수
+  onProgress?: (percent: number) => void; // 0~100 정수
 }
 ```
 
@@ -178,18 +180,29 @@ export function UploadButton() {
   const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    setError(null); setProgress(0);
-    mutate({ file, onProgress: setProgress }, {
-      onSuccess: () => { setProgress(null); /* 토스트 */ },
-      onError: (err) => { setError(err.message); setProgress(null); },
-    });
-    e.target.value = '';  // 동일 파일 재선택 허용
+    setError(null);
+    setProgress(0);
+    mutate(
+      { file, onProgress: setProgress },
+      {
+        onSuccess: () => {
+          setProgress(null); /* 토스트 */
+        },
+        onError: (err) => {
+          setError(err.message);
+          setProgress(null);
+        },
+      },
+    );
+    e.target.value = ''; // 동일 파일 재선택 허용
   };
 
   return (
     <div>
       <input ref={inputRef} type="file" accept="image/*" capture="environment" hidden onChange={handleChange} />
-      <Button onClick={() => inputRef.current?.click()} disabled={isPending}>업로드</Button>
+      <Button onClick={() => inputRef.current?.click()} disabled={isPending}>
+        업로드
+      </Button>
       {progress !== null && <progress value={progress} max={100} aria-label="업로드 진행률" />}
       {error && <p role="alert">{error}</p>}
     </div>
@@ -311,15 +324,15 @@ find services/web/src/features/file-upload -name "*.ts" -o -name "*.tsx" | xargs
 
 ## Risks
 
-| Risk | Likelihood | Mitigation |
-|---|---|---|
-| Capacitor Android WebView 가 표준 `capture` 속성을 무시 → 카메라 진입 불가 | M | Task 6 spike 결과에 따라 `@capacitor/camera` 도입. 본 plan 의 success signal 은 "실기 사진 1장 업로드" 이므로 plugin 도입까지가 정상 종료 범위 |
-| `folderControllerGetChildren` invalidation queryKey 형태가 hey-api 자동키와 매칭 안 됨 | L | Task 1 RED 단계에서 실제 mock 으로 검증. 매칭 안 되면 `predicate` 사용 또는 partial key 매칭 확장 |
-| `onProgress` race condition 으로 단조 증가 깨짐 (40% → 30% → 70%) | M | 본 phase 는 단조 증가를 보장하지 않음. UI 측에서 `Math.max(prev, next)` 적용. Phase 6 검증 시 발견되면 별도 phase 로 분리 |
-| 도메인 `File` alias 와 브라우저 `File` 충돌이 IDE 자동 import 로 재발 | M | Task 3 에서 `globalThis.File` 명시 + Validation 의 grep audit. PR description 에 GOTCHA 재명시 |
-| `<progress>` 시멘틱 태그가 Catalyst 토큰과 시각적으로 어색 | L | Phase 1 토큰 (`shared/styles/tokens.css`) 적용. 보완 필요하면 별도 commit |
-| `DrivePage` 에 UploadButton 직접 mount → Phase 4 가 widget 으로 격상할 때 두 번 작업 | L | 의도된 비용 (PRD 명시: "Phase 3 / 4 / 5 독립 진행"). Phase 4 도착 시 1줄 이동 |
-| 큰 파일 (>100MB) 업로드 시 메모리/타임아웃 | M | 본 phase 범위 밖 — PRD Open Question 4 갱신만. Phase 6 검증에서 발견되면 별도 phase |
+| Risk                                                                                   | Likelihood | Mitigation                                                                                                                                     |
+| -------------------------------------------------------------------------------------- | ---------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| Capacitor Android WebView 가 표준 `capture` 속성을 무시 → 카메라 진입 불가             | M          | Task 6 spike 결과에 따라 `@capacitor/camera` 도입. 본 plan 의 success signal 은 "실기 사진 1장 업로드" 이므로 plugin 도입까지가 정상 종료 범위 |
+| `folderControllerGetChildren` invalidation queryKey 형태가 hey-api 자동키와 매칭 안 됨 | L          | Task 1 RED 단계에서 실제 mock 으로 검증. 매칭 안 되면 `predicate` 사용 또는 partial key 매칭 확장                                              |
+| `onProgress` race condition 으로 단조 증가 깨짐 (40% → 30% → 70%)                      | M          | 본 phase 는 단조 증가를 보장하지 않음. UI 측에서 `Math.max(prev, next)` 적용. Phase 6 검증 시 발견되면 별도 phase 로 분리                      |
+| 도메인 `File` alias 와 브라우저 `File` 충돌이 IDE 자동 import 로 재발                  | M          | Task 3 에서 `globalThis.File` 명시 + Validation 의 grep audit. PR description 에 GOTCHA 재명시                                                 |
+| `<progress>` 시멘틱 태그가 Catalyst 토큰과 시각적으로 어색                             | L          | Phase 1 토큰 (`shared/styles/tokens.css`) 적용. 보완 필요하면 별도 commit                                                                      |
+| `DrivePage` 에 UploadButton 직접 mount → Phase 4 가 widget 으로 격상할 때 두 번 작업   | L          | 의도된 비용 (PRD 명시: "Phase 3 / 4 / 5 독립 진행"). Phase 4 도착 시 1줄 이동                                                                  |
+| 큰 파일 (>100MB) 업로드 시 메모리/타임아웃                                             | M          | 본 phase 범위 밖 — PRD Open Question 4 갱신만. Phase 6 검증에서 발견되면 별도 phase                                                            |
 
 ---
 
@@ -368,44 +381,44 @@ find services/web/src/features/file-upload -name "*.ts" -o -name "*.tsx" | xargs
 
 ### Task 결과
 
-| # | Task | 상태 | 메모 |
-|---|---|---|---|
-| 1 | `api/mutation.ts` invalidation | Done | `[{ _id: 'folderControllerGetChildren' }]` partial match. `mutation.test.tsx` 신설 + GREEN |
-| 2 | `upload-parts.ts` onProgress | Done | part 완료마다 `Math.round((completed / total) * 100)` emit. 신규 case 2 개 GREEN |
-| 3 | `useUploadFile.ts` onProgress 전달 | Done | `UploadFileInput.file` 타입을 `globalThis.File` 로 명시 (Phase 2 GOTCHA 방어) |
-| 4 | `ui/UploadButton.tsx` 신설 | Done | hidden `<input type="file" accept="image/*" capture="environment">` + Catalyst `<Button>` + 시멘틱 `<progress>` + `role="alert"`. 컴포넌트 테스트 5 case GREEN |
-| 5 | `index.ts` re-export + DrivePage mount | Done | 슬라이스 barrel `UploadButton` 추가, `features/index.ts` 에 `file-upload` re-export, `DrivePage` 의 `data-region="main"` 안에 mount. DrivePage 테스트 2 case 신설 GREEN |
-| 6 | Capacitor 실기 spike | **사용자 수동 대기** | `npm --prefix services/web run cap:sync && npm --prefix services/web run cap:android` → 카메라/갤러리 picker 실기 확인 필요 |
-| 7 | PRD Phase 3 row 갱신 | Done | `e27aee7` plan 신설 커밋에서 이미 `pending → in-progress` + Plan 링크 적용 완료 |
+| #   | Task                                   | 상태                 | 메모                                                                                                                                                                    |
+| --- | -------------------------------------- | -------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | `api/mutation.ts` invalidation         | Done                 | `[{ _id: 'folderControllerGetChildren' }]` partial match. `mutation.test.tsx` 신설 + GREEN                                                                              |
+| 2   | `upload-parts.ts` onProgress           | Done                 | part 완료마다 `Math.round((completed / total) * 100)` emit. 신규 case 2 개 GREEN                                                                                        |
+| 3   | `useUploadFile.ts` onProgress 전달     | Done                 | `UploadFileInput.file` 타입을 `globalThis.File` 로 명시 (Phase 2 GOTCHA 방어)                                                                                           |
+| 4   | `ui/UploadButton.tsx` 신설             | Done                 | hidden `<input type="file" accept="image/*" capture="environment">` + Catalyst `<Button>` + 시멘틱 `<progress>` + `role="alert"`. 컴포넌트 테스트 5 case GREEN          |
+| 5   | `index.ts` re-export + DrivePage mount | Done                 | 슬라이스 barrel `UploadButton` 추가, `features/index.ts` 에 `file-upload` re-export, `DrivePage` 의 `data-region="main"` 안에 mount. DrivePage 테스트 2 case 신설 GREEN |
+| 6   | Capacitor 실기 spike                   | **사용자 수동 대기** | `npm --prefix services/web run cap:sync && npm --prefix services/web run cap:android` → 카메라/갤러리 picker 실기 확인 필요                                             |
+| 7   | PRD Phase 3 row 갱신                   | Done                 | `e27aee7` plan 신설 커밋에서 이미 `pending → in-progress` + Plan 링크 적용 완료                                                                                         |
 
 ### Validation Results
 
-| Level | 결과 | 비고 |
-|---|---|---|
-| Type Check | Pass | `npm run build` 의 `tsc -b` 단계 통과 |
-| Lint | N/A | 본 repo 는 별도 lint script 없음 (tsc strict 가 lint 역할) |
-| Unit Tests | 63 / 63 PASS | 슬라이스 전용 17 + 전체 회귀 통과. Phase 2 기준 known FAIL 0 건으로 개선 |
-| Build | Pass (1.29s) | `vite build` 통과. bundle 크기 변동 미미 |
-| grep audit | Pass | `entities/file` import 0 건, `File` 토큰이 `globalThis.File` / `new File(...)` 외 등장 0 건 |
-| CRLF | Pass | 신규/수정 파일 12 개 모두 100% CRLF |
-| Capacitor 실기 | 미수행 | Task 6 사용자 수동 |
+| Level          | 결과         | 비고                                                                                        |
+| -------------- | ------------ | ------------------------------------------------------------------------------------------- |
+| Type Check     | Pass         | `npm run build` 의 `tsc -b` 단계 통과                                                       |
+| Lint           | N/A          | 본 repo 는 별도 lint script 없음 (tsc strict 가 lint 역할)                                  |
+| Unit Tests     | 63 / 63 PASS | 슬라이스 전용 17 + 전체 회귀 통과. Phase 2 기준 known FAIL 0 건으로 개선                    |
+| Build          | Pass (1.29s) | `vite build` 통과. bundle 크기 변동 미미                                                    |
+| grep audit     | Pass         | `entities/file` import 0 건, `File` 토큰이 `globalThis.File` / `new File(...)` 외 등장 0 건 |
+| CRLF           | Pass         | 신규/수정 파일 12 개 모두 100% CRLF                                                         |
+| Capacitor 실기 | 미수행       | Task 6 사용자 수동                                                                          |
 
 ### Files Changed
 
-| 파일 | Action | 메모 |
-|---|---|---|
-| `services/web/src/features/file-upload/api/mutation.ts` | UPDATE | `useQueryClient` + `onSuccess` invalidation |
-| `services/web/src/features/file-upload/api/mutation.test.tsx` | CREATE | invalidate spy 검증 1 case |
-| `services/web/src/features/file-upload/model/upload-parts.ts` | UPDATE | `onProgress` 콜백 + `globalThis.File` 명시 |
-| `services/web/src/features/file-upload/model/upload-parts.test.ts` | UPDATE | `onProgress` 호출 횟수/마지막값 case + 미지정 호환 case |
-| `services/web/src/features/file-upload/model/useUploadFile.ts` | UPDATE | `UploadFileInput.onProgress` 추가 + `uploadParts` 4 번째 인자 전달 |
-| `services/web/src/features/file-upload/model/useUploadFile.test.ts` | UPDATE | 4-arg 호출로 assertion 갱신 + `onProgress` 전달 case |
-| `services/web/src/features/file-upload/ui/UploadButton.tsx` | CREATE | 본 phase 핵심. 46 라인 |
-| `services/web/src/features/file-upload/ui/UploadButton.test.tsx` | CREATE | RTL 5 case (클릭, mutate, isPending, alert, progressbar) |
-| `services/web/src/features/file-upload/index.ts` | UPDATE | `UploadButton` re-export |
-| `services/web/src/features/index.ts` | UPDATE | `export * from './file-upload'` 추가 |
-| `services/web/src/pages/drive/ui/DrivePage.tsx` | UPDATE | `<UploadButton />` mount + import |
-| `services/web/src/pages/drive/ui/DrivePage.test.tsx` | CREATE | region marker 2 case (main 안 UploadButton, secondary 빈 자리) |
+| 파일                                                                | Action | 메모                                                               |
+| ------------------------------------------------------------------- | ------ | ------------------------------------------------------------------ |
+| `services/web/src/features/file-upload/api/mutation.ts`             | UPDATE | `useQueryClient` + `onSuccess` invalidation                        |
+| `services/web/src/features/file-upload/api/mutation.test.tsx`       | CREATE | invalidate spy 검증 1 case                                         |
+| `services/web/src/features/file-upload/model/upload-parts.ts`       | UPDATE | `onProgress` 콜백 + `globalThis.File` 명시                         |
+| `services/web/src/features/file-upload/model/upload-parts.test.ts`  | UPDATE | `onProgress` 호출 횟수/마지막값 case + 미지정 호환 case            |
+| `services/web/src/features/file-upload/model/useUploadFile.ts`      | UPDATE | `UploadFileInput.onProgress` 추가 + `uploadParts` 4 번째 인자 전달 |
+| `services/web/src/features/file-upload/model/useUploadFile.test.ts` | UPDATE | 4-arg 호출로 assertion 갱신 + `onProgress` 전달 case               |
+| `services/web/src/features/file-upload/ui/UploadButton.tsx`         | CREATE | 본 phase 핵심. 46 라인                                             |
+| `services/web/src/features/file-upload/ui/UploadButton.test.tsx`    | CREATE | RTL 5 case (클릭, mutate, isPending, alert, progressbar)           |
+| `services/web/src/features/file-upload/index.ts`                    | UPDATE | `UploadButton` re-export                                           |
+| `services/web/src/features/index.ts`                                | UPDATE | `export * from './file-upload'` 추가                               |
+| `services/web/src/pages/drive/ui/DrivePage.tsx`                     | UPDATE | `<UploadButton />` mount + import                                  |
+| `services/web/src/pages/drive/ui/DrivePage.test.tsx`                | CREATE | region marker 2 case (main 안 UploadButton, secondary 빈 자리)     |
 
 총 12 파일 (CREATE 4 / UPDATE 8) — 추정치 (CREATE 2 / UPDATE 8) 대비 CREATE 2 건 증가 (mutation 단위 테스트 + DrivePage 페이지 테스트는 plan 텍스트에 암묵 포함이었음).
 
@@ -438,3 +451,30 @@ npm run cap:android
 
 - Capacitor 실기 spike 완료 후 본 plan frontmatter `status: done` + PRD row `done` 갱신 → PR 작성
 - 30 일 경과 후 `docs/archive/superpowers/plans/` 로 `git mv` archive (plans/README §"archive 정책")
+
+---
+
+## Finalize (2026-05-27)
+
+`/ecc:prp-implement` 재호출 시점에 plan 의 모든 task 가 이미 커밋되어 있어 코드 작업 없이 **validate + finalize** 만 수행했다.
+
+### Closure 근거
+
+| Task                     | 종결 commit                                                                                                                                  | 비고                            |
+| ------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------- |
+| 1~5, 7 (코드 작업)       | `e0d7e8e` feat: services/web Phase 3 — file-upload UI · 진행률 · complete invalidation                                                       | 2026-05-26                      |
+| 6 (Capacitor 실기 spike) | `9c5bcf9` fix(web): Capacitor dev URL 을 localhost 로 정정 + `3bca7f2` fix(web): Android cleartext 화이트리스트에 localhost / 127.0.0.1 추가 | main PR #52 로 머지 — 실기 결과 |
+
+### 회귀 재검증 (2026-05-27 05:59)
+
+| Level      | 결과                                                                                                                  |
+| ---------- | --------------------------------------------------------------------------------------------------------------------- |
+| Unit Tests | 63 / 63 PASS (19 files) — 2026-05-26 baseline 유지                                                                    |
+| Build      | `tsc -b && vite build` 통과 (1.25s)                                                                                   |
+| grep audit | `entities/file` import 0 건, `\bFile\b` 토큰은 `new File(...)` 생성자 호출 + `globalThis.File` 타입 위치 외 등장 0 건 |
+
+### 상태 전이
+
+- plan frontmatter `status: in-progress → done` + `completed: 2026-05-27` 추가
+- PRD `services-web-feature-parity` Phase 3 row `in-progress → done`
+- archive 는 2026-06-26 이후 별도 `git mv` 작업 (plans/README §"archive 정책")
