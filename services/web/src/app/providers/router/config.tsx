@@ -1,8 +1,8 @@
 import { TrustedDeviceSection, TrustThisDeviceCheckbox, TwoFactorApprovalPage, TwoFactorBackupEntry, TwoFactorWaiting } from '@/features';
 import { BackupCodeIssuePage, DrivePage, Link2TwoFAAuth, LoginPage, RegisterPage, TwoFAApprovalPage, TwoFABackupPage, TwoFAWaitPage } from '@/pages';
-import { AuthLayout } from '@/widgets';
+import { AuthLayout, DriveLayout } from '@/widgets';
 import { PrivateRoute } from '@shared/router';
-import { Outlet, type RouteObject } from 'react-router-dom';
+import { Navigate, Outlet, type RouteObject } from 'react-router-dom';
 import { AppShell } from '../AppShell';
 
 const rootRoutes: RouteObject[] = [
@@ -16,16 +16,7 @@ const rootRoutes: RouteObject[] = [
     children: [
       {
         index: true,
-        element: (
-          <>
-            <ul className="flex flex-col justify-center gap-4 p-6 text-black dark:text-white">
-              <a href="/login">login</a>
-              <a href="/drive">drive</a>
-              <a href="/preview">preview</a>
-              <a href="/preview/2fa-auth">2fa auth</a>
-            </ul>
-          </>
-        ),
+        element: <Navigate to="/login" replace />,
       },
     ],
   },
@@ -60,14 +51,10 @@ const appRoutes: RouteObject[] = [
     element: (
       <PrivateRoute>
         <Link2TwoFAAuth />
-        <DrivePage />
+        <DriveLayout />
       </PrivateRoute>
     ),
-    // element: <SidebarLayout />,
-    children: [
-      // { index: true, element: <DrivePage /> },
-      // { path: ':folderId', element: <div>Drive/:folderId</div> },
-    ],
+    children: [{ index: true, element: <DrivePage /> }],
   },
   {
     path: '/2fa/:id',
