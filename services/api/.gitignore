@@ -55,6 +55,3 @@ pids
 
 # Diagnostic reports (https://nodejs.org/api/report.html)
 report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
-
-# NestJS Swagger CLI plugin codegen output (정렬 순서가 환경마다 달라 diff churn 발생)
-/src/metadata.ts
