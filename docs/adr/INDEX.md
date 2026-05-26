@@ -18,3 +18,5 @@
 |---|---|---|---|
 | 0001 | [ts-rest 제거 → Swagger + hey-api + TanStack Query](0001-ts-rest-removal-swagger-migration.md) | accepted | 2026-05-16 |
 | 0002 | [2FA Strategy 패턴 (TOTP / Push / Backup Code)](0002-twofa-strategy-pattern.md) | accepted | 2026-05-20 |
+| 0003 | [Storage SoT 를 NAS filesystem 으로 이전](0003-storage-sot-nas-filesystem.md) | proposed | 2026-05-27 |
+| 0004 | [v1 은 iSCSI 우선 통합 · SMB 보류](0004-iscsi-priority-smb-deferred.md) | proposed | 2026-05-27 |
