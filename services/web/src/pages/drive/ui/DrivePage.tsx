@@ -1,7 +1,11 @@
+import { UploadButton } from '@/features';
+
 export function DrivePage() {
   return (
     <div className="px-4 py-10 sm:px-6 lg:px-8 lg:py-6">
-      <section data-region="main" aria-label="드라이브 콘텐츠" />
+      <section data-region="main" aria-label="드라이브 콘텐츠">
+        <UploadButton />
+      </section>
       <aside
         data-region="secondary"
         aria-label="보조 콘텐츠"

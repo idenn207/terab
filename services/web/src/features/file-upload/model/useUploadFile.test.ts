@@ -39,9 +39,7 @@ describe('useUploadFile', () => {
     expect(mockInitMutate).toHaveBeenCalledWith({
       body: { folderId: 'folder-1', name: 'a.bin', size: 10, mimeType: 'application/octet-stream' },
     });
-    expect(mockUploadParts).toHaveBeenCalledWith(file, [{ partNumber: 1, uploadUrl: 'https://x' }], {
-      'Content-Type': 'application/octet-stream',
-    });
+    expect(mockUploadParts).toHaveBeenCalledWith(file, [{ partNumber: 1, uploadUrl: 'https://x' }], { 'Content-Type': 'application/octet-stream' }, undefined);
     expect(mockCompleteMutate).toHaveBeenCalledWith({
       path: { sessionId: 'sess-1' },
       body: { parts: [{ partNumber: 1, etag: 'e1' }] },
@@ -58,6 +56,25 @@ describe('useUploadFile', () => {
     await expect(result.current.mutateAsync({ file })).rejects.toThrow('boom');
     expect(mockUploadParts).not.toHaveBeenCalled();
     expect(mockCompleteMutate).not.toHaveBeenCalled();
+  });
+
+  it('onProgress 옵션은 uploadParts 네 번째 인자로 전달된다', async () => {
+    mockInitMutate.mockResolvedValue({
+      sessionId: 'sess-2',
+      parts: [{ partNumber: 1, uploadUrl: 'https://x' }],
+      uploadHeaders: { 'Content-Type': 'application/octet-stream' },
+      expiresAt: '2026-05-18T00:00:00.000Z',
+    });
+    mockUploadParts.mockResolvedValue([{ partNumber: 1, etag: 'e1' }]);
+    mockCompleteMutate.mockResolvedValue({ id: 'file-2', name: 'b.bin' });
+
+    const { result } = renderHook(() => useUploadFile(), { wrapper: makeQueryWrapper() });
+    const file = new File([new Uint8Array(10)], 'b.bin');
+    const onProgress = vi.fn();
+
+    await result.current.mutateAsync({ file, onProgress });
+
+    expect(mockUploadParts).toHaveBeenCalledWith(file, [{ partNumber: 1, uploadUrl: 'https://x' }], { 'Content-Type': 'application/octet-stream' }, onProgress);
   });
 
   it('uploadParts가 실패하면 complete을 호출하지 않는다 (서버 cleanup-worker가 회수)', async () => {

@@ -8,7 +8,7 @@ const env = (process.env.CAPACITOR_ENV ?? 'bundle') as CapacitorEnv;
 
 const servers: Record<CapacitorEnv, CapacitorConfig['server']> = {
   bundle: undefined,
-  dev: { url: 'http://10.0.2.2:5173', androidScheme: 'http' },
+  dev: { url: 'http://localhost:5173', androidScheme: 'http' },
   prod: { url: 'https://drive.skypark207.com', androidScheme: 'https' },
 };
 

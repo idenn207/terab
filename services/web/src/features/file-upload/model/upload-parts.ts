@@ -11,10 +11,16 @@ export interface UploadPartResult {
 const MAX_RETRIES = 2;
 const PART_CONCURRENCY = 4;
 
-export async function uploadParts(file: File, parts: UploadPartInput[], headers: Record<string, string>): Promise<UploadPartResult[]> {
+export async function uploadParts(
+  file: globalThis.File,
+  parts: UploadPartInput[],
+  headers: Record<string, string>,
+  onProgress?: (percent: number) => void,
+): Promise<UploadPartResult[]> {
   const partSize = Math.ceil(file.size / parts.length);
   const queue = [...parts];
   const results: UploadPartResult[] = new Array(parts.length);
+  let completed = 0;
 
   async function putOne(part: UploadPartInput): Promise<void> {
     const start = (part.partNumber - 1) * partSize;
@@ -29,6 +35,8 @@ export async function uploadParts(file: File, parts: UploadPartInput[], headers:
         const raw = res.headers.get('ETag') ?? res.headers.get('etag') ?? '';
         const etag = raw.replace(/^"+|"+$/g, '');
         results[part.partNumber - 1] = { partNumber: part.partNumber, etag };
+        completed += 1;
+        onProgress?.(Math.round((completed / parts.length) * 100));
         return;
       } catch (err) {
         lastErr = err;
