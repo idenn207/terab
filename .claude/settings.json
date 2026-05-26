@@ -16,7 +16,7 @@
     "additionalDirectories": ["C:\\_project\\my\\terab\\docs\\archive\\superpowers"]
   },
   "model": "opus",
-  "outputStyle": "Learning",
+  "outputStyle": "Explanatory",
   "effortLevel": "xhigh",
   "autoUpdatesChannel": "latest"
 }
