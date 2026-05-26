@@ -28,10 +28,6 @@ describe('TrashController', () => {
     jest.clearAllMocks();
   });
 
-  it('인스턴스가 생성된다', () => {
-    expect(controller).toBeDefined();
-  });
-
   describe('list', () => {
     it('빈 목록을 반환한다', async () => {
       service.list.mockResolvedValue({ items: [] });

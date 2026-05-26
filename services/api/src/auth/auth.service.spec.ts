@@ -8,12 +8,6 @@ import { AuthService } from './auth.service';
 import { RoleService } from './role/role.service';
 import { SessionService } from './session/session.service';
 
-jest.mock('bcryptjs', () => ({
-  ...jest.requireActual('bcryptjs'),
-  compare: jest.fn(),
-  hash: jest.fn(),
-}));
-
 const mockUserService = {
   findById: jest.fn(),
 };
@@ -94,7 +88,7 @@ describe('AuthService', () => {
       const user = { password: await bcrypt.hash('peppered-other', 10), active: true };
 
       await expect(service.validateCredentials(user, 'wrong')).rejects.toMatchObject({
-        errorCode: 'INVALID_CREDENTIALS',
+        code: 'INVALID_CREDENTIALS',
       });
     });
 
@@ -103,7 +97,7 @@ describe('AuthService', () => {
       const user = { password: await bcrypt.hash('peppered', 10), active: false };
 
       await expect(service.validateCredentials(user, 'pw')).rejects.toMatchObject({
-        errorCode: 'ACCOUNT_DISABLED',
+        code: 'ACCOUNT_DISABLED',
       });
     });
 
@@ -120,7 +114,7 @@ describe('AuthService', () => {
       mockRoleService.findByName.mockResolvedValue(null);
 
       await expect(service.assignDefaultRole('user-1')).rejects.toMatchObject({
-        errorCode: 'ROLE_NOT_FOUND',
+        code: 'ROLE_NOT_FOUND',
       });
     });
 
@@ -217,7 +211,7 @@ describe('AuthService', () => {
     it('rawRt가 undefined면 REFRESH_TOKEN_INVALID 예외를 던진다', async () => {
       const res = { cookie: jest.fn() } as any;
       await expect(service.rotateRefreshToken(undefined, res)).rejects.toMatchObject({
-        errorCode: 'REFRESH_TOKEN_INVALID',
+        code: 'REFRESH_TOKEN_INVALID',
       });
       expect(res.cookie).not.toHaveBeenCalled();
     });
@@ -270,7 +264,7 @@ describe('AuthService', () => {
       const res = { cookie: jest.fn() } as any;
 
       await expect(service.issueAfterTwoFa('ghost', res)).rejects.toMatchObject({
-        errorCode: 'TWOFA_CHALLENGE_NOT_FOUND',
+        code: 'TWOFA_CHALLENGE_NOT_FOUND',
       });
     });
 
@@ -289,7 +283,7 @@ describe('AuthService', () => {
 
       expect(result).toEqual({
         status: 'AUTHENTICATED',
-        accessToken: 'JWT',
+        accessToken: 'mock.access.token',
         user: { id: 'u1', username: 'a', nickname: 'A' },
       });
     });

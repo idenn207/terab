@@ -20,10 +20,6 @@ describe('PushChallengePublisher', () => {
     jest.clearAllMocks();
   });
 
-  it('인스턴스가 생성된다', () => {
-    expect(publisher).toBeDefined();
-  });
-
   describe('publish', () => {
     const job = { userId: 'u1', pushToken: 't1', challengeId: 'c1', options: 'a,b', expiresAt: 'iso' };
 

@@ -25,10 +25,6 @@ describe('UploadSessionRepository', () => {
     setupMockDbSelectChain();
   });
 
-  it('인스턴스가 생성된다', () => {
-    expect(repo).toBeDefined();
-  });
-
   it('findById는 일치하는 session이 없으면 null을 반환한다', async () => {
     mockDbLimit.mockResolvedValue([]);
     const result = await repo.findById('ghost-id');

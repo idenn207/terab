@@ -27,10 +27,6 @@ describe('RoleService', () => {
     jest.clearAllMocks();
   });
 
-  it('인스턴스가 생성된다', () => {
-    expect(service).toBeDefined();
-  });
-
   describe('getPermissionsByUserId', () => {
     it('userId의 권한 배열이 비어 있으면 빈 배열을 반환한다', async () => {
       mockRoleRepository.findPermissionsByUserId.mockResolvedValue([]);

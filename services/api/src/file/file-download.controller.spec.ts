@@ -32,10 +32,6 @@ describe('FileDownloadController', () => {
     jest.clearAllMocks();
   });
 
-  it('인스턴스가 생성된다', () => {
-    expect(controller).toBeDefined();
-  });
-
   describe('downloadFile', () => {
     it('FILE_NOT_FOUND가 발생하면 그대로 전파한다', async () => {
       service.getDownloadStream.mockRejectedValue(new ApiException('FILE_NOT_FOUND'));

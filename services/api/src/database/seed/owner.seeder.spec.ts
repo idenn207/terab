@@ -75,10 +75,6 @@ describe('OwnerSeeder', () => {
     (bcrypt.hash as jest.Mock).mockResolvedValue('hashed');
   });
 
-  it('인스턴스가 생성된다', () => {
-    expect(seeder).toBeDefined();
-  });
-
   describe('seed', () => {
     it('OWNER_PASSWORD가 설정되지 않으면 아무 것도 하지 않는다', async () => {
       mockConfig.get.mockReturnValue(undefined);

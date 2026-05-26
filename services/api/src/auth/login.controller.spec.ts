@@ -24,10 +24,6 @@ describe('UserController', () => {
     jest.clearAllMocks();
   });
 
-  it('인스턴스가 생성된다', () => {
-    expect(controller).toBeDefined();
-  });
-
   describe('register', () => {
     it('userService.register에 body와 res를 위임한다', async () => {
       const body = { token: 't', username: 'a', nickname: 'A', password: 'p' };

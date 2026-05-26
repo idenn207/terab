@@ -52,10 +52,8 @@ describe('ChallengeController', () => {
       await controller.complete('challenge-id', {}, res);
       expect(mockTwoFaService.completeChallenge).toHaveBeenCalledWith('challenge-id', {});
     });
-  });
 
-  describe('complete', () => {
-    it('twoFaService.completeChallenge로 검증 후 userService.issueAfterTwoFa 호출', async () => {
+    it('type=PUSH면 completeChallenge → issueAuthenticatedResponse 위임 후 AUTHENTICATED 반환', async () => {
       mockTwoFaService.completeChallenge.mockResolvedValue('u1');
       mockTwoFaService.issueAuthenticatedResponse.mockResolvedValue({
         status: 'AUTHENTICATED',

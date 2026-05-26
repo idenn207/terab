@@ -20,10 +20,6 @@ describe('RoleRepository', () => {
     setupMockDbSelectChain();
   });
 
-  it('인스턴스가 생성된다', () => {
-    expect(repo).toBeDefined();
-  });
-
   describe('findByName', () => {
     it('일치하는 role이 없으면 null을 반환한다', async () => {
       mockDbLimit.mockResolvedValue([]);

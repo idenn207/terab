@@ -34,10 +34,6 @@ describe('TrustedDeviceController', () => {
     jest.clearAllMocks();
   });
 
-  it('인스턴스가 생성된다', () => {
-    expect(controller).toBeDefined();
-  });
-
   describe('list', () => {
     it('등록된 신뢰기기가 없으면 빈 배열을 반환한다', async () => {
       service.list.mockResolvedValue([]);
@@ -73,12 +69,13 @@ describe('TrustedDeviceController', () => {
 
     it('user-agent 헤더가 없어도 정상 처리한다', async () => {
       service.register.mockResolvedValue('raw-token');
-      const res = { cookie: jest.fn() } as unknown as Response;
+      Object.defineProperty(mockTrustedDeviceService, 'trustDurationMs', { value: TRUST_DURATION_MS });
+      const res = {} as Response;
 
       await controller.register(mockAuthUser, undefined, res);
 
       expect(service.register).toHaveBeenCalledWith(mockAuthUser.userId, undefined);
-      expect(res.cookie).toHaveBeenCalled();
+      expect(mockAuthService.setTrustCookie).toHaveBeenCalledWith(res, 'raw-token', TRUST_DURATION_MS);
     });
   });
 

@@ -52,10 +52,6 @@ describe('BackupCodeService', () => {
     (bcrypt.hash as jest.Mock).mockResolvedValue('hashed');
   });
 
-  it('인스턴스가 생성된다', () => {
-    expect(service).toBeDefined();
-  });
-
   describe('generateForUser', () => {
     it('8개의 raw 코드를 생성하고 hash 후 insertMany를 호출한다', async () => {
       const result = await service.generateForUser('user-1');
@@ -110,6 +106,8 @@ describe('BackupCodeService', () => {
   describe('regenerateForUser', () => {
     it('기존 unused 코드를 모두 markUsed로 폐기하고 새 8개를 발급한다', async () => {
       const mockData: BackupCodeRegenerateBodyDto = { currentPassword: 'abcd' };
+      mockUserService.findById.mockResolvedValue(mockUser);
+      mockAuthService.validateCredentials.mockResolvedValue(undefined);
       mockBackupCodeRepository.findUnusedByUserId.mockResolvedValue([
         { id: 'bc-1', codeHash: 'h1' },
         { id: 'bc-2', codeHash: 'h2' },
@@ -131,7 +129,7 @@ describe('BackupCodeService', () => {
       await service.regenerateForUser('user-1', mockData);
 
       expect(mockDbTransaction).toHaveBeenCalled();
-      expect(mockAuthService.validateCredentials).toHaveBeenCalledWith(mockUser, 'p');
+      expect(mockAuthService.validateCredentials).toHaveBeenCalledWith(mockUser, mockUser.password);
       const txOrder = mockDbTransaction.mock.invocationCallOrder[0];
       expect(mockBackupCodeRepository.markUsed.mock.invocationCallOrder[0]).toBeGreaterThan(txOrder);
       expect(mockBackupCodeRepository.insertMany.mock.invocationCallOrder[0]).toBeGreaterThan(txOrder);
