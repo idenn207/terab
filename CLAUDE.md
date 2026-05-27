@@ -164,3 +164,25 @@ scripts/        # 빌드/배포 자동화 스크립트
 - 컨벤션·archive 정책은 [.claude/plans/README.md](.claude/plans/README.md) 참조
 - 레거시 superpowers 문서(2026-03 ~ 05)는 [docs/archive/superpowers/INDEX.md](docs/archive/superpowers/INDEX.md) 에서 주제별로 검색 (historical reference)
 - 주요 아키텍처 결정은 [docs/adr/INDEX.md](docs/adr/INDEX.md) 에 ADR 로 영속화한다 — 신규 결정 시 동일 형식(Nygard 5섹션)으로 추가
+
+### 모든 작업은 worktree에서 진행 (multi-track 병렬)
+
+신규 PRD 작성, plan 신설, 코드 구현, 정책 변경 등 **모든 작업은 `.worktrees/<slug>/` 디렉토리에서 별도 브랜치로 진행한다.** 본인이 단독 사용자임에도 worktree 를 쓰는 이유는 (1) 여러 작업을 동시에 (multi-track) 진행하기 위함이고, (2) main 워킹트리가 한 작업의 미커밋 변경·실행 중인 dev 서버에 묶이지 않도록 격리하기 위함이다.
+
+| 자동화 | 트리거 |
+| --- | --- |
+| main 에서 새 브랜치 생성 시도 | [hookify.prefer-worktree-for-branch](.claude/hookify.prefer-worktree-for-branch.local.md) 경고 |
+| main 에서 `.claude/plans/*.plan.md` / `.claude/prds/*.prd.md` 쓰기 시도 | [hookify.prefer-worktree-for-plan-prd](.claude/hookify.prefer-worktree-for-plan-prd.local.md) 경고 |
+
+권장 흐름:
+
+```bash
+git worktree add .worktrees/<slug> -b <type>/<slug>
+scripts/worktree-bootstrap.sh .worktrees/<slug>
+cd .worktrees/<slug>
+# 그 안에서 /ecc:plan-prd, /ecc:plan, /ecc:prp-implement, 코드 편집 진행
+```
+
+예외:
+- hookify `.local.md` 파일 자체 (git 추적 대상 아님 — 머신 로컬 설정이라 브랜치 개념 무의미)
+- 정책 자체를 bootstrap 하는 commit (이 정책이 본 commit 으로 처음 도입되는 경우)
