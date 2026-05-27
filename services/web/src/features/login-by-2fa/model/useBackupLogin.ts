@@ -22,7 +22,7 @@ export function useBackupLogin() {
         onSuccess: (data) => {
           if (data.status === 'AUTHENTICATED') {
             setAuth(data.accessToken, data.user);
-            navigate('/drive');
+            navigate('/drive', { replace: true });
           }
         },
       },

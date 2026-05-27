@@ -3,6 +3,7 @@ export * from './drive-layout';
 export * from './drive-sidebar';
 export * from './file-list';
 export * from './file-toolbar';
+export * from './safe-area-guard';
 export * from './sidebar-layout';
 export * from './navbar';
 export * from './sidebar';

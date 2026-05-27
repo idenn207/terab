@@ -18,5 +18,10 @@
 
     <style name="AppTheme.NoActionBarLaunch" parent="Theme.SplashScreen">
         <item name="android:background">@drawable/splash</item>
+        <!-- Edge-to-Edge: WebView 가 status / navigation bar 영역까지 그리도록 시스템 바를 투명화 -->
+        <!-- env(safe-area-inset-*) 가 WebView 에 전달되려면 WebView 가 그 영역까지 확장돼 있어야 함 -->
+        <item name="android:windowDrawsSystemBarBackgrounds">true</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
     </style>
 </resources>

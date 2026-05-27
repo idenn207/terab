@@ -2,14 +2,16 @@ import { useUserStore } from '@/entities';
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { usePushNotification } from '../model/usePushNotification';
 
-const { mockRequestPermissions, mockRegister, mockRemove, mockRegisterPushToken } = vi.hoisted(() => ({
+const { mockRequestPermissions, mockRegister, mockRemove, mockRegisterPushToken, mockNavigate } = vi.hoisted(() => ({
   mockRequestPermissions: vi.fn(),
   mockRegister: vi.fn(),
   mockRemove: vi.fn(),
   mockRegisterPushToken: vi.fn(),
+  mockNavigate: vi.fn(),
 }));
 
 let capturedRegistrationCallback: ((token: { value: string }) => Promise<void>) | null = null;
+let capturedActionPerformedCallback: ((action: { notification: { data: unknown } }) => void) | null = null;
 
 vi.mock('@capacitor/core', () => ({
   Capacitor: { isNativePlatform: vi.fn().mockReturnValue(true) },
@@ -21,10 +23,16 @@ vi.mock('@capacitor/push-notifications', () => ({
     register: mockRegister,
     addListener: vi.fn().mockImplementation((event, cb) => {
       if (event === 'registration') capturedRegistrationCallback = cb;
+      if (event === 'pushNotificationActionPerformed') capturedActionPerformedCallback = cb;
       return Promise.resolve({ remove: mockRemove });
     }),
   },
 }));
+
+vi.mock('react-router-dom', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('react-router-dom')>();
+  return { ...actual, useNavigate: () => mockNavigate };
+});
 
 vi.mock('../api/mutation', () => ({
   useRegisterDeviceMutation: () => ({
@@ -34,11 +42,18 @@ vi.mock('../api/mutation', () => ({
 }));
 
 describe('usePushNotification', () => {
+  beforeEach(async () => {
+    // 직전 테스트가 isNativePlatform 을 false 로 바꿔뒀을 수 있어 명시적 reset
+    const { Capacitor } = await import('@capacitor/core');
+    vi.mocked(Capacitor.isNativePlatform).mockReturnValue(true);
+  });
+
   afterEach(() => {
     act(() => {
       useUserStore.getState().clearAuth();
     });
     capturedRegistrationCallback = null;
+    capturedActionPerformedCallback = null;
     vi.clearAllMocks();
   });
 
@@ -138,5 +153,57 @@ describe('usePushNotification', () => {
     await Promise.resolve();
 
     expect(mockRequestPermissions).not.toHaveBeenCalled();
+  });
+
+  it('pushNotificationActionPerformed 발생 시 data.deeplink 가 슬래시로 시작하면 그대로 navigate 한다', async () => {
+    mockRequestPermissions.mockResolvedValue({ receive: 'granted' });
+
+    renderHook(() => usePushNotification());
+
+    await waitFor(() => expect(capturedActionPerformedCallback).not.toBeNull());
+    capturedActionPerformedCallback!({
+      notification: { data: { type: '2FA_CHALLENGE', challengeId: 'abc', deeplink: '/2fa/abc' } },
+    });
+
+    expect(mockNavigate).toHaveBeenCalledWith('/2fa/abc');
+  });
+
+  it('pushNotificationActionPerformed 발생 시 deeplink 누락 + 2FA_CHALLENGE 면 challengeId fallback 으로 navigate 한다', async () => {
+    mockRequestPermissions.mockResolvedValue({ receive: 'granted' });
+
+    renderHook(() => usePushNotification());
+
+    await waitFor(() => expect(capturedActionPerformedCallback).not.toBeNull());
+    capturedActionPerformedCallback!({
+      notification: { data: { type: '2FA_CHALLENGE', challengeId: 'abc' } },
+    });
+
+    expect(mockNavigate).toHaveBeenCalledWith('/2fa/abc');
+  });
+
+  it('pushNotificationActionPerformed payload 가 알 수 없는 형태면 navigate 하지 않는다', async () => {
+    mockRequestPermissions.mockResolvedValue({ receive: 'granted' });
+
+    renderHook(() => usePushNotification());
+
+    await waitFor(() => expect(capturedActionPerformedCallback).not.toBeNull());
+    capturedActionPerformedCallback!({
+      notification: { data: { type: 'UNKNOWN_TYPE' } },
+    });
+
+    expect(mockNavigate).not.toHaveBeenCalled();
+  });
+
+  it('pushNotificationActionPerformed 의 deeplink 가 슬래시로 시작하지 않으면 무시한다', async () => {
+    mockRequestPermissions.mockResolvedValue({ receive: 'granted' });
+
+    renderHook(() => usePushNotification());
+
+    await waitFor(() => expect(capturedActionPerformedCallback).not.toBeNull());
+    capturedActionPerformedCallback!({
+      notification: { data: { type: '2FA_CHALLENGE', deeplink: 'https://evil.com/phish' } },
+    });
+
+    expect(mockNavigate).not.toHaveBeenCalled();
   });
 });

@@ -2,13 +2,16 @@ import { useUserStore } from '@/entities';
 import { Capacitor, type PluginListenerHandle } from '@capacitor/core';
 import { PushNotifications } from '@capacitor/push-notifications';
 import { useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useRegisterDeviceMutation } from '../api/mutation';
+import { resolveDeepLink } from './resolveDeepLink';
 
 export function usePushNotification() {
   // registration 이벤트와 로그인 완료 시점이 다를 수 있으므로 토큰을 ref에 보관
   const pendingTokenRef = useRef<string | null>(null);
   const accessToken = useUserStore((s) => s.accessToken);
   const registerMutation = useRegisterDeviceMutation();
+  const navigate = useNavigate();
 
   // 로그인 완료 후 보류 중인 FCM 토큰이 있으면 API 호출
   useEffect(() => {
@@ -42,10 +45,8 @@ export function usePushNotification() {
       });
 
       const h3 = await PushNotifications.addListener('pushNotificationActionPerformed', (action) => {
-        const data = action.notification.data as { type?: string; challengeId?: string } | undefined;
-        if (data?.type === '2FA_CHALLENGE' && data.challengeId) {
-          // TODO: /2fa/:challengeId 라우팅 추가
-        }
+        const target = resolveDeepLink(action.notification.data);
+        if (target) navigate(target);
       });
 
       if (cancelled) {
