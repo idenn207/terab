@@ -1,4 +1,6 @@
 export * from './deep-link';
+export * from './file-download';
+export * from './file-preview';
 export * from './file-upload';
 export * from './login-by-2fa';
 export * from './login-by-credentials';
