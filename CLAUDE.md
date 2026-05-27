@@ -150,6 +150,22 @@ scripts/        # 빌드/배포 자동화 스크립트
 - 커밋은 사용자 명의로만 생성 — `Co-Authored-By` 태그는 [hookify.no-coauthor-commit](.claude/hookify.no-coauthor-commit.local.md) 로 자동 차단
 - 파괴적인 Git 명령(`reset --hard`, `push --force`, `branch -D`)은 사용자 명시 요청 시에만 실행
 
+### 디자인·UI
+
+v1.0 디자인 시스템 정책의 1차 출처는 [.claude/rules/ecc/web/mobile-ui-guide.md](.claude/rules/ecc/web/mobile-ui-guide.md) 이다 — 모바일/웹 UI 작업 시 가장 먼저 인용한다. 그 외 web 표준은 영역별로 아래 rule 파일이 1차 출처.
+
+| Rule | Scope |
+| --- | --- |
+| [.claude/rules/ecc/web/mobile-ui-guide.md](.claude/rules/ecc/web/mobile-ui-guide.md) | **모바일 first UI · a11y · trend · catalyst 정책 (1차 출처)** |
+| [.claude/rules/ecc/web/design-quality.md](.claude/rules/ecc/web/design-quality.md) | Anti-template / 시각 품질 게이트 |
+| [.claude/rules/ecc/web/coding-style.md](.claude/rules/ecc/web/coding-style.md) | Tailwind / `cn()` / token 사용 컨벤션 |
+| [.claude/rules/ecc/web/fsd.md](.claude/rules/ecc/web/fsd.md) | Feature-Sliced Design 레이어 규칙 |
+| [.claude/rules/ecc/web/patterns.md](.claude/rules/ecc/web/patterns.md) | 컴포넌트·상태·데이터 패턴 |
+| [.claude/rules/ecc/web/performance.md](.claude/rules/ecc/web/performance.md) | Core Web Vitals · bundle budget |
+| [.claude/rules/ecc/web/security.md](.claude/rules/ecc/web/security.md) | CSP · XSS · 헤더 |
+| [.claude/rules/ecc/web/testing.md](.claude/rules/ecc/web/testing.md) | 시각·a11y·E2E 우선순위 |
+| [.claude/rules/ecc/web/hooks.md](.claude/rules/ecc/web/hooks.md) | Claude Code 자동 hook 권장값 |
+
 ## 개발 워크플로우 (ECC)
 
 신규 기능·리팩토링·문서 작업은 ECC 표준 흐름을 따른다.
