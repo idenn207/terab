@@ -1,10 +1,11 @@
-import { UploadButton } from '@/features';
+import { FileList, FileToolbar } from '@/widgets';
 
 export function DrivePage() {
   return (
     <div className="px-4 py-10 sm:px-6 lg:px-8 lg:py-6">
-      <section data-region="main" aria-label="드라이브 콘텐츠">
-        <UploadButton />
+      <section data-region="main" aria-label="드라이브 콘텐츠" className="flex flex-col gap-6">
+        <FileToolbar />
+        <FileList />
       </section>
       <aside
         data-region="secondary"

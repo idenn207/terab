@@ -53,7 +53,7 @@ We'll know we're right when:
 - [ ] 기존 `services/web 테스트 커버리지 PRD/Plan`(브랜치 `test/services-web-usecase-coverage`, 직전 커밋에서 신설됐다고 표기)과의 관계 — 두 PRD가 어디서 만나고 어디서 분리되는지 명시 필요. 현재 `.claude/prds/`·`.claude/plans/` 글로브에서 찾지 못함 → 다른 경로에 있을 가능성, 또는 작업 중인 브랜치에 있을 가능성
 - [ ] Capacitor WebView가 큰 파일(>100MB) 업로드/다운로드를 어떻게 처리하는지 — 기본 fetch만으로 충분한지, 네이티브 플러그인이 필요한지 (필요하면 별도 phase로 분리)
 - [ ] 검색 범위 — 파일명만? 메타데이터 포함? API 동작 확인 필요
-- [ ] 이미지 미리보기(viewer)의 지원 포맷·이미지 외 파일(PDF/동영상) 처리 정책
+- [x] 이미지 미리보기(viewer)의 지원 포맷·이미지 외 파일(PDF/동영상) 처리 정책 — **v1 = 이미지 (`image/*`) 만 inline catalyst Dialog preview (headlessui 기반), 그 외 mime 은 자동 download fallback (Phase 4 결정)**
 
 ---
 
@@ -180,7 +180,7 @@ so I can **클라우드 서비스 의존 없이 내 NAS만으로 모바일↔PC 
 | 1   | Design Spike                     | 디자인 방향 결정, 디자인 토큰 정리, 모바일/데스크톱 컴포넌트 구조 검토, UseCase 시나리오 N개 확정                                      | in-progress | -         | -       | [phase1-design-spike](../plans/services-web-feature-parity-phase1-design-spike.plan.md)       |
 | 2   | Domain Skeleton                  | `entities/file`, `entities/folder`, `entities/trash` 추가. drive 페이지 widgets 분해 (`widgets/drive-layout`, `widgets/drive-sidebar`) | pending     | -         | 1       | -                                                                                             |
 | 3   | MVP Must - Upload                | `features/file-upload` 모바일 카메라/갤러리, 진행률, Capacitor 호환성 검증                                                             | done        | with 4, 5 | 2       | [phase3-mvp-must-upload](../plans/services-web-feature-parity-phase3-mvp-must-upload.plan.md) |
-| 4   | MVP Must - List/Preview/Download | `features/file-preview`, `features/file-download`, `pages/drive` 목록 뷰                                                               | pending     | with 3, 5 | 2       | -                                                                                             |
+| 4   | MVP Must - List/Preview/Download | `features/file-preview`, `features/file-download`, `pages/drive` 목록 뷰                                                               | in-progress | with 3, 5 | 2       | [phase4-mvp-must-list-preview-download](../plans/services-web-feature-parity-phase4-mvp-must-list-preview-download.plan.md) |
 | 5   | MVP Must - Invitation            | `features/invitation-issue`, 발급 코드 표시 UI                                                                                         | pending     | with 3, 4 | 2       | -                                                                                             |
 | 6   | MVP Verification                 | MVP 시나리오 완주 검증 (모바일↔PC, Capacitor Android), UseCase E2E N개 작성                                                            | pending     | -         | 3, 4, 5 | -                                                                                             |
 | 7   | Should - Folder CRUD             | `features/folder-create/move/delete`, drive 페이지 트리/패스 네비게이션                                                                | pending     | with 8    | 6       | -                                                                                             |
@@ -213,6 +213,7 @@ so I can **클라우드 서비스 의존 없이 내 NAS만으로 모바일↔PC 
 - **Goal**: 업로드된 파일을 PC에서 확인·다운로드한다
 - **Scope**: `features/file-preview` (이미지 인라인 viewer), `features/file-download`, `pages/drive` 목록 뷰 (반응형: 모바일 리스트 / desktop 그리드)
 - **Success signal**: 업로드 직후 목록 갱신, 썸네일 클릭 시 미리보기, 다운로드 버튼으로 파일 저장
+- **후속 결함**: Capacitor Android WebView 에서 anchor click 다운로드가 동작하지 않아 `@capacitor/filesystem` 분기 추가 — plan [`capacitor-android-download-fallback.plan.md`](../plans/capacitor-android-download-fallback.plan.md) (2026-05-27 done)
 
 **Phase 5: MVP Must - Invitation**
 
