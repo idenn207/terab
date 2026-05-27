@@ -213,6 +213,7 @@ so I can **클라우드 서비스 의존 없이 내 NAS만으로 모바일↔PC 
 - **Goal**: 업로드된 파일을 PC에서 확인·다운로드한다
 - **Scope**: `features/file-preview` (이미지 인라인 viewer), `features/file-download`, `pages/drive` 목록 뷰 (반응형: 모바일 리스트 / desktop 그리드)
 - **Success signal**: 업로드 직후 목록 갱신, 썸네일 클릭 시 미리보기, 다운로드 버튼으로 파일 저장
+- **후속 결함**: Capacitor Android WebView 에서 anchor click 다운로드가 동작하지 않아 `@capacitor/filesystem` 분기 추가 — plan [`capacitor-android-download-fallback.plan.md`](../plans/capacitor-android-download-fallback.plan.md) (2026-05-27 done)
 
 **Phase 5: MVP Must - Invitation**
 
