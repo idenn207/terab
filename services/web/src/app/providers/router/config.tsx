@@ -1,5 +1,5 @@
 import { TrustedDeviceSection, TrustThisDeviceCheckbox, TwoFactorApprovalPage, TwoFactorBackupEntry, TwoFactorWaiting } from '@/features';
-import { BackupCodeIssuePage, DrivePage, Link2TwoFAAuth, LoginPage, RegisterPage, TwoFAApprovalPage, TwoFABackupPage, TwoFAWaitPage } from '@/pages';
+import { BackupCodeIssuePage, DrivePage, LoginPage, RegisterPage, TwoFAApprovalPage, TwoFABackupPage, TwoFAWaitPage } from '@/pages';
 import { AuthLayout, DriveLayout } from '@/widgets';
 import { PrivateRoute } from '@shared/router';
 import { Navigate, Outlet, type RouteObject } from 'react-router-dom';
@@ -50,7 +50,6 @@ const appRoutes: RouteObject[] = [
     path: '/drive',
     element: (
       <PrivateRoute>
-        <Link2TwoFAAuth />
         <DriveLayout />
       </PrivateRoute>
     ),
@@ -71,7 +70,6 @@ const previewRoutes: RouteObject[] = [
       { path: '2', element: <TwoFactorBackupEntry /> },
       { path: '4', element: <TrustedDeviceSection /> },
       { path: '5', element: <TrustThisDeviceCheckbox checked={false} onChange={() => {}} /> },
-      { path: '2fa-auth', element: <Link2TwoFAAuth /> },
     ],
   },
 ];

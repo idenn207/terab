@@ -7,5 +7,4 @@ export * from './register';
 export * from './s';
 export * from './settings';
 export * from './share';
-export * from './testpages';
 export * from './trash';
