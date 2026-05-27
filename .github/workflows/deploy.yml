@@ -83,10 +83,34 @@ jobs:
         working-directory: services/web
         run: npm test
 
+  test-admin:
+    name: Test (admin)
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Set up Node 24 (admin)
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: services/admin/package-lock.json
+
+      - name: Admin build & type check
+        working-directory: services/admin
+        run: |
+          npm ci
+          npm run build
+
+      - name: Admin tests
+        working-directory: services/admin
+        run: npm test
+
   # ─── Docker 이미지 빌드 & Push ──────────────────────────────────
   build-and-push:
     name: Build & Push (${{ matrix.service }})
-    needs: [test-api, test-mq, test-web]
+    needs: [test-api, test-mq, test-web, test-admin]
     if: github.event_name == 'push'
     runs-on: ubuntu-latest
     permissions:
@@ -101,6 +125,8 @@ jobs:
             context: ./services/mq
           - service: web
             context: ./services/web
+          - service: admin
+            context: ./services/admin
 
     steps:
       - uses: actions/checkout@v6
@@ -144,7 +170,7 @@ jobs:
       packages: write
     strategy:
       matrix:
-        package: [terab-api, terab-mq, terab-web]
+        package: [terab-api, terab-mq, terab-web, terab-admin]
 
     steps:
       - name: Delete old versions
@@ -192,3 +218,11 @@ jobs:
             --with-registry-auth \
             --force \
             terab_web
+
+      - name: Update admin service
+        run: |
+          docker service update \
+            --image ghcr.io/idenn207/terab-admin:latest \
+            --with-registry-auth \
+            --force \
+            terab_admin
