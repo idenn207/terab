@@ -1,0 +1,30 @@
+#!/bin/sh
+
+set -u
+
+PKG_NAME="${SYNOPKG_PKGNAME:-terab-agent}"
+PKG_VAR="${SYNOPKG_PKGVAR:-/var/packages/${PKG_NAME}/var}"
+
+RUN_USER="terab-agent"
+RUN_GROUP="terab"
+SOCKET_PATH="${PKG_VAR}/agent.sock"
+LOG_FILE="${PKG_VAR}/agent.log"
+
+if ! synogroup --get "${RUN_GROUP}" >/dev/null 2>&1; then
+    synogroup --add "${RUN_GROUP}" "" >/dev/null 2>&1 || true
+fi
+
+if ! synouser --get "${RUN_USER}" >/dev/null 2>&1; then
+    synouser --add "${RUN_USER}" "" "Terab Storage Agent" 0 "" 0 >/dev/null 2>&1 || true
+    synogroup --member "${RUN_GROUP}" "${RUN_USER}" >/dev/null 2>&1 || true
+fi
+
+mkdir -p "${PKG_VAR}"
+touch "${LOG_FILE}"
+chown "${RUN_USER}":"${RUN_GROUP}" "${PKG_VAR}" "${LOG_FILE}"
+chmod 0750 "${PKG_VAR}"
+chmod 0640 "${LOG_FILE}"
+
+rm -f "${SOCKET_PATH}"
+
+exit 0

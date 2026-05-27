@@ -1,0 +1,5 @@
+bin/
+*.spk
+tmp/
+*.sock
+coverage.out

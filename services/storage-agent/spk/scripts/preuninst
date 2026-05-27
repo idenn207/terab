@@ -1,0 +1,27 @@
+#!/bin/sh
+
+set -u
+
+PKG_NAME="${SYNOPKG_PKGNAME:-terab-agent}"
+PKG_VAR="${SYNOPKG_PKGVAR:-/var/packages/${PKG_NAME}/var}"
+
+SOCKET_PATH="${PKG_VAR}/agent.sock"
+TERAB_IQN_PREFIX="iqn.2026-05.com.terab:"
+
+if [ -S "${SOCKET_PATH}" ]; then
+    targets=$(curl --silent --show-error --max-time 5 \
+        --unix-socket "${SOCKET_PATH}" \
+        "http://localhost/v1/targets" 2>/dev/null \
+        | sed -n 's/.*"iqn":"\('"${TERAB_IQN_PREFIX}"'[^"]*\)".*/\1/p' \
+        | sort -u || true)
+
+    for iqn in ${targets}; do
+        curl --silent --show-error --max-time 5 \
+            --unix-socket "${SOCKET_PATH}" \
+            -X DELETE "http://localhost/v1/targets/${iqn}" >/dev/null 2>&1 || true
+    done
+fi
+
+rm -f "${SOCKET_PATH}"
+
+exit 0
