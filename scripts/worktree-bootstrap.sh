@@ -91,20 +91,33 @@ fi
 echo ""
 
 # ─── 4) secrets/ 심볼릭 링크 ────────────────────────────────────────────
+# GOTCHA(Git Bash) 1: 과거에 `cmd //c mklink /D <a> <b>` 패턴을 썼다가 MSYS 가 `/D` 를
+#   경로로 path-mangling 해 mklink 인자가 깨졌음.
+# GOTCHA(Git Bash) 2: `cmd //c "mklink /D \"...\""` 처럼 인용 부호를 중첩하면
+#   MSYS args 변환에서 cmd 가 interactive 모드로 떨어지고 exit=0 만 반환 — 가짜 success.
+# GOTCHA 3 (회귀 사고): PowerShell `New-Item -ItemType SymbolicLink` 로 우회를 시도했으나
+#   Developer Mode 활성 + 비관리자 환경에서 cmd mklink 는 동작하는데 PowerShell 은
+#   "Administrator privilege required" 로 실패함 (실측). → 회귀.
+# GOTCHA 4 (현재 우회책): Git Bash 네이티브 `ln -s` + `MSYS=winsymlinks:nativestrict` 로
+#   cmd / PowerShell interop 자체를 회피. directory symlink 도 동일한 호출로 처리.
+#   `nativestrict` 는 file-copy fallback 을 금지해 권한 부족 시 명확히 실패.
+# GOTCHA 5: 본 step 실패가 set -e 로 후속 step (make setup-local / npm ci) 까지 죽이는
+#   사고를 막기 위해 `|| true` + post-check (`[ -L ]` / `[ -d ]`) 패턴. secrets/ 는
+#   로컬 dev 필수가 아니므로 (Docker Secret 은 운영 전용) 실패해도 ⚠️ 만 출력하고 진행.
 echo "[4/6] secrets/ 심볼릭 링크"
 if [ ! -d "$ROOT/secrets" ]; then
   echo "  · 원본 secrets/ 없음 — skip"
 elif [ -e "$WT_ABS/secrets" ]; then
   echo "  · secrets/ 이미 존재 — skip"
 else
-  if [[ "$OSTYPE" == "msys" || "$OSTYPE" == "win32" || "$OSTYPE" == "cygwin" ]]; then
-    win_src=$(cygpath -w "$ROOT/secrets")
-    win_dest=$(cygpath -w "$WT_ABS/secrets")
-    cmd //c mklink /D "$win_dest" "$win_src" >/dev/null
+  MSYS=winsymlinks:nativestrict ln -s "$ROOT/secrets" "$WT_ABS/secrets" 2>/dev/null || true
+  # exit code 가 아니라 실제 생성 여부로 판정 (silent fallback / 가짜 success 차단)
+  if [ -L "$WT_ABS/secrets" ] || [ -d "$WT_ABS/secrets" ]; then
+    echo "  ✓ secrets/ → $ROOT/secrets"
   else
-    ln -s "$ROOT/secrets" "$WT_ABS/secrets"
+    echo "  ⚠️  secrets/ 심볼릭 링크 실패 — Windows 개발자 모드 또는 관리자 권한 확인 필요. 후속 단계 계속 진행" >&2
+    echo "  ⚠️  운영 시 secrets/ 를 직접 참조하는 코드(Docker Secret 등)는 영향받을 수 있음" >&2
   fi
-  echo "  ✓ secrets/ → $ROOT/secrets"
 fi
 echo ""
 
