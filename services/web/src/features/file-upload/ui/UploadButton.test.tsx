@@ -21,7 +21,7 @@ beforeEach(() => {
 
 describe('UploadButton', () => {
   it('업로드 버튼 클릭 시 hidden input click 이 호출된다', () => {
-    render(<UploadButton />);
+    render(<UploadButton folderId={null} />);
     const input = document.querySelector('input[type="file"]') as HTMLInputElement;
     const clickSpy = vi.spyOn(input, 'click');
     fireEvent.click(screen.getByRole('button', { name: '업로드' }));
@@ -29,7 +29,7 @@ describe('UploadButton', () => {
   });
 
   it('파일 선택 시 onProgress 콜백과 함께 mutate 가 호출된다', () => {
-    render(<UploadButton />);
+    render(<UploadButton folderId={null} />);
     const input = document.querySelector('input[type="file"]') as HTMLInputElement;
     const file = new File(['a'], 'a.png', { type: 'image/png' });
 
@@ -41,9 +41,31 @@ describe('UploadButton', () => {
     expect(typeof firstArg.onProgress).toBe('function');
   });
 
+  it('folderId=null 이면 mutate 에 folderId 가 undefined 로 전달된다 (Issue 3 회귀)', () => {
+    render(<UploadButton folderId={null} />);
+    const input = document.querySelector('input[type="file"]') as HTMLInputElement;
+    fireEvent.change(input, {
+      target: { files: [new File(['x'], 'a.png', { type: 'image/png' })] },
+    });
+
+    const [firstArg] = mockMutate.mock.calls[0];
+    expect(firstArg.folderId).toBeUndefined();
+  });
+
+  it('folderId 가 설정되면 mutate 에 그 값이 그대로 전달된다 (Issue 3 회귀)', () => {
+    render(<UploadButton folderId="p-1" />);
+    const input = document.querySelector('input[type="file"]') as HTMLInputElement;
+    fireEvent.change(input, {
+      target: { files: [new File(['x'], 'a.png', { type: 'image/png' })] },
+    });
+
+    const [firstArg] = mockMutate.mock.calls[0];
+    expect(firstArg.folderId).toBe('p-1');
+  });
+
   it('isPending 동안 버튼은 disabled 상태가 된다', () => {
     mockUseUploadFile.mockReturnValueOnce({ mutate: mockMutate, isPending: true });
-    render(<UploadButton />);
+    render(<UploadButton folderId={null} />);
     expect(screen.getByRole('button', { name: '업로드 중...' })).toBeDisabled();
   });
 
@@ -51,7 +73,7 @@ describe('UploadButton', () => {
     mockMutate.mockImplementationOnce((_input, options) => {
       options?.onError?.(new Error('네트워크 끊김'));
     });
-    render(<UploadButton />);
+    render(<UploadButton folderId={null} />);
     const input = document.querySelector('input[type="file"]') as HTMLInputElement;
     fireEvent.change(input, { target: { files: [new File(['x'], 'a.png', { type: 'image/png' })] } });
     expect(screen.getByRole('alert')).toHaveTextContent('네트워크 끊김');
@@ -61,7 +83,7 @@ describe('UploadButton', () => {
     mockMutate.mockImplementationOnce((input) => {
       input.onProgress?.(42);
     });
-    render(<UploadButton />);
+    render(<UploadButton folderId={null} />);
     const inputEl = document.querySelector('input[type="file"]') as HTMLInputElement;
     fireEvent.change(inputEl, { target: { files: [new File(['x'], 'a.png', { type: 'image/png' })] } });
     const progress = screen.getByRole('progressbar') as HTMLProgressElement;

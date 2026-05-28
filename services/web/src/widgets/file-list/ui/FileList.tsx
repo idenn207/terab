@@ -1,13 +1,35 @@
 import type { File as DomainFile } from '@/entities/file';
 import type { Folder } from '@/entities/folder';
-import { DownloadButton, FilePreviewDialog, isImageMimeType, useDownloadFile, useFilePreview } from '@/features';
+import {
+  DeleteFolderDialog,
+  DeleteFolderMenuItem,
+  DownloadButton,
+  FilePreviewDialog,
+  MoveFolderDialog,
+  MoveFolderMenuItem,
+  RenameFolderDialog,
+  RenameFolderMenuItem,
+  isImageMimeType,
+  useDownloadFile,
+  useFilePreview,
+} from '@/features';
 import { Button } from '@/shared/ui';
+import * as Headless from '@headlessui/react';
+import { EllipsisHorizontalIcon } from '@heroicons/react/24/outline';
+import { useState } from 'react';
 import { useFileList } from '../model/useFileList';
 
 const SKELETON_COUNT = 6;
 
-export function FileList() {
-  const { folders, files, isLoading, error, refetch } = useFileList();
+type FolderModalKind = 'rename' | 'move' | 'delete';
+
+interface FileListProps {
+  folderId: string | null;
+  onFolderOpen: (folder: Pick<Folder, 'id' | 'name'>) => void;
+}
+
+export function FileList({ folderId, onFolderOpen }: FileListProps) {
+  const { folders, files, isLoading, error, refetch } = useFileList({ folderId });
   const preview = useFilePreview();
   const download = useDownloadFile();
 
@@ -56,7 +78,7 @@ export function FileList() {
       <ul role="list" className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4" aria-label="파일 목록">
         {folders.map((folder) => (
           <li key={folder.id} className="rounded-lg border border-zinc-200 bg-white p-4 dark:border-white/10 dark:bg-zinc-900">
-            <FolderRow folder={folder} />
+            <FolderRow folder={folder} onOpen={() => onFolderOpen({ id: folder.id, name: folder.name })} />
           </li>
         ))}
         {files.map((file) => (
@@ -80,12 +102,42 @@ export function FileList() {
   );
 }
 
-function FolderRow({ folder }: { folder: Folder }) {
+function FolderRow({ folder, onOpen }: { folder: Folder; onOpen: () => void }) {
+  const [modalKind, setModalKind] = useState<FolderModalKind | null>(null);
+  const closeModal = () => setModalKind(null);
+
   return (
-    <div className="flex items-center justify-between gap-3">
-      <span className="truncate text-sm font-medium text-zinc-900 dark:text-zinc-100">{folder.name}</span>
-      <span className="text-xs text-zinc-500 dark:text-zinc-400">폴더</span>
-    </div>
+    <>
+      <div className="flex items-center justify-between gap-3">
+        <button
+          type="button"
+          onClick={onOpen}
+          className="flex flex-1 items-center gap-3 truncate text-left focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500"
+        >
+          <span className="truncate text-sm font-medium text-zinc-900 dark:text-zinc-100">{folder.name}</span>
+        </button>
+        <Headless.Menu as="div" className="relative">
+          <Headless.MenuButton
+            aria-label={`${folder.name} 동작`}
+            className="-m-1 rounded p-1 text-zinc-500 hover:text-zinc-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500 dark:text-zinc-400 dark:hover:text-zinc-200"
+          >
+            <EllipsisHorizontalIcon aria-hidden="true" className="size-5" />
+          </Headless.MenuButton>
+          <Headless.MenuItems
+            transition
+            anchor="bottom end"
+            className="z-10 mt-2 w-32 origin-top-right rounded-md bg-white py-2 shadow-lg outline outline-gray-900/5 transition data-closed:scale-95 data-closed:transform data-closed:opacity-0 data-enter:duration-100 data-enter:ease-out data-leave:duration-75 data-leave:ease-in dark:bg-gray-800 dark:shadow-none dark:-outline-offset-1 dark:outline-white/10"
+          >
+            <RenameFolderMenuItem folder={folder} onOpen={() => setModalKind('rename')} />
+            <MoveFolderMenuItem folder={folder} onOpen={() => setModalKind('move')} />
+            <DeleteFolderMenuItem folder={folder} onOpen={() => setModalKind('delete')} />
+          </Headless.MenuItems>
+        </Headless.Menu>
+      </div>
+      <RenameFolderDialog folder={folder} open={modalKind === 'rename'} onClose={closeModal} />
+      <MoveFolderDialog folder={folder} open={modalKind === 'move'} onClose={closeModal} />
+      <DeleteFolderDialog folder={folder} open={modalKind === 'delete'} onClose={closeModal} />
+    </>
   );
 }
 

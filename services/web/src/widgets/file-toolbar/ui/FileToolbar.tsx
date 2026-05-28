@@ -1,9 +1,14 @@
-import { UploadButton } from '@/features';
+import { NewFolderButton, UploadButton } from '@/features';
 
-export function FileToolbar() {
+interface FileToolbarProps {
+  folderId: string | null;
+}
+
+export function FileToolbar({ folderId }: FileToolbarProps) {
   return (
     <div className="flex flex-wrap items-center justify-end gap-3" aria-label="파일 도구 모음">
-      <UploadButton />
+      <NewFolderButton parentId={folderId} />
+      <UploadButton folderId={folderId} />
     </div>
   );
 }

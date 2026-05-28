@@ -1,4 +1,5 @@
 export * from './auth-layout';
+export * from './drive-breadcrumb';
 export * from './drive-layout';
 export * from './drive-sidebar';
 export * from './file-list';
