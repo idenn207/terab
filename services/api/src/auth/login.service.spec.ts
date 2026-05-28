@@ -32,6 +32,7 @@ const mockAuthService = {
   issueTokenPair: jest.fn(),
   rotateRefreshToken: jest.fn(),
   revokeRefreshToken: jest.fn(),
+  setTrustCookie: jest.fn(),
 };
 
 const mockDeviceService = {
@@ -45,6 +46,8 @@ const mockTwoFaService = {
 
 const mockTrustedDeviceService = {
   verify: jest.fn(),
+  register: jest.fn(),
+  trustDurationMs: 30 * 24 * 60 * 60 * 1000,
 };
 
 const mockInvitationService = {
@@ -177,7 +180,7 @@ describe('LoginService', () => {
       });
     });
 
-    it('push token이 없으면 2FA 없이 AUTHENTICATED', async () => {
+    it('push token이 없으면 2FA 없이 AUTHENTICATED — trustDevice 미첨부 시 register/cookie 미호출', async () => {
       const user = { id: 'u1', username: 'a', nickname: 'A', password: 'h', active: true };
       mockUserService.findByUsername.mockResolvedValue(user);
       mockAuthService.validateCredentials.mockResolvedValue(undefined);
@@ -189,6 +192,40 @@ describe('LoginService', () => {
       const result = await service.login({ username: 'a', password: 'p' }, undefined, undefined, res);
 
       expect(result.status).toBe('AUTHENTICATED');
+      expect(mockTrustedDeviceService.register).not.toHaveBeenCalled();
+      expect(mockAuthService.setTrustCookie).not.toHaveBeenCalled();
+    });
+
+    it('push token이 없고 trustDevice=true 면 같은 흐름에서 register + setTrustCookie (atomic)', async () => {
+      const user = { id: 'u1', username: 'a', nickname: 'A', password: 'h', active: true };
+      mockUserService.findByUsername.mockResolvedValue(user);
+      mockAuthService.validateCredentials.mockResolvedValue(undefined);
+      mockTrustedDeviceService.verify.mockResolvedValue(false);
+      mockDeviceService.findPushTokensByUserId.mockResolvedValue([]);
+      mockAuthService.issueTokenPair.mockResolvedValue({ accessToken: 'JWT' });
+      mockTrustedDeviceService.register.mockResolvedValue('raw-trust-token');
+      const res = { cookie: jest.fn() } as any;
+
+      const result = await service.login({ username: 'a', password: 'p', trustDevice: true }, undefined, 'UA', res);
+
+      expect(result.status).toBe('AUTHENTICATED');
+      expect(mockTrustedDeviceService.register).toHaveBeenCalledWith('u1', 'UA');
+      expect(mockAuthService.setTrustCookie).toHaveBeenCalledWith(res, 'raw-trust-token', 30 * 24 * 60 * 60 * 1000);
+    });
+
+    it('push token이 없고 trustDevice=false 면 register/cookie 호출 안 함', async () => {
+      const user = { id: 'u1', username: 'a', nickname: 'A', password: 'h', active: true };
+      mockUserService.findByUsername.mockResolvedValue(user);
+      mockAuthService.validateCredentials.mockResolvedValue(undefined);
+      mockTrustedDeviceService.verify.mockResolvedValue(false);
+      mockDeviceService.findPushTokensByUserId.mockResolvedValue([]);
+      mockAuthService.issueTokenPair.mockResolvedValue({ accessToken: 'JWT' });
+      const res = { cookie: jest.fn() } as any;
+
+      await service.login({ username: 'a', password: 'p', trustDevice: false }, undefined, 'UA', res);
+
+      expect(mockTrustedDeviceService.register).not.toHaveBeenCalled();
+      expect(mockAuthService.setTrustCookie).not.toHaveBeenCalled();
     });
 
     it('push token 존재 시 2FA_REQUIRED 챌린지 발급 + publish', async () => {

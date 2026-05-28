@@ -71,7 +71,7 @@ export class LoginService extends ServiceCore {
   async login(
     data: LoginBodyDto,
     trustToken: string | undefined,
-    _userAgent: string | undefined,
+    userAgent: string | undefined,
     res: Response,
   ): Promise<LoginResponse> {
     const user = await this.userService.findByUsername(data.username);
@@ -79,7 +79,7 @@ export class LoginService extends ServiceCore {
 
     await this.authService.validateCredentials(user, data.password);
 
-    // 신뢰기기 쿠키 유효 시 2FA 스킵
+    // 신뢰기기 쿠키 유효 시 2FA 스킵 (verify 가 sliding window 자동 갱신)
     if (trustToken && (await this.trustedDeviceService.verify(trustToken, user.id))) {
       const { accessToken } = await this.authService.issueTokenPair(user, res);
       return {
@@ -89,15 +89,21 @@ export class LoginService extends ServiceCore {
       };
     }
 
-    // pushToken 없으면 2FA 스킵
+    // pushToken 없으면 2FA 스킵 — 모바일 첫 로그인 시 trustDevice=true 면 같은 흐름에서 trust 등록(atomic)
     const pushTokens = await this.deviceService.findPushTokensByUserId(user.id);
     if (pushTokens.length === 0) {
-      const { accessToken } = await this.authService.issueTokenPair(user, res);
-      return {
-        status: 'AUTHENTICATED',
-        accessToken,
-        user: { id: user.id, username: user.username, nickname: user.nickname },
-      };
+      return this.runInTx(async () => {
+        const { accessToken } = await this.authService.issueTokenPair(user, res);
+        if (data.trustDevice) {
+          const rawTrustToken = await this.trustedDeviceService.register(user.id, userAgent);
+          this.authService.setTrustCookie(res, rawTrustToken, this.trustedDeviceService.trustDurationMs);
+        }
+        return {
+          status: 'AUTHENTICATED' as const,
+          accessToken,
+          user: { id: user.id, username: user.username, nickname: user.nickname },
+        };
+      });
     }
 
     // 2FA 챌린지 생성 + BullMQ 발행
