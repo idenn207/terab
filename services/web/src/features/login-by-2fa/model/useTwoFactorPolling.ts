@@ -33,7 +33,7 @@ export function useTwoFactorPolling(initialChallengeId: string, onAuthenticated?
           if (completeRes.status === 'AUTHENTICATED') {
             setAuth(completeRes.accessToken, completeRes.user);
             onAuthenticatedRef.current?.();
-            navigate('/drive');
+            navigate('/drive', { replace: true });
             return;
           }
           // 타입상 2FA_REQUIRED 분기 — completeTwoFa는 서버가 항상 AUTHENTICATED만 반환하지만

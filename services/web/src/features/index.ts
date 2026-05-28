@@ -1,3 +1,4 @@
+export * from './back-button';
 export * from './deep-link';
 export * from './file-download';
 export * from './file-preview';
