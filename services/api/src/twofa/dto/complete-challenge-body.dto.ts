@@ -1,4 +1,4 @@
-import { IsIn, IsOptional, Matches, ValidateIf } from 'class-validator';
+import { IsBoolean, IsIn, IsOptional, Matches, ValidateIf } from 'class-validator';
 
 export class CompleteChallengeBodyDto {
   @IsOptional()
@@ -8,4 +8,8 @@ export class CompleteChallengeBodyDto {
   @ValidateIf((o: CompleteChallengeBodyDto) => o.type === 'TOTP')
   @Matches(/^\d{6}$/)
   code?: string;
+
+  @IsOptional()
+  @IsBoolean()
+  trustDevice?: boolean;
 }
