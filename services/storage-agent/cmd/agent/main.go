@@ -18,7 +18,7 @@ import (
 )
 
 const (
-	defaultSocketPath = "/var/packages/terab-agent/var/agent.sock"
+	defaultSocketPath = "/run/terab-agent/agent.sock"
 	defaultLogLevel   = "info"
 
 	socketPermProduction = 0o660

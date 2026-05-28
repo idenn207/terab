@@ -33,7 +33,9 @@ help:
 	@echo "  test               — go test ./... -cover"
 	@echo "  vet                — go vet ./..."
 	@echo "  tidy               — go mod tidy"
-	@echo "  spk                — package agent as Synology .spk into $(SPK_FILE)"
+	@echo "  install-agent      — deploy systemd unit + binary to NAS (NAS_HOST=... required, ADR-0005)"
+	@echo "  uninstall-agent    — disable systemd unit + remove from NAS (NAS_HOST=... required)"
+	@echo "  spk                — [legacy/ADR-0005] package agent as Synology .spk into $(SPK_FILE)"
 	@echo "  fakedsm            — build fakedsm stub binary (for tests outside Docker)"
 	@echo "  emulator-image     — docker build agent+fakedsm test image ($(EMULATOR_IMAGE))"
 	@echo "  install-dev        — build + print dev socket usage hint"
@@ -63,7 +65,17 @@ vet:
 tidy:
 	$(GO) mod tidy
 
+# NAS 배포 — systemd-only path (ADR-0005). install/uninstall script wrap.
+.PHONY: install-agent
+install-agent: build-linux-amd64
+	@bash scripts/install-agent.sh
+
+.PHONY: uninstall-agent
+uninstall-agent:
+	@bash scripts/uninstall-agent.sh
+
 # Synology .spk = tar(INFO + package.tgz + scripts/).
+# ADR-0005 로 활성 배포 path 에서 제외 — 산출물 보존 (T1-T3 trigger 시 부활 시작점).
 # arch=x86_64 default; override with `make spk PKG_ARCH=arm64` for DSM arm models.
 .PHONY: spk
 spk: build-linux-amd64

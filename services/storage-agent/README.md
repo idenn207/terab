@@ -6,9 +6,10 @@ DSM 호스트에서 root 권한으로 실행되며, NestJS API 본체를 대신�
 NestJS ↔ agent 통신은 unix socket 위의 HTTP (JSON body). 인증은 socket 파일 권한
 (group `terab`) 으로만 격리.
 
-> 본 문서는 `feat/storage-foundation` 브랜치의 Phase 2 골격 (Task 1-4) 기준이다.
-> .spk 빌드 (Task 5), fakedsm emulator (Task 6), NestJS client (Task 7), 통합 테스트 (Task 8)
-> 는 후속 세션에서 추가된다.
+> NAS 배포는 [ADR-0005](../../docs/adr/0005-sidecar-agent-systemd-only.md) 의 결정으로
+> **systemd-only** 다 — `spk/` 디렉토리는 .spk 시도 8 세션의 산출물 보존용으로 남아있지만
+> 활성 빌드/배포 path 에서는 제외된다. 부활 검토 시 시작점은 `spk/` +
+> [.spk session 7-8 reports](../../.claude/PRPs/reports/) 이다.
 
 ---
 
@@ -92,6 +93,86 @@ SIGTERM 시 5초 내 graceful shutdown + socket 파일 정리.
 // 실패
 { "error": { "code": "TARGET_CONFLICT", "message": "..." } }
 ```
+
+## NAS 배포 (systemd-only)
+
+[ADR-0005](../../docs/adr/0005-sidecar-agent-systemd-only.md) 의 결정으로 NAS 배포는
+systemd unit + bash install script 만 사용한다. 결정 배경(8 세션 .spk 시도 + LIO 커널 접근
+요구) 은 ADR 본문 참조.
+
+### 사전 설정 (1회)
+
+NAS 의 `${NAS_USER}` 계정에 **sudo NOPASSWD** 설정 필요 (install script 가 password
+prompt 에서 hang 되지 않도록):
+
+```bash
+ssh nas-claude  # 또는 자신의 NAS host
+sudo visudo
+# 다음 줄 추가 후 저장:
+#   admin ALL=(ALL) NOPASSWD: ALL
+# 또는 명령 단위 제한:
+#   admin ALL=(ALL) NOPASSWD: /usr/bin/install, /usr/bin/systemctl, /bin/rm, /usr/bin/curl
+```
+
+추가로 SSH key 가 NAS 의 `${NAS_USER}` 에 등록되어 있어야 한다 (`ssh-copy-id` 1회).
+
+### Install
+
+```bash
+cd services/storage-agent
+NAS_HOST=nas-claude make install-agent
+# 또는: NAS_HOST=nas-claude bash scripts/install-agent.sh
+```
+
+스크립트가 자동 수행:
+
+1. `make build-linux-amd64` 산출물(`bin/agent-linux-amd64`) 사전 검증
+2. sudo NOPASSWD 사전 검증
+3. binary + unit 파일 `/tmp/` 경유 atomic install
+4. `systemctl daemon-reload && enable --now`
+5. `curl --unix-socket /run/terab-agent/agent.sock /healthz` 응답 `{"status":"ok"}` 검증
+6. 환경변수 + 운영 명령 hint 출력
+
+재실행 idempotent — 동일 명령으로 update 가능 (`scp + daemon-reload + restart`).
+
+### 재부팅 후 자동 기동 검증
+
+`WantedBy=multi-user.target` 으로 NAS 재부팅 시 자동 기동:
+
+```bash
+ssh nas-claude 'sudo reboot' ; sleep 60
+ssh nas-claude 'systemctl is-active terab-agent'
+# → active
+```
+
+### Uninstall
+
+```bash
+cd services/storage-agent
+NAS_HOST=nas-claude make uninstall-agent
+```
+
+dummy target 회수 시도(`iqn.*com.terab:*` 잔존 삭제) + `systemctl disable --now` +
+unit/binary 파일 정리. agent 가 이미 dead 상태여도 idempotent.
+
+### NestJS 환경 변수
+
+`api.env`:
+
+```env
+STORAGE_AGENT_SOCKET_PATH=/run/terab-agent/agent.sock
+```
+
+운영 NestJS 컨테이너는 NAS 의 `/run/terab-agent/` 를 bind mount 후 socket file 에
+접근한다 (docker-compose 측 구성은 Phase 3 deployment 책임).
+
+### `spk/` 디렉토리 — 보존 의의
+
+`services/storage-agent/spk/` 와 `Makefile` 의 `.spk` 타겟은 [ADR-0005](../../docs/adr/0005-sidecar-agent-systemd-only.md)
+T1-T3 재평가 trigger 발동 시 부활 시작점. 활성 build/배포 path 에선 호출되지 않지만
+삭제하지 않는다. quarterly grooming 시 `make spk` 가 여전히 빌드 가능한지 1회 점검 권장.
+
+---
 
 ## EOL 규칙
 
