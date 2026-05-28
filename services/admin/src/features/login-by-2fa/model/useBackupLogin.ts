@@ -15,7 +15,7 @@ export function useBackupLogin() {
   const setAuth = useUserStore((s) => s.setAuth);
   const mutation = useLoginWithBackupMutation();
 
-  const loginWithBackup = async (form: BackupLoginForm) => {
+  const loginWithBackup = (form: BackupLoginForm) => {
     mutation.mutate(
       { body: form },
       {

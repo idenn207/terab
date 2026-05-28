@@ -15,7 +15,7 @@ export function useLogin() {
   const navigate = useNavigate();
   const mutation = useLoginMutation();
 
-  const login = async (credentials: LoginCredentials) => {
+  const login = (credentials: LoginCredentials) => {
     mutation.mutate(
       { body: credentials },
       {

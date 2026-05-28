@@ -83,6 +83,7 @@ services/web 의 dependency 중 **그대로 유지하는 항목**:
 - **단일 axios 인스턴스**: web 의 `axiosBasic`/`axiosAuth` 별칭은 admin 에는 도입하지 않는다. 단일 `axiosInstance` 가 `isPublicPath` 분기로 Authorization 헤더를 부착/생략한다 — public 라우트(`/auth/login`, `/auth/refresh` 등)는 자동 분기.
 - **codegen 산출물 lint 무시**: `scripts/disable-lint-on-generated.mjs` 가 codegen 직후 `/* eslint-disable */` 배너를 모든 `src/shared/api/generated/**/*.ts` 에 prepend 한다. eslint.config.js 의 `globalIgnores` 를 건드리지 않는 source-level 해결책.
 - **API DTO 변경 시 codegen 재실행 필수**: `services/api` 의 `LoginResponseDto.user.permissions` 같은 필드 추가는 `npm run openapi:codegen` 으로 admin types.gen.ts 에 반영해야 한다. AdminGate 가 `permissions` 필드를 읽으므로 drift 시 빌드 실패.
+- **모든 신규 admin 엔드포인트는 서버측 `@Permission('user:manage')` (또는 동등) guard 의무**: AdminGate 는 client-side advisory — 서버측 guard 가 1차 방어선. `services/api/src/admin/*` 신설 시 모든 controller method 가 권한 guard 를 부착해야 하며, 누락된 endpoint 가 머지되면 admin 권한 우회가 가능해진다.
 
 ## Claude 행동 지침 — admin 전용
 

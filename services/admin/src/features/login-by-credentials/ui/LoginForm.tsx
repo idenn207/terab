@@ -20,7 +20,7 @@ export function LoginForm() {
       clearErrors('root');
       return;
     }
-    setError('root', { message: LOGIN_ERROR_MESSAGES[apiError.code] });
+    setError('root', { message: LOGIN_ERROR_MESSAGES[apiError.code] ?? LOGIN_ERROR_MESSAGES.UNKNOWN });
   }, [apiError, setError, clearErrors]);
 
   const displayError = errors.username?.message ?? errors.password?.message ?? errors.root?.message;
@@ -30,7 +30,6 @@ export function LoginForm() {
       <Field>
         <Label htmlFor="username">아이디</Label>
         <Input
-          // ID
           id="username"
           type="text"
           autoComplete="username"
@@ -43,7 +42,6 @@ export function LoginForm() {
       <Field>
         <Label htmlFor="password">비밀번호</Label>
         <Input
-          // PW
           id="password"
           type="password"
           autoComplete="current-password"
