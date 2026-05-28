@@ -1,5 +1,6 @@
+import { TrustThisDeviceCheckbox } from '@/features/trusted-device';
 import { Button, Field, Input, Label } from '@/shared/ui';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { LOGIN_ERROR_MESSAGES } from '../model/loginErrors';
 import type { LoginCredentials } from '../model/useLogin';
@@ -7,6 +8,7 @@ import { useLogin } from '../model/useLogin';
 
 export function LoginForm() {
   const { login, isLoading, apiError, resetError } = useLogin();
+  const [trustDevice, setTrustDevice] = useState(false);
   const {
     register,
     handleSubmit,
@@ -25,8 +27,10 @@ export function LoginForm() {
 
   const displayError = errors.username?.message ?? errors.password?.message ?? errors.root?.message;
 
+  const onSubmit = (credentials: LoginCredentials) => login({ ...credentials, trustDevice });
+
   return (
-    <form onSubmit={handleSubmit(login)} className="grid w-full max-w-sm grid-cols-1 gap-6">
+    <form onSubmit={handleSubmit(onSubmit)} className="grid w-full max-w-sm grid-cols-1 gap-6">
       <Field>
         <Label htmlFor="username">아이디</Label>
         <Input
@@ -58,6 +62,7 @@ export function LoginForm() {
           {displayError}
         </p>
       )}
+      <TrustThisDeviceCheckbox checked={trustDevice} onChange={setTrustDevice} />
       <Button type="submit" disabled={isLoading}>
         {isLoading ? '로그인 중...' : '로그인'}
       </Button>
