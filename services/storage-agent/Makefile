@@ -69,19 +69,24 @@ tidy:
 spk: build-linux-amd64
 	@$(TAR) --version >/dev/null 2>&1 || { echo "[spk] $(TAR) is required (GNU tar)" >&2; exit 1; }
 	@rm -rf $(SPK_STAGE)
-	@mkdir -p $(SPK_STAGE)/package $(SPK_STAGE)/scripts $(BIN_DIR)
-	@sed -e 's/__PKG_VERSION__/$(PKG_VERSION)/' \
-	     -e 's/__PKG_ARCH__/$(PKG_ARCH)/' \
-	     spk/INFO.tmpl > $(SPK_STAGE)/INFO
+	@mkdir -p $(SPK_STAGE)/package $(SPK_STAGE)/scripts $(SPK_STAGE)/conf $(BIN_DIR)
 	@mkdir -p $(SPK_STAGE)/package/bin
 	@cp $(AGENT_BIN_LINUX_AMD64) $(SPK_STAGE)/package/bin/agent
 	@chmod 0755 $(SPK_STAGE)/package/bin/agent
 	@cp -R spk/scripts/. $(SPK_STAGE)/scripts/
 	@chmod 0755 $(SPK_STAGE)/scripts/*
+	@cp -R spk/conf/. $(SPK_STAGE)/conf/
+	@chmod 0644 $(SPK_STAGE)/conf/*
 	@$(TAR) --owner=0 --group=0 --mode=0755 -C $(SPK_STAGE)/package -czf $(SPK_STAGE)/package.tgz .
 	@rm -rf $(SPK_STAGE)/package
-	@$(TAR) --owner=0 --group=0 --mode=0644 -C $(SPK_STAGE) -cf $(SPK_FILE) INFO package.tgz
+	@PKG_CHECKSUM=$$(md5sum $(SPK_STAGE)/package.tgz | cut -d' ' -f1); \
+	 sed -e 's/__PKG_VERSION__/$(PKG_VERSION)/' \
+	     -e 's/__PKG_ARCH__/$(PKG_ARCH)/' \
+	     -e "s/__PKG_CHECKSUM__/$$PKG_CHECKSUM/" \
+	     spk/INFO.tmpl > $(SPK_STAGE)/INFO
+	@$(TAR) --owner=0 --group=0 --mode=0644 -C $(SPK_STAGE) -cf $(SPK_FILE) package.tgz INFO
 	@$(TAR) --owner=0 --group=0 --mode=0755 -C $(SPK_STAGE) -rf $(SPK_FILE) scripts
+	@$(TAR) --owner=0 --group=0 --mode=0755 -C $(SPK_STAGE) -rf $(SPK_FILE) conf
 	@rm -rf $(SPK_STAGE)
 	@echo "[spk] produced $(SPK_FILE)"
 

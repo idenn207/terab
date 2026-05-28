@@ -3,84 +3,39 @@
 set -u
 
 PKG_NAME="${SYNOPKG_PKGNAME:-terab-agent}"
-PKG_DEST="${SYNOPKG_PKGDEST:-/var/packages/${PKG_NAME}/target}"
 PKG_VAR="${SYNOPKG_PKGVAR:-/var/packages/${PKG_NAME}/var}"
 
-AGENT_BIN="${PKG_DEST}/bin/agent"
-PID_FILE="${PKG_VAR}/agent.pid"
+UNIT="pkg-${PKG_NAME}.service"
 LOG_FILE="${PKG_VAR}/agent.log"
-SOCKET_PATH="${PKG_VAR}/agent.sock"
-RUN_USER="terab-agent"
-RUN_GROUP="terab"
-LOG_LEVEL="${TERAB_AGENT_LOG_LEVEL:-info}"
+SYSTEMCTL="/usr/bin/systemctl"
+LOGGER_TAG="terab-agent-sss"
 
-start_agent() {
-    if status_agent >/dev/null 2>&1; then
-        echo "agent already running"
-        return 0
+# systemctl 호출 stderr 를 syslog 로 송출 — install 실패 시 `journalctl -t terab-agent-sss` 한 줄로 정확한 에러 추적
+run_systemctl() {
+    err=$("${SYSTEMCTL}" "$@" 2>&1 >/dev/null)
+    rc=$?
+    if [ -n "$err" ]; then
+        logger -t "${LOGGER_TAG}" "systemctl $* rc=$rc err=$err"
+    elif [ "$rc" -ne 0 ]; then
+        logger -t "${LOGGER_TAG}" "systemctl $* rc=$rc (no stderr)"
     fi
-    rm -f "${SOCKET_PATH}"
-    nohup su - "${RUN_USER}" -s /bin/sh -c \
-        "${AGENT_BIN} -socket '${SOCKET_PATH}' -log-level '${LOG_LEVEL}' >> '${LOG_FILE}' 2>&1 & echo \$! > '${PID_FILE}'" \
-        >/dev/null 2>&1
-    sleep 1
-    if [ ! -s "${PID_FILE}" ]; then
-        echo "failed to start agent (no pid recorded)"
-        return 1
-    fi
-    return 0
-}
-
-stop_agent() {
-    if [ ! -f "${PID_FILE}" ]; then
-        return 0
-    fi
-    pid=$(cat "${PID_FILE}" 2>/dev/null || echo "")
-    if [ -z "${pid}" ]; then
-        rm -f "${PID_FILE}"
-        return 0
-    fi
-    if kill -0 "${pid}" 2>/dev/null; then
-        kill -TERM "${pid}" 2>/dev/null
-        i=0
-        while kill -0 "${pid}" 2>/dev/null; do
-            i=$((i + 1))
-            if [ "${i}" -gt 10 ]; then
-                kill -KILL "${pid}" 2>/dev/null
-                break
-            fi
-            sleep 1
-        done
-    fi
-    rm -f "${PID_FILE}" "${SOCKET_PATH}"
-    return 0
-}
-
-status_agent() {
-    if [ ! -f "${PID_FILE}" ]; then
-        return 1
-    fi
-    pid=$(cat "${PID_FILE}" 2>/dev/null || echo "")
-    if [ -z "${pid}" ]; then
-        return 1
-    fi
-    if kill -0 "${pid}" 2>/dev/null; then
-        return 0
-    fi
-    return 1
+    return $rc
 }
 
 case "$1" in
     start)
-        start_agent
-        exit $?
+        # 세션 7 architectural pivot — systemctl 호출 회피.
+        #   privilege.json 에 root 언급 시 DSM unsigned 패키지 install 차단되므로
+        #   pkgctl-* 가 [Install] WantedBy chain 으로 unit 을 자동 가동하는 경로로 위임
+        logger -t "${LOGGER_TAG}" "start invoked (no-op — unit driven by pkgctl WantedBy)"
+        exit 0
         ;;
     stop)
-        stop_agent
-        exit $?
+        logger -t "${LOGGER_TAG}" "stop invoked (no-op — unit driven by pkgctl BindsTo)"
+        exit 0
         ;;
     status)
-        if status_agent; then
+        if "${SYSTEMCTL}" is-active --quiet "${UNIT}"; then
             echo "running"
             exit 0
         fi
