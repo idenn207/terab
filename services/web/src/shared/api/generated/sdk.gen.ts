@@ -3,26 +3,21 @@
 import type { Client, Options as Options2, TDataShape } from './client';
 import { client } from './client.gen';
 import type {
-  AuthControllerCompleteTwoFaData,
-  AuthControllerCompleteTwoFaErrors,
-  AuthControllerCompleteTwoFaResponses,
-  AuthControllerLoginData,
-  AuthControllerLoginErrors,
-  AuthControllerLoginResponses,
-  AuthControllerLoginWithBackupData,
-  AuthControllerLoginWithBackupErrors,
-  AuthControllerLoginWithBackupResponses,
-  AuthControllerLogoutData,
-  AuthControllerLogoutResponses,
-  AuthControllerMeData,
-  AuthControllerMeErrors,
-  AuthControllerMeResponses,
-  AuthControllerRefreshData,
-  AuthControllerRefreshErrors,
-  AuthControllerRefreshResponses,
-  AuthControllerRegisterData,
-  AuthControllerRegisterErrors,
-  AuthControllerRegisterResponses,
+  BackupCodeControllerRegenerateData,
+  BackupCodeControllerRegenerateErrors,
+  BackupCodeControllerRegenerateResponses,
+  ChallengeControllerCompleteData,
+  ChallengeControllerCompleteErrors,
+  ChallengeControllerCompleteResponses,
+  ChallengeControllerGetStatusData,
+  ChallengeControllerGetStatusErrors,
+  ChallengeControllerGetStatusResponses,
+  ChallengeControllerResendData,
+  ChallengeControllerResendErrors,
+  ChallengeControllerResendResponses,
+  ChallengeControllerRespondData,
+  ChallengeControllerRespondErrors,
+  ChallengeControllerRespondResponses,
   DeviceControllerListData,
   DeviceControllerListResponses,
   DeviceControllerRegisterData,
@@ -83,6 +78,30 @@ import type {
   InvitationControllerDeactivateResponses,
   InvitationControllerValidateData,
   InvitationControllerValidateResponses,
+  LoginControllerLoginData,
+  LoginControllerLoginErrors,
+  LoginControllerLoginResponses,
+  LoginControllerLoginWithBackupData,
+  LoginControllerLoginWithBackupErrors,
+  LoginControllerLoginWithBackupResponses,
+  LoginControllerLogoutData,
+  LoginControllerLogoutResponses,
+  LoginControllerRefreshData,
+  LoginControllerRefreshErrors,
+  LoginControllerRefreshResponses,
+  LoginControllerRegisterData,
+  LoginControllerRegisterErrors,
+  LoginControllerRegisterResponses,
+  TotpControllerCompleteSetupData,
+  TotpControllerCompleteSetupErrors,
+  TotpControllerCompleteSetupResponses,
+  TotpControllerListData,
+  TotpControllerListResponses,
+  TotpControllerRevokeData,
+  TotpControllerRevokeErrors,
+  TotpControllerRevokeResponses,
+  TotpControllerStartSetupData,
+  TotpControllerStartSetupResponses,
   TrashControllerListData,
   TrashControllerListResponses,
   TrashControllerPermanentDeleteData,
@@ -98,15 +117,9 @@ import type {
   TrustedDeviceControllerRevokeData,
   TrustedDeviceControllerRevokeErrors,
   TrustedDeviceControllerRevokeResponses,
-  TwoFaControllerGetStatusData,
-  TwoFaControllerGetStatusErrors,
-  TwoFaControllerGetStatusResponses,
-  TwoFaControllerResendData,
-  TwoFaControllerResendErrors,
-  TwoFaControllerResendResponses,
-  TwoFaControllerRespondData,
-  TwoFaControllerRespondErrors,
-  TwoFaControllerRespondResponses,
+  UserControllerMeData,
+  UserControllerMeErrors,
+  UserControllerMeResponses,
 } from './types.gen';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean, TResponse = unknown> = Options2<
@@ -135,80 +148,12 @@ export const healthControllerCheck = <ThrowOnError extends boolean = false>(opti
   });
 
 /**
- * 회원가입 — 초대 토큰 소비 후 RT 쿠키 설정
- */
-export const authControllerRegister = <ThrowOnError extends boolean = false>(options: Options<AuthControllerRegisterData, ThrowOnError>) =>
-  (options.client ?? client).post<AuthControllerRegisterResponses, AuthControllerRegisterErrors, ThrowOnError>({
-    responseType: 'json',
-    url: '/auth/register',
-    ...options,
-    headers: {
-      'Content-Type': 'application/json',
-      ...options.headers,
-    },
-  });
-
-/**
- * 로그인 — 2FA 필요 시 챌린지 발급, 아니면 AUTHENTICATED + RT 쿠키
- */
-export const authControllerLogin = <ThrowOnError extends boolean = false>(options: Options<AuthControllerLoginData, ThrowOnError>) =>
-  (options.client ?? client).post<AuthControllerLoginResponses, AuthControllerLoginErrors, ThrowOnError>({
-    responseType: 'json',
-    url: '/auth/login',
-    ...options,
-    headers: {
-      'Content-Type': 'application/json',
-      ...options.headers,
-    },
-  });
-
-/**
- * 백업 코드 로그인 — 2FA 우회
- */
-export const authControllerLoginWithBackup = <ThrowOnError extends boolean = false>(options: Options<AuthControllerLoginWithBackupData, ThrowOnError>) =>
-  (options.client ?? client).post<AuthControllerLoginWithBackupResponses, AuthControllerLoginWithBackupErrors, ThrowOnError>({
-    responseType: 'json',
-    url: '/auth/login/backup',
-    ...options,
-    headers: {
-      'Content-Type': 'application/json',
-      ...options.headers,
-    },
-  });
-
-/**
- * 2FA 챌린지 완료 — APPROVED 상태에서 토큰 발급
- */
-export const authControllerCompleteTwoFa = <ThrowOnError extends boolean = false>(options: Options<AuthControllerCompleteTwoFaData, ThrowOnError>) =>
-  (options.client ?? client).post<AuthControllerCompleteTwoFaResponses, AuthControllerCompleteTwoFaErrors, ThrowOnError>({
-    responseType: 'json',
-    url: '/auth/2fa/challenge/{id}/complete',
-    ...options,
-  });
-
-/**
- * Refresh Token 회전
- */
-export const authControllerRefresh = <ThrowOnError extends boolean = false>(options?: Options<AuthControllerRefreshData, ThrowOnError>) =>
-  (options?.client ?? client).post<AuthControllerRefreshResponses, AuthControllerRefreshErrors, ThrowOnError>({
-    responseType: 'json',
-    url: '/auth/refresh',
-    ...options,
-  });
-
-/**
- * 로그아웃 — RT 폐기 및 쿠키 삭제
- */
-export const authControllerLogout = <ThrowOnError extends boolean = false>(options?: Options<AuthControllerLogoutData, ThrowOnError>) =>
-  (options?.client ?? client).post<AuthControllerLogoutResponses, unknown, ThrowOnError>({ url: '/auth/logout', ...options });
-
-/**
  * 현재 사용자 조회
  */
-export const authControllerMe = <ThrowOnError extends boolean = false>(options?: Options<AuthControllerMeData, ThrowOnError>) =>
-  (options?.client ?? client).get<AuthControllerMeResponses, AuthControllerMeErrors, ThrowOnError>({
+export const userControllerMe = <ThrowOnError extends boolean = false>(options?: Options<UserControllerMeData, ThrowOnError>) =>
+  (options?.client ?? client).get<UserControllerMeResponses, UserControllerMeErrors, ThrowOnError>({
     responseType: 'json',
-    url: '/auth/me',
+    url: '/user/me',
     ...options,
   });
 
@@ -242,39 +187,6 @@ export const deviceControllerRemove = <ThrowOnError extends boolean = false>(opt
   (options.client ?? client).delete<DeviceControllerRemoveResponses, DeviceControllerRemoveErrors, ThrowOnError>({ url: '/devices/{id}', ...options });
 
 /**
- * 2FA 챌린지 상태 조회
- */
-export const twoFaControllerGetStatus = <ThrowOnError extends boolean = false>(options: Options<TwoFaControllerGetStatusData, ThrowOnError>) =>
-  (options.client ?? client).get<TwoFaControllerGetStatusResponses, TwoFaControllerGetStatusErrors, ThrowOnError>({
-    responseType: 'json',
-    url: '/auth/2fa/challenge/{id}/status',
-    ...options,
-  });
-
-/**
- * 2FA 챌린지 응답
- */
-export const twoFaControllerRespond = <ThrowOnError extends boolean = false>(options: Options<TwoFaControllerRespondData, ThrowOnError>) =>
-  (options.client ?? client).post<TwoFaControllerRespondResponses, TwoFaControllerRespondErrors, ThrowOnError>({
-    url: '/auth/2fa/challenge/{id}/respond',
-    ...options,
-    headers: {
-      'Content-Type': 'application/json',
-      ...options.headers,
-    },
-  });
-
-/**
- * 2FA 챌린지 재발송
- */
-export const twoFaControllerResend = <ThrowOnError extends boolean = false>(options: Options<TwoFaControllerResendData, ThrowOnError>) =>
-  (options.client ?? client).post<TwoFaControllerResendResponses, TwoFaControllerResendErrors, ThrowOnError>({
-    responseType: 'json',
-    url: '/auth/2fa/challenge/{id}/resend',
-    ...options,
-  });
-
-/**
  * 신뢰기기 목록 조회
  */
 export const trustedDeviceControllerList = <ThrowOnError extends boolean = false>(options?: Options<TrustedDeviceControllerListData, ThrowOnError>) =>
@@ -297,6 +209,106 @@ export const trustedDeviceControllerRevoke = <ThrowOnError extends boolean = fal
   (options.client ?? client).delete<TrustedDeviceControllerRevokeResponses, TrustedDeviceControllerRevokeErrors, ThrowOnError>({
     url: '/trusted-device/{id}',
     ...options,
+  });
+
+/**
+ * 2FA 챌린지 상태 조회
+ */
+export const challengeControllerGetStatus = <ThrowOnError extends boolean = false>(options: Options<ChallengeControllerGetStatusData, ThrowOnError>) =>
+  (options.client ?? client).get<ChallengeControllerGetStatusResponses, ChallengeControllerGetStatusErrors, ThrowOnError>({
+    responseType: 'json',
+    url: '/auth/2fa/challenge/{id}/status',
+    ...options,
+  });
+
+/**
+ * 2FA 챌린지 응답 (PUSH 전용)
+ */
+export const challengeControllerRespond = <ThrowOnError extends boolean = false>(options: Options<ChallengeControllerRespondData, ThrowOnError>) =>
+  (options.client ?? client).post<ChallengeControllerRespondResponses, ChallengeControllerRespondErrors, ThrowOnError>({
+    url: '/auth/2fa/challenge/{id}/respond',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    },
+  });
+
+/**
+ * 2FA 챌린지 재발송 (PUSH 전용)
+ */
+export const challengeControllerResend = <ThrowOnError extends boolean = false>(options: Options<ChallengeControllerResendData, ThrowOnError>) =>
+  (options.client ?? client).post<ChallengeControllerResendResponses, ChallengeControllerResendErrors, ThrowOnError>({
+    responseType: 'json',
+    url: '/auth/2fa/challenge/{id}/resend',
+    ...options,
+  });
+
+/**
+ * 2FA 챌린지 완료 — type별 verify 후 토큰 발급
+ */
+export const challengeControllerComplete = <ThrowOnError extends boolean = false>(options: Options<ChallengeControllerCompleteData, ThrowOnError>) =>
+  (options.client ?? client).post<ChallengeControllerCompleteResponses, ChallengeControllerCompleteErrors, ThrowOnError>({
+    responseType: 'json',
+    url: '/auth/2fa/challenge/{id}/complete',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    },
+  });
+
+/**
+ * TOTP 등록 시작 — secret + otpauth URI 발급
+ */
+export const totpControllerStartSetup = <ThrowOnError extends boolean = false>(options?: Options<TotpControllerStartSetupData, ThrowOnError>) =>
+  (options?.client ?? client).post<TotpControllerStartSetupResponses, unknown, ThrowOnError>({
+    responseType: 'json',
+    url: '/2fa/totp/setup/start',
+    ...options,
+  });
+
+/**
+ * TOTP 등록 완료 — 1회 검증 후 영구 저장
+ */
+export const totpControllerCompleteSetup = <ThrowOnError extends boolean = false>(options: Options<TotpControllerCompleteSetupData, ThrowOnError>) =>
+  (options.client ?? client).post<TotpControllerCompleteSetupResponses, TotpControllerCompleteSetupErrors, ThrowOnError>({
+    url: '/2fa/totp/setup/complete',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    },
+  });
+
+/**
+ * TOTP 등록 목록 조회 (user당 최대 1개)
+ */
+export const totpControllerList = <ThrowOnError extends boolean = false>(options?: Options<TotpControllerListData, ThrowOnError>) =>
+  (options?.client ?? client).get<TotpControllerListResponses, unknown, ThrowOnError>({
+    responseType: 'json',
+    url: '/2fa/totp',
+    ...options,
+  });
+
+/**
+ * TOTP 해제
+ */
+export const totpControllerRevoke = <ThrowOnError extends boolean = false>(options: Options<TotpControllerRevokeData, ThrowOnError>) =>
+  (options.client ?? client).delete<TotpControllerRevokeResponses, TotpControllerRevokeErrors, ThrowOnError>({ url: '/2fa/totp/{id}', ...options });
+
+/**
+ * Backup Code 재발급 — 기존 unused 폐기 후 신규 발급
+ */
+export const backupCodeControllerRegenerate = <ThrowOnError extends boolean = false>(options: Options<BackupCodeControllerRegenerateData, ThrowOnError>) =>
+  (options.client ?? client).post<BackupCodeControllerRegenerateResponses, BackupCodeControllerRegenerateErrors, ThrowOnError>({
+    responseType: 'json',
+    url: '/backup-codes/regenerate',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    },
   });
 
 /**
@@ -331,6 +343,64 @@ export const invitationControllerValidate = <ThrowOnError extends boolean = fals
     url: '/invitations/{token}',
     ...options,
   });
+
+/**
+ * 회원가입 — 초대 토큰 소비 후 RT 쿠키 설정
+ */
+export const loginControllerRegister = <ThrowOnError extends boolean = false>(options: Options<LoginControllerRegisterData, ThrowOnError>) =>
+  (options.client ?? client).post<LoginControllerRegisterResponses, LoginControllerRegisterErrors, ThrowOnError>({
+    responseType: 'json',
+    url: '/auth/register',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    },
+  });
+
+/**
+ * 로그인 — 2FA 필요 시 챌린지, 아니면 AUTHENTICATED
+ */
+export const loginControllerLogin = <ThrowOnError extends boolean = false>(options: Options<LoginControllerLoginData, ThrowOnError>) =>
+  (options.client ?? client).post<LoginControllerLoginResponses, LoginControllerLoginErrors, ThrowOnError>({
+    responseType: 'json',
+    url: '/auth/login',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    },
+  });
+
+/**
+ * 백업 코드 로그인 — 2FA 우회
+ */
+export const loginControllerLoginWithBackup = <ThrowOnError extends boolean = false>(options: Options<LoginControllerLoginWithBackupData, ThrowOnError>) =>
+  (options.client ?? client).post<LoginControllerLoginWithBackupResponses, LoginControllerLoginWithBackupErrors, ThrowOnError>({
+    responseType: 'json',
+    url: '/auth/login/backup',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    },
+  });
+
+/**
+ * Refresh Token 회전
+ */
+export const loginControllerRefresh = <ThrowOnError extends boolean = false>(options?: Options<LoginControllerRefreshData, ThrowOnError>) =>
+  (options?.client ?? client).post<LoginControllerRefreshResponses, LoginControllerRefreshErrors, ThrowOnError>({
+    responseType: 'json',
+    url: '/auth/refresh',
+    ...options,
+  });
+
+/**
+ * 로그아웃 — RT 폐기 및 쿠키 삭제
+ */
+export const loginControllerLogout = <ThrowOnError extends boolean = false>(options?: Options<LoginControllerLogoutData, ThrowOnError>) =>
+  (options?.client ?? client).post<LoginControllerLogoutResponses, unknown, ThrowOnError>({ url: '/auth/logout', ...options });
 
 /**
  * 루트 폴더 목록 조회

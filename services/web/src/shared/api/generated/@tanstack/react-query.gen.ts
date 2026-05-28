@@ -5,13 +5,11 @@ import type { AxiosError } from 'axios';
 
 import { client } from '../client.gen';
 import {
-  authControllerCompleteTwoFa,
-  authControllerLogin,
-  authControllerLoginWithBackup,
-  authControllerLogout,
-  authControllerMe,
-  authControllerRefresh,
-  authControllerRegister,
+  backupCodeControllerRegenerate,
+  challengeControllerComplete,
+  challengeControllerGetStatus,
+  challengeControllerResend,
+  challengeControllerRespond,
   deviceControllerList,
   deviceControllerRegister,
   deviceControllerRemove,
@@ -34,38 +32,40 @@ import {
   invitationControllerCreate,
   invitationControllerDeactivate,
   invitationControllerValidate,
+  loginControllerLogin,
+  loginControllerLoginWithBackup,
+  loginControllerLogout,
+  loginControllerRefresh,
+  loginControllerRegister,
   type Options,
+  totpControllerCompleteSetup,
+  totpControllerList,
+  totpControllerRevoke,
+  totpControllerStartSetup,
   trashControllerList,
   trashControllerPermanentDelete,
   trashControllerRestore,
   trustedDeviceControllerList,
   trustedDeviceControllerRegister,
   trustedDeviceControllerRevoke,
-  twoFaControllerGetStatus,
-  twoFaControllerResend,
-  twoFaControllerRespond,
+  userControllerMe,
 } from '../sdk.gen';
 import type {
-  AuthControllerCompleteTwoFaData,
-  AuthControllerCompleteTwoFaError,
-  AuthControllerCompleteTwoFaResponse,
-  AuthControllerLoginData,
-  AuthControllerLoginError,
-  AuthControllerLoginResponse,
-  AuthControllerLoginWithBackupData,
-  AuthControllerLoginWithBackupError,
-  AuthControllerLoginWithBackupResponse,
-  AuthControllerLogoutData,
-  AuthControllerLogoutResponse,
-  AuthControllerMeData,
-  AuthControllerMeError,
-  AuthControllerMeResponse,
-  AuthControllerRefreshData,
-  AuthControllerRefreshError,
-  AuthControllerRefreshResponse,
-  AuthControllerRegisterData,
-  AuthControllerRegisterError,
-  AuthControllerRegisterResponse,
+  BackupCodeControllerRegenerateData,
+  BackupCodeControllerRegenerateError,
+  BackupCodeControllerRegenerateResponse,
+  ChallengeControllerCompleteData,
+  ChallengeControllerCompleteError,
+  ChallengeControllerCompleteResponse,
+  ChallengeControllerGetStatusData,
+  ChallengeControllerGetStatusError,
+  ChallengeControllerGetStatusResponse,
+  ChallengeControllerResendData,
+  ChallengeControllerResendError,
+  ChallengeControllerResendResponse,
+  ChallengeControllerRespondData,
+  ChallengeControllerRespondError,
+  ChallengeControllerRespondResponse,
   DeviceControllerListData,
   DeviceControllerListResponse,
   DeviceControllerRegisterData,
@@ -126,6 +126,30 @@ import type {
   InvitationControllerDeactivateResponse,
   InvitationControllerValidateData,
   InvitationControllerValidateResponse,
+  LoginControllerLoginData,
+  LoginControllerLoginError,
+  LoginControllerLoginResponse,
+  LoginControllerLoginWithBackupData,
+  LoginControllerLoginWithBackupError,
+  LoginControllerLoginWithBackupResponse,
+  LoginControllerLogoutData,
+  LoginControllerLogoutResponse,
+  LoginControllerRefreshData,
+  LoginControllerRefreshError,
+  LoginControllerRefreshResponse,
+  LoginControllerRegisterData,
+  LoginControllerRegisterError,
+  LoginControllerRegisterResponse,
+  TotpControllerCompleteSetupData,
+  TotpControllerCompleteSetupError,
+  TotpControllerCompleteSetupResponse,
+  TotpControllerListData,
+  TotpControllerListResponse,
+  TotpControllerRevokeData,
+  TotpControllerRevokeError,
+  TotpControllerRevokeResponse,
+  TotpControllerStartSetupData,
+  TotpControllerStartSetupResponse,
   TrashControllerListData,
   TrashControllerListResponse,
   TrashControllerPermanentDeleteData,
@@ -140,15 +164,9 @@ import type {
   TrustedDeviceControllerRevokeData,
   TrustedDeviceControllerRevokeError,
   TrustedDeviceControllerRevokeResponse,
-  TwoFaControllerGetStatusData,
-  TwoFaControllerGetStatusError,
-  TwoFaControllerGetStatusResponse,
-  TwoFaControllerResendData,
-  TwoFaControllerResendError,
-  TwoFaControllerResendResponse,
-  TwoFaControllerRespondData,
-  TwoFaControllerRespondError,
-  TwoFaControllerRespondResponse,
+  UserControllerMeData,
+  UserControllerMeError,
+  UserControllerMeResponse,
 } from '../types.gen';
 
 export type QueryKey<TOptions extends Options> = [
@@ -203,137 +221,15 @@ export const healthControllerCheckOptions = (options?: Options<HealthControllerC
     queryKey: healthControllerCheckQueryKey(options),
   });
 
-/**
- * 회원가입 — 초대 토큰 소비 후 RT 쿠키 설정
- */
-export const authControllerRegisterMutation = (
-  options?: Partial<Options<AuthControllerRegisterData>>,
-): UseMutationOptions<AuthControllerRegisterResponse, AxiosError<AuthControllerRegisterError>, Options<AuthControllerRegisterData>> => {
-  const mutationOptions: UseMutationOptions<AuthControllerRegisterResponse, AxiosError<AuthControllerRegisterError>, Options<AuthControllerRegisterData>> = {
-    mutationFn: async (fnOptions) => {
-      const { data } = await authControllerRegister({
-        ...options,
-        ...fnOptions,
-        throwOnError: true,
-      });
-      return data;
-    },
-  };
-  return mutationOptions;
-};
-
-/**
- * 로그인 — 2FA 필요 시 챌린지 발급, 아니면 AUTHENTICATED + RT 쿠키
- */
-export const authControllerLoginMutation = (
-  options?: Partial<Options<AuthControllerLoginData>>,
-): UseMutationOptions<AuthControllerLoginResponse, AxiosError<AuthControllerLoginError>, Options<AuthControllerLoginData>> => {
-  const mutationOptions: UseMutationOptions<AuthControllerLoginResponse, AxiosError<AuthControllerLoginError>, Options<AuthControllerLoginData>> = {
-    mutationFn: async (fnOptions) => {
-      const { data } = await authControllerLogin({
-        ...options,
-        ...fnOptions,
-        throwOnError: true,
-      });
-      return data;
-    },
-  };
-  return mutationOptions;
-};
-
-/**
- * 백업 코드 로그인 — 2FA 우회
- */
-export const authControllerLoginWithBackupMutation = (
-  options?: Partial<Options<AuthControllerLoginWithBackupData>>,
-): UseMutationOptions<AuthControllerLoginWithBackupResponse, AxiosError<AuthControllerLoginWithBackupError>, Options<AuthControllerLoginWithBackupData>> => {
-  const mutationOptions: UseMutationOptions<
-    AuthControllerLoginWithBackupResponse,
-    AxiosError<AuthControllerLoginWithBackupError>,
-    Options<AuthControllerLoginWithBackupData>
-  > = {
-    mutationFn: async (fnOptions) => {
-      const { data } = await authControllerLoginWithBackup({
-        ...options,
-        ...fnOptions,
-        throwOnError: true,
-      });
-      return data;
-    },
-  };
-  return mutationOptions;
-};
-
-/**
- * 2FA 챌린지 완료 — APPROVED 상태에서 토큰 발급
- */
-export const authControllerCompleteTwoFaMutation = (
-  options?: Partial<Options<AuthControllerCompleteTwoFaData>>,
-): UseMutationOptions<AuthControllerCompleteTwoFaResponse, AxiosError<AuthControllerCompleteTwoFaError>, Options<AuthControllerCompleteTwoFaData>> => {
-  const mutationOptions: UseMutationOptions<
-    AuthControllerCompleteTwoFaResponse,
-    AxiosError<AuthControllerCompleteTwoFaError>,
-    Options<AuthControllerCompleteTwoFaData>
-  > = {
-    mutationFn: async (fnOptions) => {
-      const { data } = await authControllerCompleteTwoFa({
-        ...options,
-        ...fnOptions,
-        throwOnError: true,
-      });
-      return data;
-    },
-  };
-  return mutationOptions;
-};
-
-/**
- * Refresh Token 회전
- */
-export const authControllerRefreshMutation = (
-  options?: Partial<Options<AuthControllerRefreshData>>,
-): UseMutationOptions<AuthControllerRefreshResponse, AxiosError<AuthControllerRefreshError>, Options<AuthControllerRefreshData>> => {
-  const mutationOptions: UseMutationOptions<AuthControllerRefreshResponse, AxiosError<AuthControllerRefreshError>, Options<AuthControllerRefreshData>> = {
-    mutationFn: async (fnOptions) => {
-      const { data } = await authControllerRefresh({
-        ...options,
-        ...fnOptions,
-        throwOnError: true,
-      });
-      return data;
-    },
-  };
-  return mutationOptions;
-};
-
-/**
- * 로그아웃 — RT 폐기 및 쿠키 삭제
- */
-export const authControllerLogoutMutation = (
-  options?: Partial<Options<AuthControllerLogoutData>>,
-): UseMutationOptions<AuthControllerLogoutResponse, AxiosError<DefaultError>, Options<AuthControllerLogoutData>> => {
-  const mutationOptions: UseMutationOptions<AuthControllerLogoutResponse, AxiosError<DefaultError>, Options<AuthControllerLogoutData>> = {
-    mutationFn: async (fnOptions) => {
-      const { data } = await authControllerLogout({
-        ...options,
-        ...fnOptions,
-        throwOnError: true,
-      });
-      return data;
-    },
-  };
-  return mutationOptions;
-};
-
-export const authControllerMeQueryKey = (options?: Options<AuthControllerMeData>) => createQueryKey('authControllerMe', options);
+export const userControllerMeQueryKey = (options?: Options<UserControllerMeData>) => createQueryKey('userControllerMe', options);
 
 /**
  * 현재 사용자 조회
  */
-export const authControllerMeOptions = (options?: Options<AuthControllerMeData>) =>
-  queryOptions<AuthControllerMeResponse, AxiosError<AuthControllerMeError>, AuthControllerMeResponse, ReturnType<typeof authControllerMeQueryKey>>({
+export const userControllerMeOptions = (options?: Options<UserControllerMeData>) =>
+  queryOptions<UserControllerMeResponse, AxiosError<UserControllerMeError>, UserControllerMeResponse, ReturnType<typeof userControllerMeQueryKey>>({
     queryFn: async ({ queryKey, signal }) => {
-      const { data } = await authControllerMe({
+      const { data } = await userControllerMe({
         ...options,
         ...queryKey[0],
         signal,
@@ -341,7 +237,7 @@ export const authControllerMeOptions = (options?: Options<AuthControllerMeData>)
       });
       return data;
     },
-    queryKey: authControllerMeQueryKey(options),
+    queryKey: userControllerMeQueryKey(options),
   });
 
 export const deviceControllerListQueryKey = (options?: Options<DeviceControllerListData>) => createQueryKey('deviceControllerList', options);
@@ -391,68 +287,6 @@ export const deviceControllerRemoveMutation = (
   const mutationOptions: UseMutationOptions<DeviceControllerRemoveResponse, AxiosError<DeviceControllerRemoveError>, Options<DeviceControllerRemoveData>> = {
     mutationFn: async (fnOptions) => {
       const { data } = await deviceControllerRemove({
-        ...options,
-        ...fnOptions,
-        throwOnError: true,
-      });
-      return data;
-    },
-  };
-  return mutationOptions;
-};
-
-export const twoFaControllerGetStatusQueryKey = (options: Options<TwoFaControllerGetStatusData>) => createQueryKey('twoFaControllerGetStatus', options);
-
-/**
- * 2FA 챌린지 상태 조회
- */
-export const twoFaControllerGetStatusOptions = (options: Options<TwoFaControllerGetStatusData>) =>
-  queryOptions<
-    TwoFaControllerGetStatusResponse,
-    AxiosError<TwoFaControllerGetStatusError>,
-    TwoFaControllerGetStatusResponse,
-    ReturnType<typeof twoFaControllerGetStatusQueryKey>
-  >({
-    queryFn: async ({ queryKey, signal }) => {
-      const { data } = await twoFaControllerGetStatus({
-        ...options,
-        ...queryKey[0],
-        signal,
-        throwOnError: true,
-      });
-      return data;
-    },
-    queryKey: twoFaControllerGetStatusQueryKey(options),
-  });
-
-/**
- * 2FA 챌린지 응답
- */
-export const twoFaControllerRespondMutation = (
-  options?: Partial<Options<TwoFaControllerRespondData>>,
-): UseMutationOptions<TwoFaControllerRespondResponse, AxiosError<TwoFaControllerRespondError>, Options<TwoFaControllerRespondData>> => {
-  const mutationOptions: UseMutationOptions<TwoFaControllerRespondResponse, AxiosError<TwoFaControllerRespondError>, Options<TwoFaControllerRespondData>> = {
-    mutationFn: async (fnOptions) => {
-      const { data } = await twoFaControllerRespond({
-        ...options,
-        ...fnOptions,
-        throwOnError: true,
-      });
-      return data;
-    },
-  };
-  return mutationOptions;
-};
-
-/**
- * 2FA 챌린지 재발송
- */
-export const twoFaControllerResendMutation = (
-  options?: Partial<Options<TwoFaControllerResendData>>,
-): UseMutationOptions<TwoFaControllerResendResponse, AxiosError<TwoFaControllerResendError>, Options<TwoFaControllerResendData>> => {
-  const mutationOptions: UseMutationOptions<TwoFaControllerResendResponse, AxiosError<TwoFaControllerResendError>, Options<TwoFaControllerResendData>> = {
-    mutationFn: async (fnOptions) => {
-      const { data } = await twoFaControllerResend({
         ...options,
         ...fnOptions,
         throwOnError: true,
@@ -530,6 +364,203 @@ export const trustedDeviceControllerRevokeMutation = (
   return mutationOptions;
 };
 
+export const challengeControllerGetStatusQueryKey = (options: Options<ChallengeControllerGetStatusData>) =>
+  createQueryKey('challengeControllerGetStatus', options);
+
+/**
+ * 2FA 챌린지 상태 조회
+ */
+export const challengeControllerGetStatusOptions = (options: Options<ChallengeControllerGetStatusData>) =>
+  queryOptions<
+    ChallengeControllerGetStatusResponse,
+    AxiosError<ChallengeControllerGetStatusError>,
+    ChallengeControllerGetStatusResponse,
+    ReturnType<typeof challengeControllerGetStatusQueryKey>
+  >({
+    queryFn: async ({ queryKey, signal }) => {
+      const { data } = await challengeControllerGetStatus({
+        ...options,
+        ...queryKey[0],
+        signal,
+        throwOnError: true,
+      });
+      return data;
+    },
+    queryKey: challengeControllerGetStatusQueryKey(options),
+  });
+
+/**
+ * 2FA 챌린지 응답 (PUSH 전용)
+ */
+export const challengeControllerRespondMutation = (
+  options?: Partial<Options<ChallengeControllerRespondData>>,
+): UseMutationOptions<ChallengeControllerRespondResponse, AxiosError<ChallengeControllerRespondError>, Options<ChallengeControllerRespondData>> => {
+  const mutationOptions: UseMutationOptions<
+    ChallengeControllerRespondResponse,
+    AxiosError<ChallengeControllerRespondError>,
+    Options<ChallengeControllerRespondData>
+  > = {
+    mutationFn: async (fnOptions) => {
+      const { data } = await challengeControllerRespond({
+        ...options,
+        ...fnOptions,
+        throwOnError: true,
+      });
+      return data;
+    },
+  };
+  return mutationOptions;
+};
+
+/**
+ * 2FA 챌린지 재발송 (PUSH 전용)
+ */
+export const challengeControllerResendMutation = (
+  options?: Partial<Options<ChallengeControllerResendData>>,
+): UseMutationOptions<ChallengeControllerResendResponse, AxiosError<ChallengeControllerResendError>, Options<ChallengeControllerResendData>> => {
+  const mutationOptions: UseMutationOptions<
+    ChallengeControllerResendResponse,
+    AxiosError<ChallengeControllerResendError>,
+    Options<ChallengeControllerResendData>
+  > = {
+    mutationFn: async (fnOptions) => {
+      const { data } = await challengeControllerResend({
+        ...options,
+        ...fnOptions,
+        throwOnError: true,
+      });
+      return data;
+    },
+  };
+  return mutationOptions;
+};
+
+/**
+ * 2FA 챌린지 완료 — type별 verify 후 토큰 발급
+ */
+export const challengeControllerCompleteMutation = (
+  options?: Partial<Options<ChallengeControllerCompleteData>>,
+): UseMutationOptions<ChallengeControllerCompleteResponse, AxiosError<ChallengeControllerCompleteError>, Options<ChallengeControllerCompleteData>> => {
+  const mutationOptions: UseMutationOptions<
+    ChallengeControllerCompleteResponse,
+    AxiosError<ChallengeControllerCompleteError>,
+    Options<ChallengeControllerCompleteData>
+  > = {
+    mutationFn: async (fnOptions) => {
+      const { data } = await challengeControllerComplete({
+        ...options,
+        ...fnOptions,
+        throwOnError: true,
+      });
+      return data;
+    },
+  };
+  return mutationOptions;
+};
+
+/**
+ * TOTP 등록 시작 — secret + otpauth URI 발급
+ */
+export const totpControllerStartSetupMutation = (
+  options?: Partial<Options<TotpControllerStartSetupData>>,
+): UseMutationOptions<TotpControllerStartSetupResponse, AxiosError<DefaultError>, Options<TotpControllerStartSetupData>> => {
+  const mutationOptions: UseMutationOptions<TotpControllerStartSetupResponse, AxiosError<DefaultError>, Options<TotpControllerStartSetupData>> = {
+    mutationFn: async (fnOptions) => {
+      const { data } = await totpControllerStartSetup({
+        ...options,
+        ...fnOptions,
+        throwOnError: true,
+      });
+      return data;
+    },
+  };
+  return mutationOptions;
+};
+
+/**
+ * TOTP 등록 완료 — 1회 검증 후 영구 저장
+ */
+export const totpControllerCompleteSetupMutation = (
+  options?: Partial<Options<TotpControllerCompleteSetupData>>,
+): UseMutationOptions<TotpControllerCompleteSetupResponse, AxiosError<TotpControllerCompleteSetupError>, Options<TotpControllerCompleteSetupData>> => {
+  const mutationOptions: UseMutationOptions<
+    TotpControllerCompleteSetupResponse,
+    AxiosError<TotpControllerCompleteSetupError>,
+    Options<TotpControllerCompleteSetupData>
+  > = {
+    mutationFn: async (fnOptions) => {
+      const { data } = await totpControllerCompleteSetup({
+        ...options,
+        ...fnOptions,
+        throwOnError: true,
+      });
+      return data;
+    },
+  };
+  return mutationOptions;
+};
+
+export const totpControllerListQueryKey = (options?: Options<TotpControllerListData>) => createQueryKey('totpControllerList', options);
+
+/**
+ * TOTP 등록 목록 조회 (user당 최대 1개)
+ */
+export const totpControllerListOptions = (options?: Options<TotpControllerListData>) =>
+  queryOptions<TotpControllerListResponse, AxiosError<DefaultError>, TotpControllerListResponse, ReturnType<typeof totpControllerListQueryKey>>({
+    queryFn: async ({ queryKey, signal }) => {
+      const { data } = await totpControllerList({
+        ...options,
+        ...queryKey[0],
+        signal,
+        throwOnError: true,
+      });
+      return data;
+    },
+    queryKey: totpControllerListQueryKey(options),
+  });
+
+/**
+ * TOTP 해제
+ */
+export const totpControllerRevokeMutation = (
+  options?: Partial<Options<TotpControllerRevokeData>>,
+): UseMutationOptions<TotpControllerRevokeResponse, AxiosError<TotpControllerRevokeError>, Options<TotpControllerRevokeData>> => {
+  const mutationOptions: UseMutationOptions<TotpControllerRevokeResponse, AxiosError<TotpControllerRevokeError>, Options<TotpControllerRevokeData>> = {
+    mutationFn: async (fnOptions) => {
+      const { data } = await totpControllerRevoke({
+        ...options,
+        ...fnOptions,
+        throwOnError: true,
+      });
+      return data;
+    },
+  };
+  return mutationOptions;
+};
+
+/**
+ * Backup Code 재발급 — 기존 unused 폐기 후 신규 발급
+ */
+export const backupCodeControllerRegenerateMutation = (
+  options?: Partial<Options<BackupCodeControllerRegenerateData>>,
+): UseMutationOptions<BackupCodeControllerRegenerateResponse, AxiosError<BackupCodeControllerRegenerateError>, Options<BackupCodeControllerRegenerateData>> => {
+  const mutationOptions: UseMutationOptions<
+    BackupCodeControllerRegenerateResponse,
+    AxiosError<BackupCodeControllerRegenerateError>,
+    Options<BackupCodeControllerRegenerateData>
+  > = {
+    mutationFn: async (fnOptions) => {
+      const { data } = await backupCodeControllerRegenerate({
+        ...options,
+        ...fnOptions,
+        throwOnError: true,
+      });
+      return data;
+    },
+  };
+  return mutationOptions;
+};
+
 /**
  * 초대장 생성
  */
@@ -596,6 +627,105 @@ export const invitationControllerValidateOptions = (options: Options<InvitationC
     },
     queryKey: invitationControllerValidateQueryKey(options),
   });
+
+/**
+ * 회원가입 — 초대 토큰 소비 후 RT 쿠키 설정
+ */
+export const loginControllerRegisterMutation = (
+  options?: Partial<Options<LoginControllerRegisterData>>,
+): UseMutationOptions<LoginControllerRegisterResponse, AxiosError<LoginControllerRegisterError>, Options<LoginControllerRegisterData>> => {
+  const mutationOptions: UseMutationOptions<LoginControllerRegisterResponse, AxiosError<LoginControllerRegisterError>, Options<LoginControllerRegisterData>> = {
+    mutationFn: async (fnOptions) => {
+      const { data } = await loginControllerRegister({
+        ...options,
+        ...fnOptions,
+        throwOnError: true,
+      });
+      return data;
+    },
+  };
+  return mutationOptions;
+};
+
+/**
+ * 로그인 — 2FA 필요 시 챌린지, 아니면 AUTHENTICATED
+ */
+export const loginControllerLoginMutation = (
+  options?: Partial<Options<LoginControllerLoginData>>,
+): UseMutationOptions<LoginControllerLoginResponse, AxiosError<LoginControllerLoginError>, Options<LoginControllerLoginData>> => {
+  const mutationOptions: UseMutationOptions<LoginControllerLoginResponse, AxiosError<LoginControllerLoginError>, Options<LoginControllerLoginData>> = {
+    mutationFn: async (fnOptions) => {
+      const { data } = await loginControllerLogin({
+        ...options,
+        ...fnOptions,
+        throwOnError: true,
+      });
+      return data;
+    },
+  };
+  return mutationOptions;
+};
+
+/**
+ * 백업 코드 로그인 — 2FA 우회
+ */
+export const loginControllerLoginWithBackupMutation = (
+  options?: Partial<Options<LoginControllerLoginWithBackupData>>,
+): UseMutationOptions<LoginControllerLoginWithBackupResponse, AxiosError<LoginControllerLoginWithBackupError>, Options<LoginControllerLoginWithBackupData>> => {
+  const mutationOptions: UseMutationOptions<
+    LoginControllerLoginWithBackupResponse,
+    AxiosError<LoginControllerLoginWithBackupError>,
+    Options<LoginControllerLoginWithBackupData>
+  > = {
+    mutationFn: async (fnOptions) => {
+      const { data } = await loginControllerLoginWithBackup({
+        ...options,
+        ...fnOptions,
+        throwOnError: true,
+      });
+      return data;
+    },
+  };
+  return mutationOptions;
+};
+
+/**
+ * Refresh Token 회전
+ */
+export const loginControllerRefreshMutation = (
+  options?: Partial<Options<LoginControllerRefreshData>>,
+): UseMutationOptions<LoginControllerRefreshResponse, AxiosError<LoginControllerRefreshError>, Options<LoginControllerRefreshData>> => {
+  const mutationOptions: UseMutationOptions<LoginControllerRefreshResponse, AxiosError<LoginControllerRefreshError>, Options<LoginControllerRefreshData>> = {
+    mutationFn: async (fnOptions) => {
+      const { data } = await loginControllerRefresh({
+        ...options,
+        ...fnOptions,
+        throwOnError: true,
+      });
+      return data;
+    },
+  };
+  return mutationOptions;
+};
+
+/**
+ * 로그아웃 — RT 폐기 및 쿠키 삭제
+ */
+export const loginControllerLogoutMutation = (
+  options?: Partial<Options<LoginControllerLogoutData>>,
+): UseMutationOptions<LoginControllerLogoutResponse, AxiosError<DefaultError>, Options<LoginControllerLogoutData>> => {
+  const mutationOptions: UseMutationOptions<LoginControllerLogoutResponse, AxiosError<DefaultError>, Options<LoginControllerLogoutData>> = {
+    mutationFn: async (fnOptions) => {
+      const { data } = await loginControllerLogout({
+        ...options,
+        ...fnOptions,
+        throwOnError: true,
+      });
+      return data;
+    },
+  };
+  return mutationOptions;
+};
 
 export const folderControllerGetRootQueryKey = (options?: Options<FolderControllerGetRootData>) => createQueryKey('folderControllerGetRoot', options);
 
