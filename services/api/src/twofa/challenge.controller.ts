@@ -1,4 +1,4 @@
-import { Body, Controller, Get, HttpCode, HttpStatus, Param, ParseUUIDPipe, Post, Res } from '@nestjs/common';
+import { Body, Controller, Get, Headers, HttpCode, HttpStatus, Param, ParseUUIDPipe, Post, Res } from '@nestjs/common';
 import { ApiExtraModels, ApiOperation, ApiResponse, ApiTags, getSchemaPath, refs } from '@nestjs/swagger';
 import { ApiError, type AuthUser, CurrentUser, Public } from '@terab/common';
 import type { Response } from 'express';
@@ -89,9 +89,10 @@ export class ChallengeController {
   async complete(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() body: CompleteChallengeBodyDto,
+    @Headers('user-agent') userAgent: string | undefined,
     @Res({ passthrough: true }) res: Response,
   ): Promise<LoginResponse> {
-    const userId = await this.twoFaService.completeChallenge(id, body);
-    return this.twoFaService.issueAuthenticatedResponse(userId, res);
+    const { userId, rawTrustToken } = await this.twoFaService.completeChallenge(id, body, userAgent);
+    return this.twoFaService.issueAuthenticatedResponse(userId, res, rawTrustToken);
   }
 }

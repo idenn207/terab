@@ -5,10 +5,16 @@ import { LogReplay } from '@terab/logger';
 import type { Response } from 'express';
 import { AuthService } from '../auth/auth.service';
 import { LoginResponse } from '../auth/dto';
+import { TrustedDeviceService } from '../trusted-device/trusted-device.service';
 import { type ChallengeStatusResponse, ResendChallengeResponseDto } from './dto';
 import { TwoFaStrategyType } from './strategies/twofa-strategy.interface';
 import { TwoFaStrategyRegistry } from './strategies/twofa-strategy.registry';
 import { TwoFaRepository } from './twofa.repository';
+
+export interface CompleteChallengeResult {
+  userId: string;
+  rawTrustToken?: string;
+}
 
 @Injectable()
 export class TwoFaService extends ServiceCore {
@@ -17,6 +23,7 @@ export class TwoFaService extends ServiceCore {
     txContext: TransactionContext,
     private readonly twoFaRepository: TwoFaRepository,
     private readonly authService: AuthService,
+    private readonly trustedDeviceService: TrustedDeviceService,
     private readonly registry: TwoFaStrategyRegistry,
   ) {
     super(database, txContext);
@@ -80,7 +87,25 @@ export class TwoFaService extends ServiceCore {
   }
 
   @LogReplay()
-  async completeChallenge(challengeId: string, body: { type?: 'PUSH' | 'TOTP'; code?: string }): Promise<string> {
+  async completeChallenge(
+    challengeId: string,
+    body: { type?: 'PUSH' | 'TOTP'; code?: string; trustDevice?: boolean },
+    userAgent: string | undefined,
+  ): Promise<CompleteChallengeResult> {
+    return this.runInTx(async () => {
+      const userId = await this.verifyAndClaim(challengeId, body);
+      if (!body.trustDevice) {
+        return { userId };
+      }
+      const rawTrustToken = await this.trustedDeviceService.register(userId, userAgent);
+      return { userId, rawTrustToken };
+    });
+  }
+
+  private async verifyAndClaim(
+    challengeId: string,
+    body: { type?: 'PUSH' | 'TOTP'; code?: string },
+  ): Promise<string> {
     const type: TwoFaStrategyType = body.type ?? 'PUSH';
 
     if (type === 'PUSH') {
@@ -107,8 +132,16 @@ export class TwoFaService extends ServiceCore {
     await strategy.revoke(userId, id);
   }
 
-  async issueAuthenticatedResponse(userId: string, res: Response): Promise<LoginResponse> {
-    return await this.authService.issueAfterTwoFa(userId, res);
+  async issueAuthenticatedResponse(
+    userId: string,
+    res: Response,
+    rawTrustToken?: string,
+  ): Promise<LoginResponse> {
+    const response = await this.authService.issueAfterTwoFa(userId, res);
+    if (rawTrustToken) {
+      this.authService.setTrustCookie(res, rawTrustToken, this.trustedDeviceService.trustDurationMs);
+    }
+    return response;
   }
 
   private async countRemainingNonPushStrategiesExcluding(
