@@ -4,15 +4,17 @@ import { useNavigate } from 'react-router-dom';
 import { useCompleteTwoFaMutation, useResendChallengeMutation } from '../api/mutation';
 import { useChallengeStatusQuery } from '../api/query';
 
-export function useTwoFactorPolling(initialChallengeId: string, onAuthenticated?: () => void) {
+export function useTwoFactorPolling(initialChallengeId: string, trustDevice: boolean) {
   const [challengeId, setChallengeId] = useState(initialChallengeId);
   const [pollEnabled, setPollEnabled] = useState(true);
   const setAuth = useUserStore((s) => s.setAuth);
   const navigate = useNavigate();
   const resendMutation = useResendChallengeMutation();
   const completeMutation = useCompleteTwoFaMutation();
-  const onAuthenticatedRef = useRef(onAuthenticated);
-  onAuthenticatedRef.current = onAuthenticated;
+  // APPROVED → complete 호출은 단 1회. strict mode / 폴링 race 로 인한 중복 mutation 차단
+  const completedRef = useRef(false);
+  const trustDeviceRef = useRef(trustDevice);
+  trustDeviceRef.current = trustDevice;
 
   const { data } = useChallengeStatusQuery(challengeId, pollEnabled);
 
@@ -26,13 +28,14 @@ export function useTwoFactorPolling(initialChallengeId: string, onAuthenticated?
     }
 
     if (data.status === 'APPROVED') {
+      if (completedRef.current) return;
+      completedRef.current = true;
       setPollEnabled(false);
       completeMutation
-        .mutateAsync({ path: { id: challengeId } })
+        .mutateAsync({ path: { id: challengeId }, body: { trustDevice: trustDeviceRef.current } })
         .then((completeRes) => {
           if (completeRes.status === 'AUTHENTICATED') {
             setAuth(completeRes.accessToken, completeRes.user);
-            onAuthenticatedRef.current?.();
             navigate('/drive', { replace: true });
             return;
           }
@@ -54,6 +57,7 @@ export function useTwoFactorPolling(initialChallengeId: string, onAuthenticated?
           if (response) {
             setChallengeId(response.challengeId);
             setPollEnabled(true);
+            completedRef.current = false;
           }
         },
       },
