@@ -159,8 +159,11 @@ export class LoginService extends ServiceCore {
   // ─── Logout ──────────────────────────────────────────────────────────
 
   @LogReplay()
-  async logout(rawRt: string | undefined, res: Response): Promise<void> {
-    await this.authService.revokeRefreshToken(rawRt, res);
+  async logout(rawRt: string | undefined, pushToken: string | undefined, res: Response): Promise<void> {
+    const { userId } = await this.authService.revokeRefreshToken(rawRt, res);
+    if (userId && pushToken) {
+      await this.deviceService.deactivateByPushToken(userId, pushToken);
+    }
   }
 
   // // ─── Backup Code 재발급 ──────────────────────────────────────────────

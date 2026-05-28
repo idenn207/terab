@@ -39,4 +39,8 @@ export class DeviceService extends ServiceCore {
     const rows = await this.deviceRepository.findByUserId(userId);
     return rows.map((r) => r.pushToken);
   }
+
+  async deactivateByPushToken(userId: string, pushToken: string): Promise<void> {
+    await this.deviceRepository.deleteByUserIdAndPushToken(userId, pushToken);
+  }
 }

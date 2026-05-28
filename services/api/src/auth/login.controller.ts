@@ -26,6 +26,7 @@ import {
   BackupLoginBodyDto,
   LoginBodyDto,
   LoginResponse,
+  LogoutBodyDto,
   RegisterBodyDto,
   RegisterResponseDto,
   TwoFaRequiredResponseDto,
@@ -118,10 +119,14 @@ export class LoginController {
   @Public()
   @Post('logout')
   @HttpCode(HttpStatus.NO_CONTENT)
-  @ApiOperation({ summary: '로그아웃 — RT 폐기 및 쿠키 삭제' })
+  @ApiOperation({ summary: '로그아웃 — RT 폐기 및 쿠키 삭제 (모바일은 pushToken 첨부 시 해당 device deactivate)' })
   @ApiResponse({ status: HttpStatus.NO_CONTENT })
-  async logout(@Req() req: Request, @Res({ passthrough: true }) res: Response): Promise<void> {
+  async logout(
+    @Req() req: Request,
+    @Body() body: LogoutBodyDto,
+    @Res({ passthrough: true }) res: Response,
+  ): Promise<void> {
     const rawRt = req.cookies?.[this.REFRESH_TOKEN_COOKIE] as string | undefined;
-    await this.loginService.logout(rawRt, res);
+    await this.loginService.logout(rawRt, body.pushToken, res);
   }
 }

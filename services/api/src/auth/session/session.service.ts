@@ -47,12 +47,14 @@ export class SessionService extends ServiceCore {
     });
   }
 
-  async revokeByRawToken(rawRefreshToken: string): Promise<void> {
+  async revokeByRawToken(rawRefreshToken: string): Promise<{ userId?: string }> {
     const now = new Date();
     const tokenHash = this.tokenService.hashToken(rawRefreshToken);
     const matched = await this.sessionRepository.findActiveByHash(tokenHash, now);
     if (matched) {
       await this.sessionRepository.revokeById(matched.id, now);
+      return { userId: matched.userId };
     }
+    return {};
   }
 }
