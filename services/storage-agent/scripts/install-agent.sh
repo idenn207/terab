@@ -38,25 +38,27 @@ SSH=(ssh "${NAS_USER}@${NAS_HOST}")
 log "target: ${NAS_USER}@${NAS_HOST}"
 
 # step 2: sudo NOPASSWD 사전 검증 — password prompt 에서 hang 방지
-"${SSH[@]}" 'sudo -n true' >/dev/null 2>&1 \
+# command-scoped NOPASSWD 환경 호환: 실제로 호출할 systemctl 로 검증
+"${SSH[@]}" 'sudo -n /usr/bin/systemctl --version' >/dev/null 2>&1 \
   || fail "NAS 의 sudo NOPASSWD 미설정 — README §'사전 설정' 참조"
 
 # step 3: binary + unit 전송 (atomic move 위해 /tmp 경유)
 log "binary 전송 → /tmp/terab-agent"
-scp -q "${AGENT_BIN}" "${NAS_USER}@${NAS_HOST}:/tmp/terab-agent"
+scp -q -O "${AGENT_BIN}" "${NAS_USER}@${NAS_HOST}:/tmp/terab-agent"
 
 log "unit 전송 → /tmp/${UNIT_NAME}"
-scp -q "${UNIT_FILE}" "${NAS_USER}@${NAS_HOST}:/tmp/${UNIT_NAME}"
+scp -q -O "${UNIT_FILE}" "${NAS_USER}@${NAS_HOST}:/tmp/${UNIT_NAME}"
 
-# step 4: install + daemon-reload + enable --now (idempotent)
-log "install + systemctl enable --now"
+# step 4: install + daemon-reload + enable + restart (idempotent)
+# DSM 7 의 systemd 219 가 --now flag 미지원 — enable 와 restart 를 분리
+log "install + systemctl enable + restart"
 "${SSH[@]}" "
   set -e
   sudo install -m 0755 -o root -g root /tmp/terab-agent ${REMOTE_BIN}
   sudo install -m 0644 -o root -g root /tmp/${UNIT_NAME} ${REMOTE_UNIT}
   sudo rm -f /tmp/terab-agent /tmp/${UNIT_NAME}
   sudo systemctl daemon-reload
-  sudo systemctl enable --now ${UNIT_NAME}
+  sudo systemctl enable ${UNIT_NAME}
   sudo systemctl restart ${UNIT_NAME}
 "
 

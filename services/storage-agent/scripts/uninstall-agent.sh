@@ -42,10 +42,12 @@ else
   log "  NAS 에 jq 미설치 — dummy target 회수 skip (수동 확인 권장)"
 fi
 
-# step 2: systemd disable + 파일 정리 (idempotent — unit not-found 시에도 exit 0)
-log "systemctl disable --now + 파일 정리"
+# step 2: systemd stop + disable + 파일 정리 (idempotent — unit not-found 시에도 exit 0)
+# DSM 7 의 systemd 219 가 --now flag 미지원 — stop 과 disable 을 분리
+log "systemctl stop + disable + 파일 정리"
 "${SSH[@]}" "
-  sudo systemctl disable --now ${UNIT_NAME} 2>/dev/null || true
+  sudo systemctl stop ${UNIT_NAME} 2>/dev/null || true
+  sudo systemctl disable ${UNIT_NAME} 2>/dev/null || true
   sudo rm -f ${REMOTE_UNIT} ${REMOTE_BIN}
   sudo systemctl daemon-reload
 "

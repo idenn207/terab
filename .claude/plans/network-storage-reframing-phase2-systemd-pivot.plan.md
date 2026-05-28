@@ -1,8 +1,9 @@
 ---
 name: network-storage-reframing-phase2-systemd-pivot
 description: Phase 2 systemd Pivot — storage-agent 의 NAS 배포 architecture 를 .spk → systemd-only 로 전환 (ADR-0005 의 구현 plan)
-status: in-progress
+status: done
 created: 2026-05-28
+completed: 2026-05-29
 ---
 
 # Plan: Phase 2 systemd Pivot — storage-agent 배포 architecture 전환
@@ -47,7 +48,7 @@ so that **8 세션 .spk 시도의 잔존 blocker(DSM first-start abnormal) 와 C
 
 | Topic | Source | Key Takeaway |
 |---|---|---|
-| systemd `RuntimeDirectory` | https://www.freedesktop.org/software/systemd/man/systemd.exec.html#RuntimeDirectory= | unit 종료 시 `/run/<dir>/` 자동 정리. root:root 0755 기본 — agent 가 root 실행이라 owner 일치 |
+| systemd `RuntimeDirectory` | https://www.freedesktop.org/software/systemd/man/systemd.exec.html#RuntimeDirectory= | unit 종료 시 `/run/<dir>/` 자동 정리. root:root 0755 기본 — agent 가 root 실행이라 owner 일치. systemd 211+ 지원 (DSM 7 의 219 에서 round-trip 통과 — Task 6) |
 | systemd `Restart=` policy | https://www.freedesktop.org/software/systemd/man/systemd.service.html#Restart= | `on-failure` + `RestartSec=5` 가 sidecar 표준. `always` 는 SIGTERM(정상 종료) 시에도 restart → uninstall 시 race |
 | `systemctl is-active` exit code | https://www.freedesktop.org/software/systemd/man/systemctl.html#is-active%20PATTERN%E2%80%A6 | active=0, inactive=3 — install script 가 health check exit code 로 판단 |
 | Synology DSM 7 의 sudo NOPASSWD | DSM 7 의 admin 계정은 기본 sudo 사용. `sudo -S` 로 password 주입 가능 (memory `project_auth_2fa_fallback_pending` 시점에 검증됨) | install script 가 NAS 의 root password 를 require — `NAS_PASS` env 또는 `~/.ssh/config` 의 `RemoteCommand` |
@@ -242,16 +243,16 @@ file services/storage-agent/README.md             # ASCII (LF)
 
 ## Acceptance Criteria
 
-- [ ] `services/storage-agent/systemd/terab-agent.service` 생성 + `systemd-analyze verify` 통과
-- [ ] `services/storage-agent/scripts/install-agent.sh` + `uninstall-agent.sh` 생성 + `bash -n` 통과 + idempotent
-- [ ] `services/storage-agent/Makefile` 의 `install-agent` / `uninstall-agent` target 작동
-- [ ] 루트 `Makefile` 의 `install-agent` proxy target 작동
-- [ ] `services/storage-agent/README.md` §"Deployment — systemd" 섹션 + spk/ 보존 의의 명시
-- [ ] `api.env.example` 의 `STORAGE_AGENT_SOCKET_PATH` 갱신
-- [ ] NestJS storage-agent 모듈 단위 테스트 통과 (회귀 0)
-- [ ] 실 NAS round-trip 통과 — install / healthz / 재부팅 / 자동 기동 / uninstall
+- [x] `services/storage-agent/systemd/terab-agent.service` 생성 + `systemd-analyze verify` 통과 (DSM 7 systemd 219 에서 load + active 확인 — `systemd-analyze verify` CLI 자체는 219 에 부재이나 unit 실 적재가 더 강한 검증)
+- [x] `services/storage-agent/scripts/install-agent.sh` + `uninstall-agent.sh` 생성 + `bash -n` 통과 + idempotent
+- [x] `services/storage-agent/Makefile` 의 `install-agent` / `uninstall-agent` target 작동
+- [x] 루트 `Makefile` 의 `install-agent` proxy target 작동
+- [x] `services/storage-agent/README.md` §"Deployment — systemd" 섹션 + spk/ 보존 의의 명시
+- [x] `api.env.example` 의 `STORAGE_AGENT_SOCKET_PATH` 갱신
+- [x] NestJS storage-agent 모듈 단위 테스트 통과 (회귀 0)
+- [x] 실 NAS round-trip 통과 — install / healthz / 재부팅 / 자동 기동 / uninstall (2026-05-29, [Phase 5 report](../PRPs/reports/network-storage-reframing-phase2-systemd-pivot-task6-report.md))
 - [ ] ADR-0005 frontmatter `status` `proposed` → `accepted` + PR 번호 + 머지일 (PR 머지 시점)
-- [ ] 본 plan frontmatter `status` `in-progress` → `done` (Task 1-6 완료 시점)
+- [x] 본 plan frontmatter `status` `in-progress` → `done` (Task 1-6 완료 시점)
 
 ## Completion Checklist
 
