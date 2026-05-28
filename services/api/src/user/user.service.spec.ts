@@ -1,6 +1,7 @@
 import { Test } from '@nestjs/testing';
 import { DatabaseService, TransactionContext } from '@terab/db';
 import { mockDatabaseService, mockTransactionContext } from '@terab/test';
+import { RoleService } from '../auth/role/role.service';
 import { UserRepository } from './user.repository';
 import { UserService } from './user.service';
 
@@ -8,6 +9,10 @@ const mockUserRepository = {
   findById: jest.fn(),
   findByUsername: jest.fn(),
   insert: jest.fn(),
+};
+
+const mockRoleService = {
+  getPermissionsByUserId: jest.fn(),
 };
 
 describe('UserService', () => {
@@ -20,6 +25,7 @@ describe('UserService', () => {
         { provide: DatabaseService, useValue: mockDatabaseService },
         { provide: TransactionContext, useValue: mockTransactionContext },
         { provide: UserRepository, useValue: mockUserRepository },
+        { provide: RoleService, useValue: mockRoleService },
       ],
     }).compile();
 
@@ -44,7 +50,7 @@ describe('UserService', () => {
       await expect(service.getCurrentUser('ghost')).rejects.toMatchObject({ code: 'INVALID_CREDENTIALS' });
     });
 
-    it('UserDto 형태로 반환한다', async () => {
+    it('UserDto 형태로 반환한다 — permissions 포함', async () => {
       mockUserRepository.findById.mockResolvedValue({
         id: 'u1',
         username: 'a',
@@ -52,8 +58,10 @@ describe('UserService', () => {
         password: 'h',
         active: true,
       });
+      mockRoleService.getPermissionsByUserId.mockResolvedValue(['file:read', 'user:manage']);
       const result = await service.getCurrentUser('u1');
-      expect(result).toEqual({ id: 'u1', username: 'a', nickname: 'A' });
+      expect(mockRoleService.getPermissionsByUserId).toHaveBeenCalledWith('u1');
+      expect(result).toEqual({ id: 'u1', username: 'a', nickname: 'A', permissions: ['file:read', 'user:manage'] });
     });
   });
 });

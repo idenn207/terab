@@ -32,6 +32,7 @@ const mockAuthService = {
   issueTokenPair: jest.fn(),
   rotateRefreshToken: jest.fn(),
   revokeRefreshToken: jest.fn(),
+  buildUserResponse: jest.fn(),
 };
 
 const mockDeviceService = {
@@ -85,6 +86,16 @@ describe('LoginService', () => {
     service = module.get(LoginService);
     jest.clearAllMocks();
     setupMockDbTransactionChain();
+    // 모든 login flow 가 buildUserResponse 를 호출해 UserDto + permissions 를 합성하므로
+    // 기본 mock 응답을 한 곳에서 제공한다. 개별 케이스에서 mockResolvedValueOnce 로 override 가능.
+    mockAuthService.buildUserResponse.mockImplementation(
+      async (user: { id: string; username: string; nickname: string }) => ({
+        id: user.id,
+        username: user.username,
+        nickname: user.nickname,
+        permissions: ['file:read'],
+      }),
+    );
   });
 
   describe('register', () => {
@@ -144,7 +155,7 @@ describe('LoginService', () => {
 
       expect(result).toEqual({
         accessToken: 'JWT',
-        user: { id: 'u1', username: 'alice', nickname: 'A' },
+        user: { id: 'u1', username: 'alice', nickname: 'A', permissions: ['file:read'] },
         backupCodes: ['code-1', 'code-2'],
       });
     });
@@ -173,7 +184,7 @@ describe('LoginService', () => {
       expect(result).toEqual({
         status: 'AUTHENTICATED',
         accessToken: 'JWT',
-        user: { id: 'u1', username: 'a', nickname: 'A' },
+        user: { id: 'u1', username: 'a', nickname: 'A', permissions: ['file:read'] },
       });
     });
 
@@ -245,7 +256,7 @@ describe('LoginService', () => {
       expect(result).toEqual({
         status: 'AUTHENTICATED',
         accessToken: 'JWT',
-        user: { id: 'u1', username: 'a', nickname: 'A' },
+        user: { id: 'u1', username: 'a', nickname: 'A', permissions: ['file:read'] },
       });
     });
   });
@@ -278,7 +289,7 @@ describe('LoginService', () => {
       expect(result).toEqual({
         status: 'AUTHENTICATED',
         accessToken: 'JWT',
-        user: { id: 'u1', username: 'a', nickname: 'A' },
+        user: { id: 'u1', username: 'a', nickname: 'A', permissions: ['file:read'] },
       });
     });
   });

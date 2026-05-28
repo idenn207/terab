@@ -66,7 +66,7 @@ terab 운영(사용자 초대/가입/관리, 스토리지 모니터링, 감사)�
 | # | Milestone | Outcome | Status | Plan |
 |---|---|---|---|---|
 | 1 | services/admin 부트스트랩 + admin.drive.skypark207.com 배포 | NAS Swarm stack 에 admin 컨테이너 정상 기동, 빈 페이지라도 도메인으로 접근 가능 + 헬스체크 통과 | impl-complete · deploy-pending | [.claude/plans/completed/admin-service-bootstrap.plan.md](../plans/completed/admin-service-bootstrap.plan.md) · [report](../PRPs/reports/admin-service-bootstrap-report.md) |
-| 2 | A-01 관리자 로그인 동작 | 본인이 ID/PW + Push 2FA + backup code 로 로그인 → ADMIN role claim 검증된 토큰으로 admin 진입 | pending | — |
+| 2 | A-01 관리자 로그인 동작 | 본인이 ID/PW + Push 2FA + backup code 로 로그인 → ADMIN role claim 검증된 토큰으로 admin 진입 | impl-complete · deploy-pending | [.claude/plans/completed/admin-login-twofa.plan.md](../plans/completed/admin-login-twofa.plan.md) · [report](../PRPs/reports/admin-login-twofa-report.md) |
 | 3 | A-05 사용자 초대 + A-03 사용자 목록 동작 | 본인이 브라우저에서 새 사용자 초대 → 가입 → 사용자 목록에 표기 + 본인 로그인 가능 | pending | — |
 
 ## Open Questions
