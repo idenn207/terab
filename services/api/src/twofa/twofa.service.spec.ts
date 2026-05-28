@@ -300,9 +300,9 @@ describe('TwoFaService', () => {
       });
       mockTrustedDeviceService.register.mockRejectedValue(new Error('db-down'));
 
-      await expect(
-        service.completeChallenge('c', { type: 'PUSH', trustDevice: true }, 'UA'),
-      ).rejects.toThrow('db-down');
+      await expect(service.completeChallenge('c', { type: 'PUSH', trustDevice: true }, 'UA')).rejects.toThrow(
+        'db-down',
+      );
     });
   });
 

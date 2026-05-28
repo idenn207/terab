@@ -18,7 +18,12 @@ import { TwoFaRepository } from './twofa.repository';
 import { TwoFaService } from './twofa.service';
 
 @Module({
-  imports: [BullModule.registerQueue({ name: PUSH_CHALLENGE_QUEUE }), AuthModule, BackupCodeModule, TrustedDeviceModule],
+  imports: [
+    BullModule.registerQueue({ name: PUSH_CHALLENGE_QUEUE }),
+    AuthModule,
+    BackupCodeModule,
+    TrustedDeviceModule,
+  ],
   controllers: [ChallengeController, TotpController],
   providers: [
     PushChallengePublisher,
