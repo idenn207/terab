@@ -10,6 +10,7 @@ const mockDeviceRepository = {
   findByUserId: jest.fn(),
   findByIdAndUserId: jest.fn(),
   deleteById: jest.fn(),
+  deleteByUserIdAndPushToken: jest.fn(),
 };
 
 describe('DeviceService', () => {
@@ -41,6 +42,14 @@ describe('DeviceService', () => {
       await service.remove('device-id', 'user-id');
 
       expect(mockDeviceRepository.deleteById).toHaveBeenCalledWith('device-id');
+    });
+  });
+
+  describe('deactivateByPushToken', () => {
+    it('userId 와 pushToken 이 모두 일치하는 device 만 hard delete한다', async () => {
+      await service.deactivateByPushToken('user-id', 'token-abc');
+
+      expect(mockDeviceRepository.deleteByUserIdAndPushToken).toHaveBeenCalledWith('user-id', 'token-abc');
     });
   });
 });

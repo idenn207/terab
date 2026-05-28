@@ -66,11 +66,14 @@ export class AuthService extends ServiceCore {
     return { userId: rotated.userId };
   }
 
-  async revokeRefreshToken(rawRt: string | undefined, res: Response): Promise<void> {
+  async revokeRefreshToken(rawRt: string | undefined, res: Response): Promise<{ userId?: string }> {
+    let userId: string | undefined;
     if (rawRt) {
-      await this.sessionService.revokeByRawToken(rawRt);
+      const result = await this.sessionService.revokeByRawToken(rawRt);
+      userId = result.userId;
     }
     this.clearRefreshCookie(res);
+    return { userId };
   }
 
   // ─── 2FA ──────────────────────────────────────────────────────────

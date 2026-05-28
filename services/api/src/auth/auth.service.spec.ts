@@ -247,14 +247,25 @@ describe('AuthService', () => {
       expect(res.clearCookie).toHaveBeenCalledWith('refreshToken', expect.any(Object));
     });
 
-    it('rawRt가 있으면 session revoke + 쿠키 clear', async () => {
+    it('rawRt가 있고 matched session이 있으면 session revoke + 쿠키 clear + userId 반환', async () => {
       const res = { clearCookie: jest.fn() } as any;
-      mockSessionService.revokeByRawToken.mockResolvedValue(undefined);
+      mockSessionService.revokeByRawToken.mockResolvedValue({ userId: 'u1' });
 
-      await service.revokeRefreshToken('rt', res);
+      const result = await service.revokeRefreshToken('rt', res);
 
       expect(mockSessionService.revokeByRawToken).toHaveBeenCalledWith('rt');
       expect(res.clearCookie).toHaveBeenCalledWith('refreshToken', expect.any(Object));
+      expect(result).toEqual({ userId: 'u1' });
+    });
+
+    it('rawRt가 있어도 matched session이 없으면 userId 없이 반환 (쿠키는 여전히 clear)', async () => {
+      const res = { clearCookie: jest.fn() } as any;
+      mockSessionService.revokeByRawToken.mockResolvedValue({});
+
+      const result = await service.revokeRefreshToken('rt', res);
+
+      expect(res.clearCookie).toHaveBeenCalledWith('refreshToken', expect.any(Object));
+      expect(result).toEqual({ userId: undefined });
     });
   });
 

@@ -31,4 +31,8 @@ export class DeviceRepository extends RepositoryCore {
   async deleteById(id: string): Promise<void> {
     await this.conn.delete(devices).where(eq(devices.id, id));
   }
+
+  async deleteByUserIdAndPushToken(userId: string, pushToken: string): Promise<void> {
+    await this.conn.delete(devices).where(and(eq(devices.userId, userId), eq(devices.pushToken, pushToken)));
+  }
 }

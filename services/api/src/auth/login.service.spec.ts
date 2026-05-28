@@ -36,6 +36,7 @@ const mockAuthService = {
 
 const mockDeviceService = {
   findPushTokensByUserId: jest.fn(),
+  deactivateByPushToken: jest.fn(),
 };
 
 const mockTwoFaService = {
@@ -284,13 +285,32 @@ describe('LoginService', () => {
   });
 
   describe('logout', () => {
-    it('authService.revokeRefreshToken에 위임한다', async () => {
+    it('pushToken 미첨부 시 revokeRefreshToken만 호출하고 deactivate는 호출하지 않는다', async () => {
       const res = { clearCookie: jest.fn() } as any;
-      mockAuthService.revokeRefreshToken.mockResolvedValue(undefined);
+      mockAuthService.revokeRefreshToken.mockResolvedValue({ userId: 'u1' });
 
-      await service.logout('rt', res);
+      await service.logout('rt', undefined, res);
 
       expect(mockAuthService.revokeRefreshToken).toHaveBeenCalledWith('rt', res);
+      expect(mockDeviceService.deactivateByPushToken).not.toHaveBeenCalled();
+    });
+
+    it('pushToken 첨부 시 해당 device를 deactivate한다', async () => {
+      const res = { clearCookie: jest.fn() } as any;
+      mockAuthService.revokeRefreshToken.mockResolvedValue({ userId: 'u1' });
+
+      await service.logout('rt', 'token-abc', res);
+
+      expect(mockDeviceService.deactivateByPushToken).toHaveBeenCalledWith('u1', 'token-abc');
+    });
+
+    it('userId가 없으면 (이미 만료된 RT) pushToken이 있어도 deactivate를 호출하지 않는다', async () => {
+      const res = { clearCookie: jest.fn() } as any;
+      mockAuthService.revokeRefreshToken.mockResolvedValue({ userId: undefined });
+
+      await service.logout('rt', 'token-abc', res);
+
+      expect(mockDeviceService.deactivateByPushToken).not.toHaveBeenCalled();
     });
   });
 });
