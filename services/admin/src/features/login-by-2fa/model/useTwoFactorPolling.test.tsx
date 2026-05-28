@@ -34,11 +34,7 @@ describe('useTwoFactorPolling', () => {
   });
 
   it('APPROVED 이후 effect 가 재실행돼도 completeMutation 은 1회만 호출된다', async () => {
-    server.use(
-      http.get('/api/auth/2fa/challenge/:id/status', () =>
-        HttpResponse.json({ status: 'APPROVED' }),
-      ),
-    );
+    server.use(http.get('/api/auth/2fa/challenge/:id/status', () => HttpResponse.json({ status: 'APPROVED' })));
 
     let completeCalls = 0;
     server.use(
