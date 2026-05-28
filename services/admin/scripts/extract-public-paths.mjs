@@ -12,18 +12,33 @@ async function main() {
   }
   const openapi = await res.json();
 
+  // 한 path 안에 public method 와 auth-required method 가 공존하면 인터셉터의 path 단위 분기로는
+  // 안전하게 처리할 수 없다 (예: GET=public 목록 노출 + DELETE=admin-only 가 한 path 에 묶이면
+  // DELETE 요청도 Authorization 헤더가 빠진다). 빌드를 실패시켜 향후 함정을 차단한다.
+  const isPublicOp = (op) =>
+    Array.isArray(op.security) &&
+    op.security.length > 0 &&
+    op.security.every((s) => Object.keys(s).length === 0);
+
   const publicPaths = [];
+  const mixedSecurityPaths = [];
   for (const [path, methods] of Object.entries(openapi.paths ?? {})) {
-    for (const op of Object.values(methods)) {
-      if (
-        Array.isArray(op.security) &&
-        op.security.length > 0 &&
-        op.security.every((s) => Object.keys(s).length === 0)
-      ) {
-        publicPaths.push(path);
-        break;
-      }
+    const ops = Object.values(methods);
+    const publicCount = ops.filter(isPublicOp).length;
+    if (publicCount === 0) continue;
+    if (publicCount !== ops.length) {
+      mixedSecurityPaths.push(path);
+      continue;
     }
+    publicPaths.push(path);
+  }
+
+  if (mixedSecurityPaths.length > 0) {
+    console.error(
+      `Mixed security in OpenAPI paths — path 단위 분기로는 처리 불가:\n  ${mixedSecurityPaths.join('\n  ')}\n` +
+        `각 method 별 security 가 다른 path 가 생기면 extract-public-paths 를 method-aware 로 재설계해야 한다.`,
+    );
+    process.exit(1);
   }
 
   publicPaths.sort();
