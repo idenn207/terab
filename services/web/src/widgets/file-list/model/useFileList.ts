@@ -1,6 +1,10 @@
 import type { File as DomainFile } from '@/entities/file';
-import { useFolderRootQuery } from '@/entities/folder';
+import { useFolderChildrenQuery, useFolderRootQuery } from '@/entities/folder';
 import type { Folder } from '@/entities/folder';
+
+export interface UseFileListProps {
+  folderId: string | null;
+}
 
 export interface UseFileListResult {
   folders: Folder[];
@@ -10,16 +14,18 @@ export interface UseFileListResult {
   refetch: () => void;
 }
 
-export function useFileList(): UseFileListResult {
+export function useFileList({ folderId }: UseFileListProps): UseFileListResult {
   const root = useFolderRootQuery();
+  const children = useFolderChildrenQuery(folderId ?? undefined);
+  const active = folderId ? children : root;
 
   return {
-    folders: root.data?.folders ?? [],
-    files: root.data?.files ?? [],
-    isLoading: root.isLoading,
-    error: root.error ?? null,
+    folders: active.data?.folders ?? [],
+    files: active.data?.files ?? [],
+    isLoading: active.isLoading,
+    error: active.error ?? null,
     refetch: () => {
-      void root.refetch();
+      void active.refetch();
     },
   };
 }

@@ -2,7 +2,11 @@ import { Button } from '@/shared/ui';
 import { type ChangeEvent, useRef, useState } from 'react';
 import { useUploadFile } from '../model/useUploadFile';
 
-export function UploadButton() {
+interface UploadButtonProps {
+  folderId: string | null;
+}
+
+export function UploadButton({ folderId }: UploadButtonProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [progress, setProgress] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -14,7 +18,7 @@ export function UploadButton() {
     setError(null);
     setProgress(0);
     mutate(
-      { file, onProgress: setProgress },
+      { file, folderId: folderId ?? undefined, onProgress: setProgress },
       {
         onSuccess: () => {
           setProgress(null);

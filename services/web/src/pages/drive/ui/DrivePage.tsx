@@ -1,11 +1,14 @@
-import { FileList, FileToolbar } from '@/widgets';
+import { DriveBreadcrumb, FileList, FileToolbar, useBreadcrumbTrail } from '@/widgets';
 
 export function DrivePage() {
+  const { currentFolderId, openFolder } = useBreadcrumbTrail();
+
   return (
     <div className="px-4 py-10 sm:px-6 lg:px-8 lg:py-6">
       <section data-region="main" aria-label="드라이브 콘텐츠" className="flex flex-col gap-6">
-        <FileToolbar />
-        <FileList />
+        <DriveBreadcrumb />
+        <FileToolbar folderId={currentFolderId} />
+        <FileList folderId={currentFolderId} onFolderOpen={openFolder} />
       </section>
       <aside
         data-region="secondary"
