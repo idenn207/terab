@@ -102,10 +102,7 @@ export class TwoFaService extends ServiceCore {
     });
   }
 
-  private async verifyAndClaim(
-    challengeId: string,
-    body: { type?: 'PUSH' | 'TOTP'; code?: string },
-  ): Promise<string> {
+  private async verifyAndClaim(challengeId: string, body: { type?: 'PUSH' | 'TOTP'; code?: string }): Promise<string> {
     const type: TwoFaStrategyType = body.type ?? 'PUSH';
 
     if (type === 'PUSH') {
@@ -132,11 +129,7 @@ export class TwoFaService extends ServiceCore {
     await strategy.revoke(userId, id);
   }
 
-  async issueAuthenticatedResponse(
-    userId: string,
-    res: Response,
-    rawTrustToken?: string,
-  ): Promise<LoginResponse> {
+  async issueAuthenticatedResponse(userId: string, res: Response, rawTrustToken?: string): Promise<LoginResponse> {
     const response = await this.authService.issueAfterTwoFa(userId, res);
     if (rawTrustToken) {
       this.authService.setTrustCookie(res, rawTrustToken, this.trustedDeviceService.trustDurationMs);
