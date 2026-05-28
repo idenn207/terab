@@ -284,8 +284,19 @@ describe('AuthService', () => {
       expect(result).toEqual({
         status: 'AUTHENTICATED',
         accessToken: 'mock.access.token',
-        user: { id: 'u1', username: 'a', nickname: 'A' },
+        user: { id: 'u1', username: 'a', nickname: 'A', permissions: mockUser.permissions },
       });
+    });
+  });
+
+  describe('buildUserResponse', () => {
+    it('permissions 를 RoleService 에서 조회해 UserDto 를 합성한다', async () => {
+      mockRoleService.getPermissionsByUserId.mockResolvedValue(['file:read', 'user:manage']);
+
+      const result = await service.buildUserResponse({ id: 'u1', username: 'a', nickname: 'A' });
+
+      expect(mockRoleService.getPermissionsByUserId).toHaveBeenCalledWith('u1');
+      expect(result).toEqual({ id: 'u1', username: 'a', nickname: 'A', permissions: ['file:read', 'user:manage'] });
     });
   });
 });
