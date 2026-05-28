@@ -27,7 +27,8 @@ let failedQueue: Array<{
 const processQueue = (error: unknown, token: string | null = null) => {
   failedQueue.forEach((prom) => {
     if (error) prom.reject(error);
-    else prom.resolve(token!);
+    else if (token) prom.resolve(token);
+    else prom.reject(new Error('No token available in refresh response'));
   });
   failedQueue = [];
 };
@@ -36,6 +37,10 @@ axiosInstance.interceptors.response.use(
   (response) => response,
   async (error: unknown) => {
     if (!(error instanceof AxiosError)) {
+      throw error;
+    }
+    // 네트워크 레벨 실패는 error.config 가 undefined — 캐스트 시 런타임 crash 방어
+    if (!error.config) {
       throw error;
     }
     const originalRequest = error.config as InternalAxiosRequestConfig & { _retry?: boolean };
@@ -61,7 +66,7 @@ axiosInstance.interceptors.response.use(
     isRefreshing = true;
 
     try {
-      const { data } = await axios.post<{ accessToken: string; user: unknown }>('/api/auth/refresh', {}, { withCredentials: true });
+      const { data } = await axios.post<{ accessToken: string }>('/api/auth/refresh', {}, { withCredentials: true });
       useUserStore.getState().setAccessToken(data.accessToken);
       processQueue(null, data.accessToken);
       originalRequest.headers.Authorization = `Bearer ${data.accessToken}`;

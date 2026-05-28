@@ -1,4 +1,5 @@
 import { useUserStore, type User } from '@/entities';
+import { logger } from '@/shared/lib';
 import { useEffect, useState } from 'react';
 import { Navigate } from 'react-router-dom';
 import { axiosInstance } from '../api';
@@ -19,7 +20,11 @@ export function PrivateRoute({ children }: { children: React.ReactNode }) {
     axiosInstance
       .post<RefreshResponse>('/auth/refresh', {})
       .then(({ data }) => setAuth(data.accessToken, data.user))
-      .catch(() => {})
+      .catch((err: unknown) => {
+        // silent refresh: 비로그인 사용자의 새 탭/새로고침에서는 401 이 정상 흐름.
+        // 운영 디버깅(5xx, network) 단서를 남기되 사용자에게는 노출하지 않는다.
+        logger.warn({ err }, 'silent refresh attempt failed');
+      })
       .finally(() => setChecking(false));
   }, [accessToken, setAuth]);
 

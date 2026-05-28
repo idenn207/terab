@@ -1,8 +1,11 @@
 import { useUserStore } from '@/entities';
+import { axiosInstance } from '@/shared/api';
 import { makeRouterWrapper } from '@tests/wrappers';
-import { act, renderHook } from '@testing-library/react';
+import { act, renderHook, waitFor } from '@testing-library/react';
 import { server } from '@tests/mocks';
+import { AxiosError } from 'axios';
 import { http, HttpResponse } from 'msw';
+import { afterEach, describe, expect, it } from 'vitest';
 import { useLogin } from '../model/useLogin';
 
 describe('useLogin', () => {
@@ -60,5 +63,56 @@ describe('useLogin', () => {
 
     expect(result.current.apiError?.code).toBe('INVALID_CREDENTIALS');
     expect(useUserStore.getState().accessToken).toBeNull();
+  });
+
+  it('B8 — 502 Bad Gateway 응답 (HTML body) → mutation.isError + UNKNOWN fallback', async () => {
+    server.use(
+      http.post('/api/auth/login', () =>
+        new HttpResponse('<html><body>502 Bad Gateway</body></html>', {
+          status: 502,
+          headers: { 'Content-Type': 'text/html' },
+        }),
+      ),
+    );
+
+    const { result } = renderHook(() => useLogin(), { wrapper: makeRouterWrapper({ initialEntries: ['/login'] }) });
+    await act(() => result.current.login({ username: 'x', password: 'x' }));
+
+    expect(result.current.apiError?.code).toBe('UNKNOWN');
+    expect(useUserStore.getState().accessToken).toBeNull();
+  });
+
+  it('B8 — network error → mutation.isError + UNKNOWN fallback', async () => {
+    server.use(
+      http.post('/api/auth/login', () => HttpResponse.error()),
+    );
+
+    const { result } = renderHook(() => useLogin(), { wrapper: makeRouterWrapper({ initialEntries: ['/login'] }) });
+    await act(() => result.current.login({ username: 'x', password: 'x' }));
+
+    expect(result.current.apiError?.code).toBe('UNKNOWN');
+    expect(useUserStore.getState().accessToken).toBeNull();
+  });
+
+  it('B8 — timeout (ECONNABORTED AxiosError) → mutation.isError + UNKNOWN fallback', async () => {
+    // MSW interceptor 가 axios timeout 타이머를 가로채므로 defaults.timeout 만으로는 deterministic 하지 않다.
+    // adapter 를 임시 교체해 ECONNABORTED AxiosError 를 강제로 throw — 이는 axios 의 실제 timeout 경로와
+    // 동등한 error 형태 (config undefined → H3 가드 통과 → mutation reject).
+    const originalAdapter = axiosInstance.defaults.adapter;
+    axiosInstance.defaults.adapter = (async () => {
+      throw new AxiosError('timeout of 50ms exceeded', 'ECONNABORTED');
+    }) as never;
+
+    try {
+      const { result } = renderHook(() => useLogin(), { wrapper: makeRouterWrapper({ initialEntries: ['/login'] }) });
+      await act(() => result.current.login({ username: 'x', password: 'x' }));
+
+      await waitFor(() => {
+        expect(result.current.apiError?.code).toBe('UNKNOWN');
+      });
+      expect(useUserStore.getState().accessToken).toBeNull();
+    } finally {
+      axiosInstance.defaults.adapter = originalAdapter;
+    }
   });
 });
