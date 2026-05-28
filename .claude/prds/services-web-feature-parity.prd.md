@@ -169,24 +169,24 @@ so I can **클라우드 서비스 의존 없이 내 NAS만으로 모바일↔PC 
 ## Implementation Phases
 
 <!--
-  STATUS: pending | in-progress | complete
+  STATUS: pending | in-progress | done | admin-transferred
   PARALLEL: phases that can run concurrently (e.g., "with 3" or "-")
   DEPENDS: phases that must complete first (e.g., "1, 2" or "-")
   PRP: link to generated plan file once created
 -->
 
-| #   | Phase                            | Description                                                                                                                            | Status      | Parallel  | Depends | PRP Plan                                                                                      |
-| --- | -------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- | ----------- | --------- | ------- | --------------------------------------------------------------------------------------------- |
-| 1   | Design Spike                     | 디자인 방향 결정, 디자인 토큰 정리, 모바일/데스크톱 컴포넌트 구조 검토, UseCase 시나리오 N개 확정                                      | in-progress | -         | -       | [phase1-design-spike](../plans/services-web-feature-parity-phase1-design-spike.plan.md)       |
-| 2   | Domain Skeleton                  | `entities/file`, `entities/folder`, `entities/trash` 추가. drive 페이지 widgets 분해 (`widgets/drive-layout`, `widgets/drive-sidebar`) | pending     | -         | 1       | -                                                                                             |
-| 3   | MVP Must - Upload                | `features/file-upload` 모바일 카메라/갤러리, 진행률, Capacitor 호환성 검증                                                             | done        | with 4, 5 | 2       | [phase3-mvp-must-upload](../plans/services-web-feature-parity-phase3-mvp-must-upload.plan.md) |
-| 4   | MVP Must - List/Preview/Download | `features/file-preview`, `features/file-download`, `pages/drive` 목록 뷰                                                               | in-progress | with 3, 5 | 2       | [phase4-mvp-must-list-preview-download](../plans/services-web-feature-parity-phase4-mvp-must-list-preview-download.plan.md) |
-| 5   | MVP Must - Invitation            | `features/invitation-issue`, 발급 코드 표시 UI                                                                                         | pending     | with 3, 4 | 2       | -                                                                                             |
-| 6   | MVP Verification                 | MVP 시나리오 완주 검증 (모바일↔PC, Capacitor Android), UseCase E2E N개 작성                                                            | pending     | -         | 3, 4, 5 | -                                                                                             |
-| 7   | Should - Folder CRUD             | `features/folder-create/move/delete`, drive 페이지 트리/패스 네비게이션                                                                | pending     | with 8    | 6       | -                                                                                             |
-| 8   | Should - Trash                   | `features/trash-restore/purge`, 휴지통 페이지                                                                                          | pending     | with 7    | 6       | -                                                                                             |
-| 9   | Should - Search                  | `features/file-search` — API 범위 확인 후 결정                                                                                         | pending     | -         | 7, 8    | -                                                                                             |
-| 10  | Could - Polish                   | 공유 링크(API 확인 후), 디바이스 관리, 접근성/반응형 마무리                                                                            | pending     | -         | 9       | -                                                                                             |
+| # | Phase | Description | Status | Parallel | Depends | PRP Plan |
+| --- | --- | --- | --- | --- | --- | --- |
+| 1 | Design Spike | 디자인 방향 결정, 디자인 토큰 정리, 모바일/데스크톱 컴포넌트 구조 검토, UseCase 시나리오 N개 확정 | done | - | - | [phase1-design-spike](../plans/services-web-feature-parity-phase1-design-spike.plan.md) |
+| 2 | Domain Skeleton | `entities/file`, `entities/folder`, `entities/trash` 추가. drive 페이지 widgets 분해 (`widgets/drive-layout`, `widgets/drive-sidebar`) | done | - | 1 | - |
+| 3 | MVP Must - Upload | `features/file-upload` 모바일 카메라/갤러리, 진행률, Capacitor 호환성 검증 | done | with 4, 5 | 2 | [phase3-mvp-must-upload](../plans/services-web-feature-parity-phase3-mvp-must-upload.plan.md) |
+| 4 | MVP Must - List/Preview/Download | `features/file-preview`, `features/file-download`, `pages/drive` 목록 뷰 | done | with 3, 5 | 2 | [phase4-mvp-must-list-preview-download](../plans/services-web-feature-parity-phase4-mvp-must-list-preview-download.plan.md) |
+| 5 | MVP Must - Invitation | invitation 발급 + 코드 표시 UI — **services/admin 신설로 이관 (별도 진행)**. services/web 측에는 더 이상 슬라이스 없음 | admin-transferred | - | 2 | (services/admin PRD 참조 — 별도 신설) |
+| 6 | MVP Verification | MVP 시나리오 완주 검증 (모바일↔PC, Capacitor Android), UseCase E2E N개 작성. 5는 services/admin 완성 후 합류 | pending | - | 3, 4, (5: admin 완성) | - |
+| 7 | Should - Folder CRUD | `features/folder-create/-rename/-move/-delete`, drive 페이지 breadcrumb + URL state | done | with 8 | 2 | [phase7-should-folder-crud](../plans/services-web-feature-parity-phase7-should-folder-crud.plan.md) + [phase7-fixup](../plans/services-web-feature-parity-phase7-fixup.plan.md) |
+| 8 | Should - Trash | `features/trash-restore/purge`, 휴지통 페이지 | pending | with 7 | 2 | - |
+| 9 | Should - Search | `features/file-search` — API 범위 확인 후 결정 | pending | - | 7, 8 | - |
+| 10 | Could - Polish | 공유 링크(API 확인 후), 디바이스 관리, 접근성/반응형 마무리 | pending | - | 9 | - |
 
 ### Phase Details
 
@@ -215,23 +215,29 @@ so I can **클라우드 서비스 의존 없이 내 NAS만으로 모바일↔PC 
 - **Success signal**: 업로드 직후 목록 갱신, 썸네일 클릭 시 미리보기, 다운로드 버튼으로 파일 저장
 - **후속 결함**: Capacitor Android WebView 에서 anchor click 다운로드가 동작하지 않아 `@capacitor/filesystem` 분기 추가 — plan [`capacitor-android-download-fallback.plan.md`](../plans/capacitor-android-download-fallback.plan.md) (2026-05-27 done)
 
-**Phase 5: MVP Must - Invitation**
+**Phase 5: MVP Must - Invitation (services/admin 이관)**
 
-- **Goal**: 다른 디바이스/게스트가 가입할 수 있도록 초대 코드를 발급한다
-- **Scope**: `features/invitation-issue/{api,model,ui}`, 발급 코드 표시·복사 UI, 만료 표시
-- **Success signal**: 발급 → 코드 복사 → RegisterForm에서 그 코드로 가입 성공 (E2E 자동화 또는 본인 수동 검증)
+- **Status**: services/web 책임에서 제거. services/admin (관리자용 별도 서비스, 신설 예정) 안에서 구현된다.
+- **Why moved**: invitation 발급은 관리자 행위. services/web 은 User 용이므로 발급 UI 가 user 화면에 노출되는 것은 도메인 책임 위반.
+- **Original scope (이관됨)**: `features/invitation-issue/{api,model,ui}`, 발급 코드 표시·복사 UI, 만료 표시 → services/admin 의 user-management 화면에서 동일 슬라이스 구성으로 구현
+- **services/web 측 변경**: `features/register-by-invitation` (수신 쪽) 만 유지 — 기존 그대로
+- **Cross-reference**: services/admin 신설 PRD 가 만들어지면 그 PRD 의 invitation 발급 phase 에 연결
 
 **Phase 6: MVP Verification**
 
 - **Goal**: MVP 한 줄 시나리오와 UseCase 시나리오 N개를 모두 통과한다
 - **Scope**: Playwright E2E 시나리오 작성, Capacitor Android 실기기 검증, 5초 이내 표시 측정, Swagger UI 의존 자가 보고
+- **Depends**: Phase 3, 4 완료 (web 자체) + Phase 5 (services/admin 안에서 별도 완성). admin 미완성 시 web 자체 검증만 부분 수행 가능
 - **Success signal**: MVP 시나리오 통과, UseCase N개 통과, 1주일 자가 사용 중 Swagger 미사용
 
 **Phase 7: Should - Folder CRUD**
 
-- **Goal**: 폴더 단위 정리·이동이 가능하다
-- **Scope**: `features/folder-create/move/delete`, drive 페이지 경로 네비게이션·breadcrumb
-- **Success signal**: 폴더 생성/이동/삭제 모두 desktop·mobile에서 동작
+- **Goal**: 폴더 단위 정리·이동·이름변경이 가능하고, drive 페이지가 폴더 경로를 보존한다
+- **Scope**: `features/folder-create/-rename/-move/-delete` 4개 features 슬라이스 + `widgets/drive-breadcrumb` 신설 + `pages/drive` URL search param (`?folderId=`) state + `widgets/file-list` 폴더 섹션 추가
+- **Includes rename**: PRD 본문 원안에는 명시 안 됐지만 API 에 PATCH `/folders/:id` 가 있고, 폴더가 늘기 시작하면 rename 없이는 정리 불가. CRUD 4개를 한 phase 로 묶는다 (Decisions Log 참조)
+- **URL state 채택**: 폴더 컨텍스트는 URL search param 으로 보존 — 새로고침·뒤로가기·공유 자연스러움 (Decisions Log 참조)
+- **Depends**: Phase 2 (Domain Skeleton) — Phase 6 의존 제거 (folder CRUD 는 MVP 검증과 무관하게 독립 진행 가능)
+- **Success signal**: 폴더 생성/이름변경/이동/삭제 모두 desktop·mobile 에서 동작, breadcrumb 으로 트리 탐색 가능
 
 **Phase 8: Should - Trash**
 
@@ -254,22 +260,30 @@ so I can **클라우드 서비스 의존 없이 내 NAS만으로 모바일↔PC 
 ### Parallelism Notes
 
 - 1인 개발자의 phase는 *논리적 독립성*이지 *시간적 동시성*이 아니다. "with"는 phase 간 의존이 없으니 컨텍스트 스위칭 비용 없이 임의 순서·임의 분할로 진행 가능하다는 의미
-- Phase 3 / 4 / 5는 모두 Phase 2 위에서 독립적으로 진행 가능 — 단, MVP 검증(Phase 6)은 세 개 모두를 요구
-- Phase 7 / 8은 서로 독립. Phase 9는 Phase 7/8의 데이터가 있을 때 의미 있음
+- Phase 3 / 4 는 Phase 2 위에서 독립적으로 진행 가능 (2026-05-27 시점에 둘 다 done)
+- Phase 5 는 services/admin 으로 이관됐으므로 web 측 작업과 시간적으로 완전 분리됨
+- Phase 6 (MVP 검증) 은 web 의 3/4 + admin 의 5 완성 후 합류
+- Phase 7 / 8 은 서로 독립이며 Phase 2 위에서 진행 가능. Phase 6 보다 앞설 수 있음 (admin 신설 대기 시간을 활용)
+- Phase 9 는 Phase 7/8 의 데이터가 있을 때 의미 있음
 
 ---
 
 ## Decisions Log
 
-| Decision                         | Choice                                                   | Alternatives                                           | Rationale                                                                                                                                                                               |
-| -------------------------------- | -------------------------------------------------------- | ------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 디자인 결정을 별도 phase로 분리  | Phase 1 = Design Spike                                   | 기능 phase 중간에 디자인 결정 산재                     | 디자인이 늦어져도 후행 phase 견적이 흔들리지 않음. 사용자가 명시한 선결 조건                                                                                                            |
-| MVP 시나리오를 한 줄로 잠금      | "모바일 사진 1장 → PC 미리보기·다운로드"                 | 다중 파일·폴더 포함 시나리오                           | 검증 가능한 최소 단위. 한 줄이면 미래 리뷰어가 1초 내 판별                                                                                                                              |
-| Drive.tsx를 widgets로 분해       | `widgets/drive-layout` + `widgets/drive-sidebar` 분리    | Drive.tsx에 그대로 누적                                | FSD 컨벤션 준수, 사이드바/메인 영역이 다른 페이지에서도 재사용 가능                                                                                                                     |
-| iOS Capacitor 빌드 미포함        | Won't (v1)                                               | 안드로이드와 동시 진행                                 | Capacitor iOS는 인증서·빌드 환경이 별도. 본인 디바이스가 안드로이드인 한 우선순위 낮음                                                                                                  |
-| 최근/즐겨찾기 사이드바 항목 제거 | Won't, sidebar 메뉴에서 삭제                             | placeholder 항목 유지                                  | API에 없는 기능을 UI에 두지 않는다. 사용자 혼란 방지                                                                                                                                    |
-| 검색을 Should로 분류             | Should (Phase 9)                                         | Must                                                   | MVP 시나리오에 검색 불필요. 데이터가 적은 초기에는 목록 스크롤로 충분                                                                                                                   |
+| Decision | Choice | Alternatives | Rationale |
+| --- | --- | --- | --- |
+| 디자인 결정을 별도 phase로 분리 | Phase 1 = Design Spike | 기능 phase 중간에 디자인 결정 산재 | 디자인이 늦어져도 후행 phase 견적이 흔들리지 않음. 사용자가 명시한 선결 조건 |
+| MVP 시나리오를 한 줄로 잠금 | "모바일 사진 1장 → PC 미리보기·다운로드" | 다중 파일·폴더 포함 시나리오 | 검증 가능한 최소 단위. 한 줄이면 미래 리뷰어가 1초 내 판별 |
+| Drive.tsx를 widgets로 분해 | `widgets/drive-layout` + `widgets/drive-sidebar` 분리 | Drive.tsx에 그대로 누적 | FSD 컨벤션 준수, 사이드바/메인 영역이 다른 페이지에서도 재사용 가능 |
+| iOS Capacitor 빌드 미포함 | Won't (v1) | 안드로이드와 동시 진행 | Capacitor iOS는 인증서·빌드 환경이 별도. 본인 디바이스가 안드로이드인 한 우선순위 낮음 |
+| 최근/즐겨찾기 사이드바 항목 제거 | Won't, sidebar 메뉴에서 삭제 | placeholder 항목 유지 | API에 없는 기능을 UI에 두지 않는다. 사용자 혼란 방지 |
+| 검색을 Should로 분류 | Should (Phase 9) | Must | MVP 시나리오에 검색 불필요. 데이터가 적은 초기에는 목록 스크롤로 충분 |
 | 디자인 방향 채택 (Phase 1 Spike) | Editorial Minimal + Catalyst 제거 + headlessui 자체 wrap | Bento / Glassmorphism / Editorial 순수 / Catalyst 유지 | 평가표 합계 23/25 (NAS 정보 밀도 + Capacitor perf + headless 호환), 사용자 명시 지시로 Catalyst zinc 종속 해제. 자세한 근거: [docs/design/direction.md](../../docs/design/direction.md) |
+| Phase 5 (invitation 발급) services/admin 이관 (2026-05-27) | services/admin 신설 시 그 안에서 구현 | services/web 에 임시 마운트 후 admin 분리 시 이동 | invitation 발급은 관리자 행위 — User 용 services/web 에 노출하면 도메인 책임 위반. 임시 마운트는 admin 분리 시 이동 비용 + 그 사이 user 혼란 발생. 별도 진행이 더 깔끔 |
+| Phase 7 에 rename 포함 (2026-05-27) | folder-create / -rename / -move / -delete 4개를 한 phase 로 묶음 | rename 을 별도 후행 phase 로 분리 | API 이미 존재 (`PATCH /folders/:id`). 폴더가 늘기 시작하면 rename 없이는 정리 불가. CRUD 한 묶음이 자연스럽고 phase 분할 오버헤드 회피 |
+| Phase 7 폴더 컨텍스트는 URL search param (2026-05-27) | `?folderId=<uuid>` | URL path `/drive/:folderId` / Zustand store 만 | 새로고침·뒤로가기·공유 자연스러움 + 라우터 설정 변경 최소. path 변경은 React Router 설정 변경이 따라옴 |
+| Phase 7 이동 UX 는 다이얼로그만 (2026-05-27) | FolderTreePicker 다이얼로그 | 드래그앤드롭 (또는 둘 다) | 드래그앤드롭은 모바일에서 어색 + 구현 비용 큼. 다이얼로그가 모바일/PC 모두 자연스러움. v1 범위로 충분 |
+| Phase 7 폴더 삭제 UX 는 confirm 다이얼로그 (2026-05-27) | 즉시 confirm | toast "되돌리기" 5초 | API 는 soft delete (휴지통이 안전망). confirm 한 단계가 충분. 되돌리기 toast 는 비용 대비 가치 작음 |
 
 ---
 
@@ -290,6 +304,7 @@ so I can **클라우드 서비스 의존 없이 내 NAS만으로 모바일↔PC 
 
 ---
 
-_Generated: 2026-05-26_
-_Status: DRAFT - needs validation_
-_Open: 디자인 방향 / UseCase 시나리오 개수 / 기존 web 테스트 PRD 관계 / Capacitor 큰 파일 / 검색 범위 / 미리보기 포맷_
+*Generated: 2026-05-26*
+*Last Updated: 2026-05-28 — Phase 7 done (본체 + fixup 완료)*
+*Status: ACTIVE — Phase 7 done, Phase 6 는 admin 완성 대기 / Phase 8 (Trash) 다음*
+*Open: UseCase 시나리오 개수 (Phase 6 진입 시 확정) / Capacitor 큰 파일 / 검색 범위 (Phase 9) / services/admin PRD 신설 시점*
