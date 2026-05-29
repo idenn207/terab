@@ -45,7 +45,7 @@ dev-down: infra-down
 	docker stack rm terab-dev
 
 .PHONY: dev-update
-dev-update: 
+dev-update:
 	docker service update \
 		--image terab-api:local \
 		--with-registry-auth \
@@ -61,6 +61,11 @@ dev-update:
 		--with-registry-auth \
 		--force \
 		terab_web \
+	&& docker service update \
+		--image terab-admin:local \
+		--with-registry-auth \
+		--force \
+		terab_admin \
 
 # ─── Docker Swarm 운영 환경 ────────────────────────────────────────
 .PHONY: ensure-volumes
@@ -99,6 +104,11 @@ stack-update:
 		--with-registry-auth \
 		--force \
 		terab_web \
+	&& docker service update \
+		--image ghcr.io/idenn207/terab-admin:latest \
+		--with-registry-auth \
+		--force \
+		terab_admin \
 
 # ─── docker 이미지 빌드 ─────────────────────────────────────────────
 .PHONY: image
@@ -106,10 +116,11 @@ image: build
 	docker build -t terab-api:local ./services/api
 	docker build -t terab-mq:local ./services/mq
 	docker build -t terab-web:local ./services/web
+	docker build -t terab-admin:local ./services/admin
 
 # ─── 빌드 ────────────────────────────────────────────────────────
 .PHONY: build
-build: build-api build-mq build-web build-android
+build: build-api build-mq build-web build-admin build-android
 
 .PHONY: build-api
 build-api:
@@ -122,6 +133,10 @@ build-mq:
 .PHONY: build-web
 build-web:
 	cd services/web && npm run build
+
+.PHONY: build-admin
+build-admin:
+	cd services/admin && npm run build
 
 .PHONY: build-android
 build-android:
@@ -149,6 +164,10 @@ mq:
 web:
 	cd services/web && npm run dev
 
+.PHONY: admin
+admin:
+	cd services/admin && npm run dev
+
 # ─── 안드로이드 ────────────────────────────────────────────────────
 .PHONY: android
 android: build-android
@@ -156,6 +175,8 @@ android: build-android
 
 .PHONY: android-dev
 android-dev: build-android-dev
+	adb reverse tcp:5173 tcp:5173   # vite dev server
+	adb reverse tcp:9000 tcp:9000   # MinIO
 	cd services/web && npm run cap:android:dev
 
 .PHONY: android-prod
@@ -168,7 +189,7 @@ android-open:
 
 # ─── 테스트 ────────────────────────────────────────────────────────
 .PHONY: test
-test: test-api test-mq test-web
+test: test-api test-mq test-web test-admin
 
 .PHONY: test-api
 test-api:
@@ -181,6 +202,10 @@ test-mq:
 .PHONY: test-web
 test-web:
 	cd services/web && npm test
+
+.PHONY: test-admin
+test-admin:
+	cd services/admin && npm test
 
 
 # ─── Runner ────────────────────────────────────────────────────────

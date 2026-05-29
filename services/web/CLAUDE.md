@@ -176,10 +176,12 @@ export { UploadButton } from './ui/UploadButton'; // ✅ ui export
 
 ## 컴포넌트 컨벤션
 
+> 디자인 시스템 규칙(시각·a11y·trend·catalyst 정책)은 [`.claude/rules/ecc/web/mobile-ui-guide.md`](../../.claude/rules/ecc/web/mobile-ui-guide.md) 이 1차 출처.
+
 - 파일명: PascalCase (`FileList.tsx`)
 - 컴포넌트명과 파일명 일치
 - props 타입은 `interface`로 선언, 파일 상단에 위치
-- UI 라이브러리: `shared/ui/catalyst/` — 직접 수정 금지, 확장 필요 시 래핑 컴포넌트 작성
+- UI 라이브러리: `shared/ui/catalyst/` 는 **임시·마이그레이션 대상** — v1.0 출시 전 headless 컴포넌트로 교체 예정. 신규 컴포넌트는 `shared/ui/{component}/` headless 버전을 생성하고 catalyst import 금지. 진행은 PRD `design-system-v1` Milestone 2
 - 스타일: TailwindCSS 4 유틸리티 클래스만 사용, 인라인 `style` 속성 금지
 - 클래스 조합: `cn()` 유틸(`shared/lib/utils/cn.ts`) 사용
 
@@ -457,7 +459,7 @@ server: {
 ### 코드 작성 전 확인 사항
 
 - 새 파일 생성 전 FSD 레이어 위치가 적절한지 판단한다
-- 컴포넌트 작성 전 `shared/ui/catalyst/`에 재사용 가능한 기반 컴포넌트가 있는지 확인한다
+- 컴포넌트 작성 전 [`.claude/rules/ecc/web/mobile-ui-guide.md`](../../.claude/rules/ecc/web/mobile-ui-guide.md) 의 anatomy·token·a11y 기준에 따라 `shared/ui/{component}/` headless 버전 작성을 우선 검토한다 (catalyst 는 임시·마이그레이션 대상 — 신규 import 금지)
 - API 함수 작성 전 인증 필요 여부를 확인한다: 인증 필요 → `axiosInstance`, 공개 엔드포인트(로그인·리프레시 등) → 순수 `axios`
 
 ### FSD 레이어 위반 감지 시

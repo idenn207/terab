@@ -210,6 +210,33 @@ services:
         condition: on-failure
         window: 60s
 
+  # ─── Admin Frontend (admin.drive.skypark207.com) ──────────────
+  admin:
+    image: ghcr.io/idenn207/terab-admin:latest
+    env_file:
+      - admin.prod.env
+    networks:
+      - terab-net
+    healthcheck:
+      test: ['CMD', 'curl', '-f', 'http://localhost:80/']
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    deploy:
+      replicas: 1
+      update_config:
+        order: start-first
+        parallelism: 1
+        failure_action: rollback
+        delay: 10s
+        monitor: 20s
+      rollback_config:
+        order: start-first
+      restart_policy:
+        condition: on-failure
+        window: 60s
+
   # ─── Nginx (리버스 프록시) ─────────────────────────────────────
   nginx:
     image: nginx:mainline

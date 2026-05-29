@@ -22,9 +22,9 @@ export function useLogin() {
         onSuccess: (data) => {
           if (data.status === 'AUTHENTICATED') {
             setAuth(data.accessToken, data.user);
-            navigate('/drive');
+            navigate('/drive', { replace: true });
           } else if (data.status === '2FA_REQUIRED') {
-            navigate(`/login/2fa?id=${data.challengeId}`);
+            navigate(`/login/2fa?id=${data.challengeId}`, { replace: true });
           }
         },
       },

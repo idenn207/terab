@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { ApiException } from '@terab/common';
+import { ApiException, UserDto } from '@terab/common';
 import { DatabaseService, ServiceCore, TransactionContext, Users$Select } from '@terab/db';
 import { TokenService } from '@terab/security';
 import bcrypt from 'bcryptjs';
@@ -81,8 +81,14 @@ export class AuthService extends ServiceCore {
     return {
       status: 'AUTHENTICATED',
       accessToken,
-      user: { id: user.id, username: user.username, nickname: user.nickname },
+      user: await this.buildUserResponse(user),
     };
+  }
+
+  // ADMIN 진입 게이트(`user:manage` 보유 검증)가 client-side 에서 permissions 를 필요로 한다.
+  async buildUserResponse(user: Pick<Users$Select, 'id' | 'username' | 'nickname'>): Promise<UserDto> {
+    const permissions = await this.roleService.getPermissionsByUserId(user.id);
+    return { id: user.id, username: user.username, nickname: user.nickname, permissions };
   }
 
   // ─── Cookie 설정 ──────────────────────────────────────────────────

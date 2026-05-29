@@ -1,15 +1,17 @@
 import { TrustedDeviceSection, TrustThisDeviceCheckbox, TwoFactorApprovalPage, TwoFactorBackupEntry, TwoFactorWaiting } from '@/features';
-import { BackupCodeIssuePage, DrivePage, Link2TwoFAAuth, LoginPage, RegisterPage, TwoFAApprovalPage, TwoFABackupPage, TwoFAWaitPage } from '@/pages';
+import { BackupCodeIssuePage, DrivePage, LoginPage, RegisterPage, TwoFAApprovalPage, TwoFABackupPage, TwoFAWaitPage } from '@/pages';
 import { AuthLayout, DriveLayout } from '@/widgets';
-import { PrivateRoute } from '@shared/router';
+import { type AppRouteHandle, PrivateRoute } from '@shared/router';
 import { Navigate, Outlet, type RouteObject } from 'react-router-dom';
 import { AppShell } from '../AppShell';
+
+const rootDestinationHandle: AppRouteHandle = { isRootDestination: true };
 
 const rootRoutes: RouteObject[] = [
   {
     path: '/',
     element: (
-      <main className="pt-safe-top">
+      <main>
         <Outlet />
       </main>
     ),
@@ -38,7 +40,7 @@ const authRoutes: RouteObject[] = [
     path: '/login',
     element: <AuthLayout />,
     children: [
-      { index: true, element: <LoginPage /> },
+      { index: true, element: <LoginPage />, handle: rootDestinationHandle },
       { path: '2fa', element: <TwoFAWaitPage /> },
       { path: 'backup', element: <TwoFABackupPage /> },
     ],
@@ -50,15 +52,15 @@ const appRoutes: RouteObject[] = [
     path: '/drive',
     element: (
       <PrivateRoute>
-        <Link2TwoFAAuth />
         <DriveLayout />
       </PrivateRoute>
     ),
-    children: [{ index: true, element: <DrivePage /> }],
+    children: [{ index: true, element: <DrivePage />, handle: rootDestinationHandle }],
   },
   {
     path: '/2fa/:id',
     element: <TwoFAApprovalPage />,
+    handle: rootDestinationHandle,
   },
 ];
 
@@ -71,7 +73,6 @@ const previewRoutes: RouteObject[] = [
       { path: '2', element: <TwoFactorBackupEntry /> },
       { path: '4', element: <TrustedDeviceSection /> },
       { path: '5', element: <TrustThisDeviceCheckbox checked={false} onChange={() => {}} /> },
-      { path: '2fa-auth', element: <Link2TwoFAAuth /> },
     ],
   },
 ];

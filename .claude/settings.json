@@ -15,6 +15,19 @@
   "permissions": {
     "additionalDirectories": ["C:\\_project\\my\\terab\\docs\\archive\\superpowers"]
   },
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node .claude/hooks/post-bash-worktree-bootstrap.cjs"
+          }
+        ]
+      }
+    ]
+  },
   "model": "opus",
   "outputStyle": "Explanatory",
   "effortLevel": "xhigh",

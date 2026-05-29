@@ -3,8 +3,9 @@ import { useUploadCompleteMutation, useUploadInitMutation } from '../api/mutatio
 import { uploadParts } from './upload-parts';
 
 export interface UploadFileInput {
-  file: File;
+  file: globalThis.File;
   folderId?: string;
+  onProgress?: (percent: number) => void;
 }
 
 export function useUploadFile() {
@@ -12,7 +13,7 @@ export function useUploadFile() {
   const completeMutation = useUploadCompleteMutation();
 
   return useMutation({
-    mutationFn: async ({ file, folderId }: UploadFileInput) => {
+    mutationFn: async ({ file, folderId, onProgress }: UploadFileInput) => {
       const init = await initMutation.mutateAsync({
         body: {
           folderId,
@@ -22,7 +23,7 @@ export function useUploadFile() {
         },
       });
 
-      const partResults = await uploadParts(file, init.parts, init.uploadHeaders);
+      const partResults = await uploadParts(file, init.parts, init.uploadHeaders, onProgress);
 
       return completeMutation.mutateAsync({
         path: { sessionId: init.sessionId },

@@ -62,6 +62,13 @@ services:
     deploy:
       replicas: 1
 
+  admin:
+    image: terab-admin:local
+    env_file:
+      - admin.dev.env
+    deploy:
+      replicas: 1
+
   # ─── Nginx (리버스 프록시) ─────────────────────────────────────
   nginx:
     image: nginx:alpine
