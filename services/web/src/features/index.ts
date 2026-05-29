@@ -12,4 +12,6 @@ export * from './login-by-credentials';
 export * from './logout';
 export * from './push-notification';
 export * from './register-by-invitation';
+export * from './trash-purge';
+export * from './trash-restore';
 export * from './trusted-device';

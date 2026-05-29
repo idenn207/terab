@@ -2,7 +2,7 @@ import { LogoUrl } from '@/shared/assets';
 import { cn } from '@/shared/lib';
 import * as Headless from '@headlessui/react';
 import { XMarkIcon } from '@heroicons/react/24/outline';
-import { useLocation } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { DRIVE_NAV_ITEMS } from '../model/navigation';
 
 interface DriveSidebarProps {
@@ -42,8 +42,9 @@ export function DriveSidebar({ isOpen, onClose }: DriveSidebarProps) {
                     const isCurrent = pathname === item.href;
                     return (
                       <li key={item.name}>
-                        <a
-                          href={item.href}
+                        <Link
+                          to={item.href}
+                          onClick={onClose}
                           aria-current={isCurrent ? 'page' : undefined}
                           className={cn(
                             isCurrent ? 'bg-gray-800 text-white' : 'text-gray-400 hover:bg-gray-800 hover:text-white',
@@ -52,7 +53,7 @@ export function DriveSidebar({ isOpen, onClose }: DriveSidebarProps) {
                         >
                           <item.icon aria-hidden="true" className="size-6 shrink-0" />
                           {item.name}
-                        </a>
+                        </Link>
                       </li>
                     );
                   })}
@@ -73,8 +74,8 @@ export function DriveSidebar({ isOpen, onClose }: DriveSidebarProps) {
               const isCurrent = pathname === item.href;
               return (
                 <li key={item.name}>
-                  <a
-                    href={item.href}
+                  <Link
+                    to={item.href}
                     aria-current={isCurrent ? 'page' : undefined}
                     className={cn(
                       isCurrent ? 'bg-white/5 text-white' : 'text-gray-400 hover:bg-white/5 hover:text-white',
@@ -83,7 +84,7 @@ export function DriveSidebar({ isOpen, onClose }: DriveSidebarProps) {
                   >
                     <item.icon aria-hidden="true" className="size-6 shrink-0" />
                     <span className="sr-only">{item.name}</span>
-                  </a>
+                  </Link>
                 </li>
               );
             })}

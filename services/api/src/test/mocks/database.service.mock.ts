@@ -2,6 +2,7 @@ export const mockDbFor = jest.fn();
 export const mockDbLimit = jest.fn();
 export const mockDbWhere = jest.fn();
 export const mockDbFrom = jest.fn();
+export const mockDbLeftJoin = jest.fn();
 export const mockDbSelect = jest.fn();
 export const mockDbInsert = jest.fn();
 export const mockDbUpdate = jest.fn();
@@ -22,7 +23,8 @@ export const mockDatabaseService = {
 // jest.clearAllMocks() 호출 후 select 체인을 재구성할 때 사용
 export const setupMockDbSelectChain = () => {
   mockDbSelect.mockReturnValue({ from: mockDbFrom });
-  mockDbFrom.mockReturnValue({ where: mockDbWhere });
+  mockDbFrom.mockReturnValue({ where: mockDbWhere, leftJoin: mockDbLeftJoin });
+  mockDbLeftJoin.mockReturnValue({ where: mockDbWhere, leftJoin: mockDbLeftJoin });
   mockDbWhere.mockReturnValue({ limit: mockDbLimit });
   mockDbLimit.mockReturnValue({ for: mockDbFor });
 };

@@ -20,7 +20,7 @@ export class TrashController {
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: '휴지통 항목 복원' })
   @ApiResponse({ status: HttpStatus.NO_CONTENT })
-  @ApiError('FILE_NOT_FOUND', 'FOLDER_NOT_FOUND')
+  @ApiError('FILE_NOT_FOUND', 'FOLDER_NOT_FOUND', 'PARENT_IN_TRASH')
   async restore(
     @CurrentUser() user: AuthUser,
     @Param('id', ParseUUIDPipe) id: string,
@@ -33,7 +33,7 @@ export class TrashController {
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: '영구 삭제' })
   @ApiResponse({ status: HttpStatus.NO_CONTENT })
-  @ApiError('FILE_NOT_FOUND', 'FOLDER_NOT_FOUND')
+  @ApiError('FILE_NOT_FOUND', 'FOLDER_NOT_FOUND', 'PARENT_IN_TRASH')
   async permanentDelete(
     @CurrentUser() user: AuthUser,
     @Param('id', ParseUUIDPipe) id: string,

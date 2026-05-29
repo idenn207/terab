@@ -239,11 +239,12 @@ so I can **클라우드 서비스 의존 없이 내 NAS만으로 모바일↔PC 
 - **Depends**: Phase 2 (Domain Skeleton) — Phase 6 의존 제거 (folder CRUD 는 MVP 검증과 무관하게 독립 진행 가능)
 - **Success signal**: 폴더 생성/이름변경/이동/삭제 모두 desktop·mobile 에서 동작, breadcrumb 으로 트리 탐색 가능
 
-**Phase 8: Should - Trash**
+**Phase 8: Should - Trash** ✓ done (2026-05-29)
 
 - **Goal**: 삭제된 파일이 복원·영구 삭제 가능하다
 - **Scope**: `features/trash-restore/purge`, 휴지통 페이지
 - **Success signal**: 휴지통 목록 → 복원 / 영구 삭제 모두 동작
+- **Done**: 본체 + cascade-semantics fixup 완료 — trash root semantics + `PARENT_IN_TRASH` 가드 (Decisions Log 참조)
 
 **Phase 9: Should - Search**
 
@@ -284,6 +285,9 @@ so I can **클라우드 서비스 의존 없이 내 NAS만으로 모바일↔PC 
 | Phase 7 폴더 컨텍스트는 URL search param (2026-05-27) | `?folderId=<uuid>` | URL path `/drive/:folderId` / Zustand store 만 | 새로고침·뒤로가기·공유 자연스러움 + 라우터 설정 변경 최소. path 변경은 React Router 설정 변경이 따라옴 |
 | Phase 7 이동 UX 는 다이얼로그만 (2026-05-27) | FolderTreePicker 다이얼로그 | 드래그앤드롭 (또는 둘 다) | 드래그앤드롭은 모바일에서 어색 + 구현 비용 큼. 다이얼로그가 모바일/PC 모두 자연스러움. v1 범위로 충분 |
 | Phase 7 폴더 삭제 UX 는 confirm 다이얼로그 (2026-05-27) | 즉시 confirm | toast "되돌리기" 5초 | API 는 soft delete (휴지통이 안전망). confirm 한 단계가 충분. 되돌리기 toast 는 비용 대비 가치 작음 |
+| Phase 8 fixup — Trash root 정의 (2026-05-29) | `GET /trash` 는 *부모가 휴지통이 아닌* 자식만 반환 (LEFT JOIN + `parent.soft_deleted_at IS NULL` 필터) | (a) 모든 soft-deleted 항목 반환 (b) `TrashItemDto` 에 `trashRootId`/`parentId` 노출 후 client filter | Google Drive·Dropbox 표준 — 사용자 멘탈 모델 일치. server 가 root 만 반환 = 단일 진실원. client filter 는 메모리 비효율 + 페이지네이션 깨짐. hierarchy view 가 필요해지면 그때 추가 (YAGNI) |
+| Phase 8 fixup — cascade child restore/purge 거부 (2026-05-29) | `restore` / `permanentDelete` 시작부에 `isParentInTrash` 가드 → `PARENT_IN_TRASH` (400) | (a) cascade-restore — 부모 chain 함께 복원 (b) 그냥 처리 | (a) 는 *사용자가 의도하지 않은 부모/형제 subtree 가 함께 복원*되는 부작용. (b) 는 race + 중복 처리. defense-in-depth (직접 API 호출 차단) + KISS. UI 가 trash root 만 노출하므로 정상 흐름에선 발생하지 않음 |
+| Phase 8 fixup — parent chain 검사 깊이 (2026-05-29) | 1단계 LEFT JOIN 만 (`immediate parent` 의 `soft_deleted_at` 비교) | 재귀 CTE 로 전체 chain | 부모가 휴지통이면 grand-parent 도 자동으로 hide (자식이 안 보이므로 호출 안 됨). 직접 API 호출 방어 시에도 1단 검사로 충분. 단순 + 빠름 |
 
 ---
 
@@ -305,6 +309,6 @@ so I can **클라우드 서비스 의존 없이 내 NAS만으로 모바일↔PC 
 ---
 
 *Generated: 2026-05-26*
-*Last Updated: 2026-05-28 — Phase 7 done (본체 + fixup 완료)*
-*Status: ACTIVE — Phase 7 done, Phase 6 는 admin 완성 대기 / Phase 8 (Trash) 다음*
+*Last Updated: 2026-05-29 — Phase 8 done (본체 + cascade-semantics fixup 완료)*
+*Status: ACTIVE — Phase 8 done, Phase 6 는 admin 완성 대기 / Phase 9 (Search) 다음*
 *Open: UseCase 시나리오 개수 (Phase 6 진입 시 확정) / Capacitor 큰 파일 / 검색 범위 (Phase 9) / services/admin PRD 신설 시점*

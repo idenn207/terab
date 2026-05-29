@@ -8,3 +8,4 @@ export * from './safe-area-guard';
 export * from './sidebar-layout';
 export * from './navbar';
 export * from './sidebar';
+export * from './trash-list';
