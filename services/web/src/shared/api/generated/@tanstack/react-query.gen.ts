@@ -709,7 +709,7 @@ export const loginControllerRefreshMutation = (
 };
 
 /**
- * 로그아웃 — RT 폐기 및 쿠키 삭제
+ * 로그아웃 — RT 폐기 및 쿠키 삭제 (모바일은 pushToken 첨부 시 해당 device deactivate)
  */
 export const loginControllerLogoutMutation = (
   options?: Partial<Options<LoginControllerLogoutData>>,

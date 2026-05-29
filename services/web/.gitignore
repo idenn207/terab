@@ -18,6 +18,11 @@ dist-ssr
 # rollup-plugin-visualizer
 services/web/stats.html
 
+# Playwright
+test-results/
+playwright-report/
+.playwright/
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

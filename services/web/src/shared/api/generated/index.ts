@@ -213,6 +213,7 @@ export type {
   LoginControllerRegisterErrors,
   LoginControllerRegisterResponse,
   LoginControllerRegisterResponses,
+  LogoutBodyDto,
   MoveFileBodyDto,
   MoveFolderBodyDto,
   Object,

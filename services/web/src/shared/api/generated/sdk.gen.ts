@@ -397,10 +397,17 @@ export const loginControllerRefresh = <ThrowOnError extends boolean = false>(opt
   });
 
 /**
- * 로그아웃 — RT 폐기 및 쿠키 삭제
+ * 로그아웃 — RT 폐기 및 쿠키 삭제 (모바일은 pushToken 첨부 시 해당 device deactivate)
  */
-export const loginControllerLogout = <ThrowOnError extends boolean = false>(options?: Options<LoginControllerLogoutData, ThrowOnError>) =>
-  (options?.client ?? client).post<LoginControllerLogoutResponses, unknown, ThrowOnError>({ url: '/auth/logout', ...options });
+export const loginControllerLogout = <ThrowOnError extends boolean = false>(options: Options<LoginControllerLogoutData, ThrowOnError>) =>
+  (options.client ?? client).post<LoginControllerLogoutResponses, unknown, ThrowOnError>({
+    url: '/auth/logout',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    },
+  });
 
 /**
  * 루트 폴더 목록 조회

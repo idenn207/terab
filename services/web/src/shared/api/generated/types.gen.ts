@@ -152,12 +152,17 @@ export type RegisterResponseDto = {
 export type LoginBodyDto = {
   username: string;
   password: string;
+  trustDevice?: boolean;
 };
 
 export type BackupLoginBodyDto = {
   username: string;
   password: string;
   backupCode: string;
+};
+
+export type LogoutBodyDto = {
+  pushToken?: string;
 };
 
 export type FolderItemDto = {
@@ -808,7 +813,7 @@ export type LoginControllerRefreshResponses = {
 export type LoginControllerRefreshResponse = LoginControllerRefreshResponses[keyof LoginControllerRefreshResponses];
 
 export type LoginControllerLogoutData = {
-  body?: never;
+  body: LogoutBodyDto;
   path?: never;
   query?: never;
   url: '/auth/logout';

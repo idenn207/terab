@@ -19,6 +19,8 @@ export function LoginPage() {
     if (!errorKey) return;
     consumedRef.current = true;
     const text = ERROR_MESSAGES[errorKey];
+    // URL query 진입 시 1회만 banner — consumedRef gate 로 idempotent.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (text) setErrorMessage(text);
     setSearchParams({}, { replace: true });
   }, [searchParams, setSearchParams]);
