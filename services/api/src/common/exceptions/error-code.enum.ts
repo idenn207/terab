@@ -182,6 +182,32 @@ export const ErrorCode = {
     message: '스토리지 에이전트 내부 오류가 발생했습니다.',
     status: HttpStatus.INTERNAL_SERVER_ERROR,
   },
+  // ───── Drive ──────────────────────────────
+  DRIVE_NOT_FOUND: {
+    message: '드라이브를 찾을 수 없습니다.',
+    status: HttpStatus.NOT_FOUND,
+  },
+  DRIVE_FORBIDDEN: {
+    message: '해당 드라이브에 접근할 권한이 없습니다.',
+    status: HttpStatus.FORBIDDEN,
+  },
+  // ───── Mount Credential ──────────────────────────────
+  MOUNT_CREDENTIAL_NOT_FOUND: {
+    message: '마운트 자격증명을 찾을 수 없습니다.',
+    status: HttpStatus.NOT_FOUND,
+  },
+  MOUNT_CREDENTIAL_DUPLICATE_PROTOCOL: {
+    message: '해당 드라이브에 같은 프로토콜의 활성 자격증명이 이미 존재합니다.',
+    status: HttpStatus.CONFLICT,
+  },
+  MOUNT_CREDENTIAL_REVOKED: {
+    message: '이미 회수된 마운트 자격증명입니다.',
+    status: HttpStatus.GONE,
+  },
+  MOUNT_CREDENTIAL_SECRET_WRITE_FAILED: {
+    message: '마운트 자격증명 비밀 저장에 실패했습니다.',
+    status: HttpStatus.INTERNAL_SERVER_ERROR,
+  },
 } as const satisfies Record<string, ErrorCodeDefinition>;
 
 export type ErrorCodeKey = keyof typeof ErrorCode;

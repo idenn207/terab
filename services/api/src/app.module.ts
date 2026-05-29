@@ -12,6 +12,7 @@ import { SecurityModule } from '@terab/security';
 import { AuthModule } from './auth/auth.module';
 import { LoginModule } from './auth/login.module';
 import { DeviceModule } from './device/device.module';
+import { DriveModule } from './drive/drive.module';
 import { FileModule } from './file/file.module';
 import { FolderModule } from './folder/folder.module';
 import { HealthModule } from './health/health.module';
@@ -60,6 +61,7 @@ import { UserModule } from './user/user.module';
     FileModule,
     TrashModule,
     StorageAgentModule,
+    DriveModule,
   ],
   providers: [
     // 전역 Guard: ThrottlerGuard → JwtAuthGuard(401) → PermissionGuard(403) 순서 보장
