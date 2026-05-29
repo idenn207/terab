@@ -36,10 +36,10 @@ export function TwoFactorWaiting() {
       <TrustThisDeviceCheckbox checked={trustChecked} onChange={setTrustChecked} />
 
       <div className="flex flex-col gap-2 sm:flex-row sm:justify-between">
-        <Button type="button" onClick={resend} outline>
+        <Button type="button" onClick={resend} variant="outlined" tone="neutral">
           재전송
         </Button>
-        <Button type="button" onClick={() => navigate('/login/backup')} plain>
+        <Button type="button" onClick={() => navigate('/login/backup')} variant="text" tone="neutral">
           백업 코드 사용
         </Button>
       </div>

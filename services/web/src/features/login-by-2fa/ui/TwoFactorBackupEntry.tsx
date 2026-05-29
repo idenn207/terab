@@ -74,7 +74,7 @@ export function TwoFactorBackupEntry() {
       <Button type="submit" disabled={isLoading}>
         {isLoading ? '로그인 중...' : '로그인'}
       </Button>
-      <Button type="button" onClick={() => navigate('/login')} plain>
+      <Button type="button" onClick={() => navigate('/login')} variant="text" tone="neutral">
         일반 로그인으로 돌아가기
       </Button>
     </form>

@@ -1,5 +1,5 @@
 import { parseApiError } from '@shared/api';
-import { Button, Dialog, DialogActions, DialogBody, DialogTitle, Input } from '@/shared/ui';
+import { Button, Input, Modal } from '@/shared/ui';
 import { type FormEvent, useState } from 'react';
 import { useCreateFolder } from '../model/useCreateFolder';
 
@@ -48,30 +48,30 @@ export function NewFolderButton({ parentId }: NewFolderButtonProps) {
   return (
     <>
       <Button onClick={() => setIsOpen(true)}>새 폴더</Button>
-      <Dialog open={isOpen} onClose={close} size="md">
+      <Modal open={isOpen} onClose={close} size="md">
         <form onSubmit={handleSubmit} aria-label="새 폴더 만들기">
-          <DialogTitle>새 폴더 만들기</DialogTitle>
-          <DialogBody className="flex flex-col gap-3">
-            <label htmlFor="new-folder-name" className="text-sm text-zinc-700 dark:text-zinc-300">
+          <Modal.Header>새 폴더 만들기</Modal.Header>
+          <Modal.Body className="flex flex-col gap-3">
+            <label htmlFor="new-folder-name" className="text-sm text-text-muted">
               폴더 이름
             </label>
             <Input id="new-folder-name" autoFocus value={name} onChange={(event) => setName(event.target.value)} maxLength={255} disabled={isPending} />
             {errorMessage && (
-              <p role="alert" className="text-sm text-red-500">
+              <p role="alert" className="text-sm text-danger">
                 {errorMessage}
               </p>
             )}
-          </DialogBody>
-          <DialogActions>
-            <Button plain type="button" onClick={close} disabled={isPending}>
+          </Modal.Body>
+          <Modal.Footer>
+            <Button variant="text" tone="neutral" type="button" onClick={close} disabled={isPending}>
               취소
             </Button>
             <Button type="submit" disabled={isPending}>
               {isPending ? '생성 중...' : '만들기'}
             </Button>
-          </DialogActions>
+          </Modal.Footer>
         </form>
-      </Dialog>
+      </Modal>
     </>
   );
 }

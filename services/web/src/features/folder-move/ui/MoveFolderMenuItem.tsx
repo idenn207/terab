@@ -1,5 +1,5 @@
 import type { Folder } from '@/entities/folder';
-import { Button, Dialog, DialogActions, DialogBody, DialogTitle } from '@/shared/ui';
+import { Button, Modal } from '@/shared/ui';
 import { parseApiError } from '@shared/api';
 import * as Headless from '@headlessui/react';
 import { useState } from 'react';
@@ -65,25 +65,25 @@ export function MoveFolderDialog({ folder, open, onClose }: MoveFolderDialogProp
   };
 
   return (
-    <Dialog open={open} onClose={handleClose} size="lg">
-      <DialogTitle>"{folder.name}" 폴더 이동</DialogTitle>
-      <DialogBody className="flex flex-col gap-3">
-        <p className="text-sm text-zinc-700 dark:text-zinc-300">이동할 위치를 선택해주세요.</p>
+    <Modal open={open} onClose={handleClose} size="lg">
+      <Modal.Header>"{folder.name}" 폴더 이동</Modal.Header>
+      <Modal.Body className="flex flex-col gap-3">
+        <p className="text-sm text-text-muted">이동할 위치를 선택해주세요.</p>
         <FolderTreePicker excludedFolderId={folder.id} selectedParentId={selectedParentId} onSelect={setSelectedParentId} />
         {errorMessage && (
-          <p role="alert" className="text-sm text-red-500">
+          <p role="alert" className="text-sm text-danger">
             {errorMessage}
           </p>
         )}
-      </DialogBody>
-      <DialogActions>
-        <Button plain type="button" onClick={handleClose} disabled={isPending}>
+      </Modal.Body>
+      <Modal.Footer>
+        <Button variant="text" tone="neutral" type="button" onClick={handleClose} disabled={isPending}>
           취소
         </Button>
         <Button type="button" onClick={handleSubmit} disabled={isPending}>
           {isPending ? '이동 중...' : '이동'}
         </Button>
-      </DialogActions>
-    </Dialog>
+      </Modal.Footer>
+    </Modal>
   );
 }

@@ -1,5 +1,5 @@
 import type { Folder } from '@/entities/folder';
-import { Button, Dialog, DialogActions, DialogBody, DialogTitle, Input } from '@/shared/ui';
+import { Button, Input, Modal } from '@/shared/ui';
 import { parseApiError } from '@shared/api';
 import * as Headless from '@headlessui/react';
 import { type FormEvent, useState } from 'react';
@@ -72,11 +72,11 @@ export function RenameFolderDialog({ folder, open, onClose }: RenameFolderDialog
   };
 
   return (
-    <Dialog open={open} onClose={handleClose} size="md">
+    <Modal open={open} onClose={handleClose} size="md">
       <form onSubmit={handleSubmit} aria-label="폴더 이름 변경">
-        <DialogTitle>폴더 이름 변경</DialogTitle>
-        <DialogBody className="flex flex-col gap-3">
-          <label htmlFor={`rename-folder-${folder.id}`} className="text-sm text-zinc-700 dark:text-zinc-300">
+        <Modal.Header>폴더 이름 변경</Modal.Header>
+        <Modal.Body className="flex flex-col gap-3">
+          <label htmlFor={`rename-folder-${folder.id}`} className="text-sm text-text-muted">
             새 이름
           </label>
           <Input
@@ -88,20 +88,20 @@ export function RenameFolderDialog({ folder, open, onClose }: RenameFolderDialog
             disabled={isPending}
           />
           {errorMessage && (
-            <p role="alert" className="text-sm text-red-500">
+            <p role="alert" className="text-sm text-danger">
               {errorMessage}
             </p>
           )}
-        </DialogBody>
-        <DialogActions>
-          <Button plain type="button" onClick={handleClose} disabled={isPending}>
+        </Modal.Body>
+        <Modal.Footer>
+          <Button variant="text" tone="neutral" type="button" onClick={handleClose} disabled={isPending}>
             취소
           </Button>
           <Button type="submit" disabled={isPending}>
             {isPending ? '변경 중...' : '변경'}
           </Button>
-        </DialogActions>
+        </Modal.Footer>
       </form>
-    </Dialog>
+    </Modal>
   );
 }

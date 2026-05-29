@@ -18,7 +18,8 @@ export function DownloadButton({ fileId, fileName }: DownloadButtonProps) {
   return (
     <>
       <Button
-        plain
+        variant="text"
+        tone="neutral"
         type="button"
         disabled={isPending}
         onClick={(event) => {

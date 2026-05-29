@@ -68,7 +68,7 @@ export function DeleteFolderDialog({ folder, open, onClose }: DeleteFolderDialog
         </p>
       )}
       <AlertActions>
-        <Button plain type="button" onClick={handleClose} disabled={isPending}>
+        <Button variant="text" tone="neutral" type="button" onClick={handleClose} disabled={isPending}>
           취소
         </Button>
         <Button type="button" onClick={handleConfirm} disabled={isPending}>

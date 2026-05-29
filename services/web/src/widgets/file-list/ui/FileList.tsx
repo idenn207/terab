@@ -56,7 +56,7 @@ export function FileList({ folderId, onFolderOpen }: FileListProps) {
     return (
       <div role="alert" className="flex flex-col items-start gap-3 rounded-lg border border-red-300 bg-red-50 p-4 dark:border-red-900 dark:bg-red-950">
         <p className="text-sm text-red-700 dark:text-red-300">목록을 불러올 수 없습니다: {error.message}</p>
-        <Button plain onClick={refetch}>
+        <Button variant="text" tone="neutral" onClick={refetch}>
           다시 시도
         </Button>
       </div>
