@@ -8,6 +8,7 @@ import { LOGIN_ERROR_MESSAGES } from './loginErrors';
 export interface LoginCredentials {
   username: string;
   password: string;
+  trustDevice?: boolean;
 }
 
 export function useLogin() {

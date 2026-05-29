@@ -12,6 +12,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
+    "test:e2e": "playwright test",
     "cap:sync": "tsc -b && vite build && npx cap sync",
     "cap:sync:dev": "tsc -b && vite build && cross-env CAPACITOR_ENV=dev npx cap sync",
     "cap:sync:prod": "tsc -b && vite build && cross-env CAPACITOR_ENV=prod npx cap sync",
@@ -50,6 +51,7 @@
   "devDependencies": {
     "@eslint/js": "^9.39.4",
     "@hey-api/openapi-ts": "0.97.1",
+    "@playwright/test": "^1.60.0",
     "@testing-library/dom": "^10.4.1",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
@@ -72,6 +74,7 @@
     "typescript-eslint": "^8.56.1",
     "vite": "^8.0.0",
     "vite-plugin-svgr": "^5.0.0",
-    "vitest": "^4.1.0"
+    "vitest": "^4.1.0",
+    "zod": "^4.4.3"
   }
 }

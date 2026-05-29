@@ -1,4 +1,4 @@
-import { IsString, MaxLength, MinLength } from 'class-validator';
+import { IsBoolean, IsOptional, IsString, MaxLength, MinLength } from 'class-validator';
 
 export class LoginBodyDto {
   @IsString()
@@ -10,4 +10,8 @@ export class LoginBodyDto {
   @MinLength(1)
   @MaxLength(255)
   password!: string;
+
+  @IsOptional()
+  @IsBoolean()
+  trustDevice?: boolean;
 }

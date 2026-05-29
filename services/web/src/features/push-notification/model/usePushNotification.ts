@@ -1,4 +1,5 @@
 import { useUserStore } from '@/entities';
+import { setPushToken } from '@/shared/lib/capacitor/pushToken';
 import { Capacitor, type PluginListenerHandle } from '@capacitor/core';
 import { PushNotifications } from '@capacitor/push-notifications';
 import { useEffect, useRef } from 'react';
@@ -34,6 +35,8 @@ export function usePushNotification() {
       await PushNotifications.register();
 
       const h1 = await PushNotifications.addListener('registration', (token) => {
+        // logout 시 device deactivate body 에 첨부하기 위해 module 변수에도 보관
+        setPushToken(token.value);
         const accessToken = useUserStore.getState().accessToken;
         // 아직 로그인 전이면 토큰을 보관해두고 로그인 후 위의 useEffect에서 호출
         if (accessToken) registerMutation.mutate({ body: { pushToken: token.value } });

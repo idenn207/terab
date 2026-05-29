@@ -1,8 +1,9 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { ApiException } from '@terab/common';
 import { DatabaseService, TransactionContext } from '@terab/db';
-import { mockDatabaseService, mockTransactionContext } from '@terab/test';
+import { mockDatabaseService, mockTransactionContext, setupMockDbTransactionChain } from '@terab/test';
 import { AuthService } from '../auth/auth.service';
+import { TrustedDeviceService } from '../trusted-device/trusted-device.service';
 import { TwoFaStrategyRegistry } from './strategies/twofa-strategy.registry';
 import { TwoFaRepository } from './twofa.repository';
 import { TwoFaService } from './twofa.service';
@@ -35,6 +36,12 @@ const mockTwoFaRepository = {
 
 const mockAuthService = {
   issueAfterTwoFa: jest.fn(),
+  setTrustCookie: jest.fn(),
+};
+
+const mockTrustedDeviceService = {
+  register: jest.fn(),
+  trustDurationMs: 30 * 24 * 60 * 60 * 1000,
 };
 
 describe('TwoFaService', () => {
@@ -48,12 +55,15 @@ describe('TwoFaService', () => {
         { provide: TransactionContext, useValue: mockTransactionContext },
         { provide: TwoFaRepository, useValue: mockTwoFaRepository },
         { provide: AuthService, useValue: mockAuthService },
+        { provide: TrustedDeviceService, useValue: mockTrustedDeviceService },
         { provide: TwoFaStrategyRegistry, useValue: mockRegistry },
       ],
     }).compile();
 
     service = module.get<TwoFaService>(TwoFaService);
     jest.clearAllMocks();
+    setupMockDbTransactionChain();
+    mockTrustedDeviceService.register.mockReset();
     mockRegistry.get.mockImplementation((type: string) => {
       if (type === 'PUSH') return mockPushStrategy;
       throw new ApiException('TWOFA_STRATEGY_NOT_FOUND');
@@ -198,7 +208,7 @@ describe('TwoFaService', () => {
   });
 
   describe('completeChallenge', () => {
-    it('type=PUSH면 claimApprovedChallenge에 위임', async () => {
+    it('type=PUSH면 claimApprovedChallenge에 위임하고 userId만 반환 (trustDevice 미지정)', async () => {
       mockTwoFaRepository.findById.mockResolvedValue({
         id: 'c',
         userId: 'u',
@@ -207,9 +217,10 @@ describe('TwoFaService', () => {
         options: '47,82,13',
         correctNum: '47',
       });
-      const userId = await service.completeChallenge('c', { type: 'PUSH' });
-      expect(userId).toBe('u');
+      const result = await service.completeChallenge('c', { type: 'PUSH' }, undefined);
+      expect(result).toEqual({ userId: 'u' });
       expect(mockTwoFaRepository.updateStatus).toHaveBeenCalledWith('c', 'EXPIRED');
+      expect(mockTrustedDeviceService.register).not.toHaveBeenCalled();
     });
 
     it('type=TOTP면 challenge가 PENDING이어야 하고, strategy.verifyResponse 호출 후 EXPIRED 처리', async () => {
@@ -224,10 +235,10 @@ describe('TwoFaService', () => {
       const totpStrategy = { type: 'TOTP', verifyResponse: jest.fn().mockResolvedValue(true) };
       mockRegistry.get.mockImplementation((t: string) => (t === 'TOTP' ? totpStrategy : mockPushStrategy));
 
-      const userId = await service.completeChallenge('c', { type: 'TOTP', code: '123456' });
+      const result = await service.completeChallenge('c', { type: 'TOTP', code: '123456' }, undefined);
 
       expect(totpStrategy.verifyResponse).toHaveBeenCalledWith('u', 'c', { code: '123456' });
-      expect(userId).toBe('u');
+      expect(result).toEqual({ userId: 'u' });
       expect(mockTwoFaRepository.updateStatus).toHaveBeenCalledWith('c', 'EXPIRED');
     });
 
@@ -240,9 +251,81 @@ describe('TwoFaService', () => {
         options: '47,82,13',
         correctNum: '47',
       });
-      await expect(service.completeChallenge('c', { type: 'TOTP', code: '1' })).rejects.toMatchObject({
+      await expect(service.completeChallenge('c', { type: 'TOTP', code: '1' }, undefined)).rejects.toMatchObject({
         code: 'TWOFA_CHALLENGE_NOT_FOUND',
       });
+    });
+
+    it('trustDevice=true 시 같은 흐름 안에서 TrustedDeviceService.register 호출 + rawTrustToken 반환', async () => {
+      mockTwoFaRepository.findById.mockResolvedValue({
+        id: 'c',
+        userId: 'u',
+        status: 'APPROVED',
+        expiresAt: new Date(Date.now() + 60_000),
+        options: '47,82,13',
+        correctNum: '47',
+      });
+      mockTrustedDeviceService.register.mockResolvedValue('raw-trust-1');
+
+      const result = await service.completeChallenge('c', { type: 'PUSH', trustDevice: true }, 'Mozilla/UA');
+
+      expect(mockTrustedDeviceService.register).toHaveBeenCalledWith('u', 'Mozilla/UA');
+      expect(result).toEqual({ userId: 'u', rawTrustToken: 'raw-trust-1' });
+    });
+
+    it('trustDevice=false 시 register 미호출 + rawTrustToken 미반환', async () => {
+      mockTwoFaRepository.findById.mockResolvedValue({
+        id: 'c',
+        userId: 'u',
+        status: 'APPROVED',
+        expiresAt: new Date(Date.now() + 60_000),
+        options: '47,82,13',
+        correctNum: '47',
+      });
+
+      const result = await service.completeChallenge('c', { type: 'PUSH', trustDevice: false }, 'UA');
+
+      expect(mockTrustedDeviceService.register).not.toHaveBeenCalled();
+      expect(result.rawTrustToken).toBeUndefined();
+    });
+
+    it('trustDevice=true 인데 register 실패 시 에러 전파 — 트랜잭션 rollback 으로 claim 도 무효', async () => {
+      mockTwoFaRepository.findById.mockResolvedValue({
+        id: 'c',
+        userId: 'u',
+        status: 'APPROVED',
+        expiresAt: new Date(Date.now() + 60_000),
+        options: '47,82,13',
+        correctNum: '47',
+      });
+      mockTrustedDeviceService.register.mockRejectedValue(new Error('db-down'));
+
+      await expect(service.completeChallenge('c', { type: 'PUSH', trustDevice: true }, 'UA')).rejects.toThrow(
+        'db-down',
+      );
+    });
+  });
+
+  describe('issueAuthenticatedResponse', () => {
+    it('rawTrustToken 없으면 setTrustCookie 미호출', async () => {
+      mockAuthService.issueAfterTwoFa.mockResolvedValue({ status: 'AUTHENTICATED' });
+
+      await service.issueAuthenticatedResponse('u', {} as never);
+
+      expect(mockAuthService.setTrustCookie).not.toHaveBeenCalled();
+    });
+
+    it('rawTrustToken 있으면 setTrustCookie 호출 (trustDurationMs 동봉)', async () => {
+      mockAuthService.issueAfterTwoFa.mockResolvedValue({ status: 'AUTHENTICATED' });
+      const res = {} as never;
+
+      await service.issueAuthenticatedResponse('u', res, 'raw-trust-1');
+
+      expect(mockAuthService.setTrustCookie).toHaveBeenCalledWith(
+        res,
+        'raw-trust-1',
+        mockTrustedDeviceService.trustDurationMs,
+      );
     });
   });
 

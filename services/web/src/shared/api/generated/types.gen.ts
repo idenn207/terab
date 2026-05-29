@@ -10,10 +10,123 @@ export type UserDto = {
   nickname: string;
 };
 
+export type ErrorResponseDto = {
+  /**
+   * ErrorCode 키 또는 일반화된 코드(HTTP_ERROR, INTERNAL_SERVER_ERROR)
+   */
+  code: string;
+  /**
+   * 사용자 노출 메시지
+   */
+  message: string;
+};
+
+export type DeviceResponseDto = {
+  id: string;
+  userAgent?: string;
+  createdAt: string;
+};
+
+export type RegisterDeviceBodyDto = {
+  pushToken: string;
+};
+
+export type TrustedDeviceResponseDto = {
+  id: string;
+  userAgent?: string;
+  createdAt: string;
+};
+
+export type ChallengeStatusPendingDto = {
+  status: 'PENDING';
+  options: Array<string>;
+  correctNum: string;
+  remainingSeconds: number;
+};
+
+export type ChallengeStatusApprovedDto = {
+  status: 'APPROVED';
+  userId: string;
+};
+
+export type ChallengeStatusDeniedDto = {
+  status: 'DENIED';
+};
+
+export type ChallengeStatusExpiredDto = {
+  status: 'EXPIRED';
+};
+
+export type RespondChallengeBodyDto = {
+  selectedNumber: string;
+};
+
+export type ResendChallengeResponseDto = {
+  challengeId: string;
+  options: Array<string>;
+  expiresAt: string;
+};
+
+export type CompleteChallengeBodyDto = {
+  type?: {
+    [key: string]: unknown;
+  };
+  code?: string;
+  trustDevice?: boolean;
+};
+
 export type AuthenticatedResponseDto = {
   status: 'AUTHENTICATED';
   accessToken: string;
   user: UserDto;
+};
+
+export type TotpSetupPendingDto = {
+  status: 'PENDING';
+  secret: string;
+  otpauthUri: string;
+};
+
+export type TotpSetupEnrolledDto = {
+  status: 'ENROLLED';
+  id: string;
+};
+
+export type TotpSetupCompleteBodyDto = {
+  secret: string;
+  code: string;
+};
+
+export type TotpInstanceDto = {
+  id: string;
+  lastUsedAt: string | null;
+  createdAt: string;
+};
+
+export type TotpListResponseDto = {
+  instances: Array<TotpInstanceDto>;
+};
+
+export type BackupCodeRegenerateBodyDto = {
+  currentPassword: string;
+};
+
+export type BackupCodeRegenerateResponseDto = {
+  backupCodes: Array<string>;
+};
+
+export type CreateInvitationBodyDto = {
+  expiresInDays?: number;
+};
+
+export type InvitationResponseDto = {
+  token: string;
+  url: string;
+  expiresAt: string;
+};
+
+export type ValidateInvitationResponseDto = {
+  valid: boolean;
 };
 
 export type TwoFaRequiredResponseDto = {
@@ -36,20 +149,10 @@ export type RegisterResponseDto = {
   backupCodes: Array<string>;
 };
 
-export type ErrorResponseDto = {
-  /**
-   * ErrorCode 키 또는 일반화된 코드(HTTP_ERROR, INTERNAL_SERVER_ERROR)
-   */
-  code: string;
-  /**
-   * 사용자 노출 메시지
-   */
-  message: string;
-};
-
 export type LoginBodyDto = {
   username: string;
   password: string;
+  trustDevice?: boolean;
 };
 
 export type BackupLoginBodyDto = {
@@ -58,65 +161,8 @@ export type BackupLoginBodyDto = {
   backupCode: string;
 };
 
-export type DeviceResponseDto = {
-  id: string;
-  userAgent?: string;
-  createdAt: string;
-};
-
-export type RegisterDeviceBodyDto = {
-  pushToken: string;
-};
-
-export type ChallengeStatusPendingDto = {
-  status: 'PENDING';
-  options: Array<string>;
-  correctNum: string;
-  remainingSeconds: number;
-};
-
-export type ChallengeStatusApprovedDto = {
-  status: 'APPROVED';
-  accessToken: string;
-  user: UserDto;
-};
-
-export type ChallengeStatusDeniedDto = {
-  status: 'DENIED';
-};
-
-export type ChallengeStatusExpiredDto = {
-  status: 'EXPIRED';
-};
-
-export type RespondChallengeBodyDto = {
-  selectedNumber: string;
-};
-
-export type ResendChallengeResponseDto = {
-  challengeId: string;
-  options: Array<string>;
-  expiresAt: string;
-};
-
-export type TrustedDeviceResponseDto = {
-  id: string;
-  userAgent?: string;
-  createdAt: string;
-};
-
-export type CreateInvitationBodyDto = {
-  expiresInDays?: number;
-};
-
-export type InvitationResponseDto = {
-  token: string;
-  url: string;
-  expiresAt: string;
-};
-
-export type ValidateInvitationResponseDto = {
-  valid: boolean;
+export type LogoutBodyDto = {
+  pushToken?: string;
 };
 
 export type FolderItemDto = {
@@ -153,6 +199,10 @@ export type RenameFolderBodyDto = {
 
 export type MoveFolderBodyDto = {
   parentId: string | null;
+};
+
+export type Object = {
+  [key: string]: unknown;
 };
 
 export type FileSearchResponseDto = {
@@ -216,7 +266,9 @@ export type TrashListResponseDto = {
 };
 
 export type TrashActionBodyDto = {
-  type: 'file' | 'folder';
+  type: {
+    [key: string]: unknown;
+  };
 };
 
 export type HealthControllerCheckData = {
@@ -234,199 +286,27 @@ export type HealthControllerCheckResponses = {
 
 export type HealthControllerCheckResponse = HealthControllerCheckResponses[keyof HealthControllerCheckResponses];
 
-export type AuthControllerRegisterData = {
-  body: RegisterBodyDto;
-  path?: never;
-  query?: never;
-  url: '/auth/register';
-};
-
-export type AuthControllerRegisterErrors = {
-  /**
-   * `INVITATION_NOT_FOUND` — 유효하지 않은 초대 링크입니다.
-   */
-  404: ErrorResponseDto;
-  /**
-   * `INVITATION_ALREADY_USED` — 이미 사용된 초대 링크입니다.
-   * `USERNAME_TAKEN` — 이미 사용 중인 아이디입니다.
-   */
-  409: ErrorResponseDto;
-  /**
-   * `INVITATION_EXPIRED` — 만료된 초대 링크입니다.
-   */
-  410: ErrorResponseDto;
-  /**
-   * `REGISTRATION_FAILED` — 회원가입 중 오류가 발생했습니다.
-   * `ROLE_NOT_FOUND` — 역할 정보를 찾을 수 없습니다. 관리자에게 문의하세요.
-   */
-  500: ErrorResponseDto;
-};
-
-export type AuthControllerRegisterError = AuthControllerRegisterErrors[keyof AuthControllerRegisterErrors];
-
-export type AuthControllerRegisterResponses = {
-  201: RegisterResponseDto;
-};
-
-export type AuthControllerRegisterResponse = AuthControllerRegisterResponses[keyof AuthControllerRegisterResponses];
-
-export type AuthControllerLoginData = {
-  body: LoginBodyDto;
-  path?: never;
-  query?: never;
-  url: '/auth/login';
-};
-
-export type AuthControllerLoginErrors = {
-  /**
-   * `INVALID_CREDENTIALS` — 아이디 또는 비밀번호가 올바르지 않습니다.
-   */
-  401: ErrorResponseDto;
-  /**
-   * `ACCOUNT_DISABLED` — 비활성화된 계정입니다.
-   */
-  423: ErrorResponseDto;
-};
-
-export type AuthControllerLoginError = AuthControllerLoginErrors[keyof AuthControllerLoginErrors];
-
-export type AuthControllerLoginResponses = {
-  200:
-    | ({
-        status: 'AUTHENTICATED';
-      } & AuthenticatedResponseDto)
-    | ({
-        status: '2FA_REQUIRED';
-      } & TwoFaRequiredResponseDto);
-};
-
-export type AuthControllerLoginResponse = AuthControllerLoginResponses[keyof AuthControllerLoginResponses];
-
-export type AuthControllerLoginWithBackupData = {
-  body: BackupLoginBodyDto;
-  path?: never;
-  query?: never;
-  url: '/auth/login/backup';
-};
-
-export type AuthControllerLoginWithBackupErrors = {
-  /**
-   * `INVALID_CREDENTIALS` — 아이디 또는 비밀번호가 올바르지 않습니다.
-   * `BACKUP_CODE_INVALID` — 유효하지 않은 백업 코드입니다.
-   */
-  401: ErrorResponseDto;
-  /**
-   * `ACCOUNT_DISABLED` — 비활성화된 계정입니다.
-   */
-  423: ErrorResponseDto;
-};
-
-export type AuthControllerLoginWithBackupError = AuthControllerLoginWithBackupErrors[keyof AuthControllerLoginWithBackupErrors];
-
-export type AuthControllerLoginWithBackupResponses = {
-  200:
-    | ({
-        status: 'AUTHENTICATED';
-      } & AuthenticatedResponseDto)
-    | ({
-        status: '2FA_REQUIRED';
-      } & TwoFaRequiredResponseDto);
-};
-
-export type AuthControllerLoginWithBackupResponse = AuthControllerLoginWithBackupResponses[keyof AuthControllerLoginWithBackupResponses];
-
-export type AuthControllerCompleteTwoFaData = {
-  body?: never;
-  path: {
-    id: string;
-  };
-  query?: never;
-  url: '/auth/2fa/challenge/{id}/complete';
-};
-
-export type AuthControllerCompleteTwoFaErrors = {
-  /**
-   * `TWOFA_CHALLENGE_NOT_FOUND` — 2FA 챌린지를 찾을 수 없습니다.
-   */
-  404: ErrorResponseDto;
-};
-
-export type AuthControllerCompleteTwoFaError = AuthControllerCompleteTwoFaErrors[keyof AuthControllerCompleteTwoFaErrors];
-
-export type AuthControllerCompleteTwoFaResponses = {
-  200:
-    | ({
-        status: 'AUTHENTICATED';
-      } & AuthenticatedResponseDto)
-    | ({
-        status: '2FA_REQUIRED';
-      } & TwoFaRequiredResponseDto);
-};
-
-export type AuthControllerCompleteTwoFaResponse = AuthControllerCompleteTwoFaResponses[keyof AuthControllerCompleteTwoFaResponses];
-
-export type AuthControllerRefreshData = {
+export type UserControllerMeData = {
   body?: never;
   path?: never;
   query?: never;
-  url: '/auth/refresh';
+  url: '/user/me';
 };
 
-export type AuthControllerRefreshErrors = {
-  /**
-   * `REFRESH_TOKEN_INVALID` — Refresh Token이 유효하지 않습니다.
-   */
-  401: ErrorResponseDto;
-};
-
-export type AuthControllerRefreshError = AuthControllerRefreshErrors[keyof AuthControllerRefreshErrors];
-
-export type AuthControllerRefreshResponses = {
-  200:
-    | ({
-        status: 'AUTHENTICATED';
-      } & AuthenticatedResponseDto)
-    | ({
-        status: '2FA_REQUIRED';
-      } & TwoFaRequiredResponseDto);
-};
-
-export type AuthControllerRefreshResponse = AuthControllerRefreshResponses[keyof AuthControllerRefreshResponses];
-
-export type AuthControllerLogoutData = {
-  body?: never;
-  path?: never;
-  query?: never;
-  url: '/auth/logout';
-};
-
-export type AuthControllerLogoutResponses = {
-  204: void;
-};
-
-export type AuthControllerLogoutResponse = AuthControllerLogoutResponses[keyof AuthControllerLogoutResponses];
-
-export type AuthControllerMeData = {
-  body?: never;
-  path?: never;
-  query?: never;
-  url: '/auth/me';
-};
-
-export type AuthControllerMeErrors = {
+export type UserControllerMeErrors = {
   /**
    * `INVALID_CREDENTIALS` — 아이디 또는 비밀번호가 올바르지 않습니다.
    */
   401: ErrorResponseDto;
 };
 
-export type AuthControllerMeError = AuthControllerMeErrors[keyof AuthControllerMeErrors];
+export type UserControllerMeError = UserControllerMeErrors[keyof UserControllerMeErrors];
 
-export type AuthControllerMeResponses = {
+export type UserControllerMeResponses = {
   200: UserDto;
 };
 
-export type AuthControllerMeResponse = AuthControllerMeResponses[keyof AuthControllerMeResponses];
+export type UserControllerMeResponse = UserControllerMeResponses[keyof UserControllerMeResponses];
 
 export type DeviceControllerListData = {
   body?: never;
@@ -478,94 +358,6 @@ export type DeviceControllerRemoveResponses = {
 
 export type DeviceControllerRemoveResponse = DeviceControllerRemoveResponses[keyof DeviceControllerRemoveResponses];
 
-export type TwoFaControllerGetStatusData = {
-  body?: never;
-  path: {
-    id: string;
-  };
-  query?: never;
-  url: '/auth/2fa/challenge/{id}/status';
-};
-
-export type TwoFaControllerGetStatusErrors = {
-  /**
-   * `TWOFA_CHALLENGE_NOT_FOUND` — 2FA 챌린지를 찾을 수 없습니다.
-   */
-  404: ErrorResponseDto;
-};
-
-export type TwoFaControllerGetStatusError = TwoFaControllerGetStatusErrors[keyof TwoFaControllerGetStatusErrors];
-
-export type TwoFaControllerGetStatusResponses = {
-  200:
-    | ({
-        status: 'PENDING';
-      } & ChallengeStatusPendingDto)
-    | ({
-        status: 'APPROVED';
-      } & ChallengeStatusApprovedDto)
-    | ({
-        status: 'DENIED';
-      } & ChallengeStatusDeniedDto)
-    | ({
-        status: 'EXPIRED';
-      } & ChallengeStatusExpiredDto);
-};
-
-export type TwoFaControllerGetStatusResponse = TwoFaControllerGetStatusResponses[keyof TwoFaControllerGetStatusResponses];
-
-export type TwoFaControllerRespondData = {
-  body: RespondChallengeBodyDto;
-  path: {
-    id: string;
-  };
-  query?: never;
-  url: '/auth/2fa/challenge/{id}/respond';
-};
-
-export type TwoFaControllerRespondErrors = {
-  /**
-   * `FORBIDDEN` — 접근 권한이 없습니다.
-   */
-  403: ErrorResponseDto;
-  /**
-   * `TWOFA_CHALLENGE_NOT_FOUND` — 2FA 챌린지를 찾을 수 없습니다.
-   */
-  404: ErrorResponseDto;
-};
-
-export type TwoFaControllerRespondError = TwoFaControllerRespondErrors[keyof TwoFaControllerRespondErrors];
-
-export type TwoFaControllerRespondResponses = {
-  204: void;
-};
-
-export type TwoFaControllerRespondResponse = TwoFaControllerRespondResponses[keyof TwoFaControllerRespondResponses];
-
-export type TwoFaControllerResendData = {
-  body?: never;
-  path: {
-    id: string;
-  };
-  query?: never;
-  url: '/auth/2fa/challenge/{id}/resend';
-};
-
-export type TwoFaControllerResendErrors = {
-  /**
-   * `TWOFA_CHALLENGE_NOT_FOUND` — 2FA 챌린지를 찾을 수 없습니다.
-   */
-  404: ErrorResponseDto;
-};
-
-export type TwoFaControllerResendError = TwoFaControllerResendErrors[keyof TwoFaControllerResendErrors];
-
-export type TwoFaControllerResendResponses = {
-  200: ResendChallengeResponseDto;
-};
-
-export type TwoFaControllerResendResponse = TwoFaControllerResendResponses[keyof TwoFaControllerResendResponses];
-
 export type TrustedDeviceControllerListData = {
   body?: never;
   path?: never;
@@ -613,6 +405,231 @@ export type TrustedDeviceControllerRevokeResponses = {
 };
 
 export type TrustedDeviceControllerRevokeResponse = TrustedDeviceControllerRevokeResponses[keyof TrustedDeviceControllerRevokeResponses];
+
+export type ChallengeControllerGetStatusData = {
+  body?: never;
+  path: {
+    id: string;
+  };
+  query?: never;
+  url: '/auth/2fa/challenge/{id}/status';
+};
+
+export type ChallengeControllerGetStatusErrors = {
+  /**
+   * `TWOFA_CHALLENGE_NOT_FOUND` — 2FA 챌린지를 찾을 수 없습니다.
+   */
+  404: ErrorResponseDto;
+};
+
+export type ChallengeControllerGetStatusError = ChallengeControllerGetStatusErrors[keyof ChallengeControllerGetStatusErrors];
+
+export type ChallengeControllerGetStatusResponses = {
+  200:
+    | ({
+        status: 'PENDING';
+      } & ChallengeStatusPendingDto)
+    | ({
+        status: 'APPROVED';
+      } & ChallengeStatusApprovedDto)
+    | ({
+        status: 'DENIED';
+      } & ChallengeStatusDeniedDto)
+    | ({
+        status: 'EXPIRED';
+      } & ChallengeStatusExpiredDto);
+};
+
+export type ChallengeControllerGetStatusResponse = ChallengeControllerGetStatusResponses[keyof ChallengeControllerGetStatusResponses];
+
+export type ChallengeControllerRespondData = {
+  body: RespondChallengeBodyDto;
+  path: {
+    id: string;
+  };
+  query?: never;
+  url: '/auth/2fa/challenge/{id}/respond';
+};
+
+export type ChallengeControllerRespondErrors = {
+  /**
+   * `FORBIDDEN` — 접근 권한이 없습니다.
+   */
+  403: ErrorResponseDto;
+  /**
+   * `TWOFA_CHALLENGE_NOT_FOUND` — 2FA 챌린지를 찾을 수 없습니다.
+   */
+  404: ErrorResponseDto;
+};
+
+export type ChallengeControllerRespondError = ChallengeControllerRespondErrors[keyof ChallengeControllerRespondErrors];
+
+export type ChallengeControllerRespondResponses = {
+  204: void;
+};
+
+export type ChallengeControllerRespondResponse = ChallengeControllerRespondResponses[keyof ChallengeControllerRespondResponses];
+
+export type ChallengeControllerResendData = {
+  body?: never;
+  path: {
+    id: string;
+  };
+  query?: never;
+  url: '/auth/2fa/challenge/{id}/resend';
+};
+
+export type ChallengeControllerResendErrors = {
+  /**
+   * `TWOFA_CHALLENGE_NOT_FOUND` — 2FA 챌린지를 찾을 수 없습니다.
+   */
+  404: ErrorResponseDto;
+};
+
+export type ChallengeControllerResendError = ChallengeControllerResendErrors[keyof ChallengeControllerResendErrors];
+
+export type ChallengeControllerResendResponses = {
+  200: ResendChallengeResponseDto;
+};
+
+export type ChallengeControllerResendResponse = ChallengeControllerResendResponses[keyof ChallengeControllerResendResponses];
+
+export type ChallengeControllerCompleteData = {
+  body: CompleteChallengeBodyDto;
+  path: {
+    id: string;
+  };
+  query?: never;
+  url: '/auth/2fa/challenge/{id}/complete';
+};
+
+export type ChallengeControllerCompleteErrors = {
+  /**
+   * `TWOFA_TOTP_INVALID_CODE` — TOTP 코드가 올바르지 않습니다.
+   */
+  400: ErrorResponseDto;
+  /**
+   * `TWOFA_CHALLENGE_NOT_FOUND` — 2FA 챌린지를 찾을 수 없습니다.
+   */
+  404: ErrorResponseDto;
+  /**
+   * `TWOFA_TOTP_LOCKED` — TOTP 입력 실패 횟수가 한도를 초과해 잠겼습니다. 잠시 후 다시 시도하세요.
+   */
+  429: ErrorResponseDto;
+};
+
+export type ChallengeControllerCompleteError = ChallengeControllerCompleteErrors[keyof ChallengeControllerCompleteErrors];
+
+export type ChallengeControllerCompleteResponses = {
+  200: AuthenticatedResponseDto;
+};
+
+export type ChallengeControllerCompleteResponse = ChallengeControllerCompleteResponses[keyof ChallengeControllerCompleteResponses];
+
+export type TotpControllerStartSetupData = {
+  body?: never;
+  path?: never;
+  query?: never;
+  url: '/2fa/totp/setup/start';
+};
+
+export type TotpControllerStartSetupResponses = {
+  200:
+    | ({
+        status: 'PENDING';
+      } & TotpSetupPendingDto)
+    | ({
+        status: 'ENROLLED';
+      } & TotpSetupEnrolledDto);
+};
+
+export type TotpControllerStartSetupResponse = TotpControllerStartSetupResponses[keyof TotpControllerStartSetupResponses];
+
+export type TotpControllerCompleteSetupData = {
+  body: TotpSetupCompleteBodyDto;
+  path?: never;
+  query?: never;
+  url: '/2fa/totp/setup/complete';
+};
+
+export type TotpControllerCompleteSetupErrors = {
+  /**
+   * `TWOFA_TOTP_INVALID_CODE` — TOTP 코드가 올바르지 않습니다.
+   * `TWOFA_SETUP_NOT_SUPPORTED` — 해당 2FA 방식은 별도 등록 절차가 없습니다.
+   */
+  400: ErrorResponseDto;
+};
+
+export type TotpControllerCompleteSetupError = TotpControllerCompleteSetupErrors[keyof TotpControllerCompleteSetupErrors];
+
+export type TotpControllerCompleteSetupResponses = {
+  204: void;
+};
+
+export type TotpControllerCompleteSetupResponse = TotpControllerCompleteSetupResponses[keyof TotpControllerCompleteSetupResponses];
+
+export type TotpControllerListData = {
+  body?: never;
+  path?: never;
+  query?: never;
+  url: '/2fa/totp';
+};
+
+export type TotpControllerListResponses = {
+  200: TotpListResponseDto;
+};
+
+export type TotpControllerListResponse = TotpControllerListResponses[keyof TotpControllerListResponses];
+
+export type TotpControllerRevokeData = {
+  body?: never;
+  path: {
+    id: string;
+  };
+  query?: never;
+  url: '/2fa/totp/{id}';
+};
+
+export type TotpControllerRevokeErrors = {
+  /**
+   * `TWOFA_LAST_STRATEGY_CANNOT_REMOVE` — 마지막 2FA 방식은 제거할 수 없습니다. backup code 또는 다른 방식을 먼저 추가하세요.
+   */
+  400: ErrorResponseDto;
+  /**
+   * `FORBIDDEN` — 접근 권한이 없습니다.
+   */
+  403: ErrorResponseDto;
+};
+
+export type TotpControllerRevokeError = TotpControllerRevokeErrors[keyof TotpControllerRevokeErrors];
+
+export type TotpControllerRevokeResponses = {
+  204: void;
+};
+
+export type TotpControllerRevokeResponse = TotpControllerRevokeResponses[keyof TotpControllerRevokeResponses];
+
+export type BackupCodeControllerRegenerateData = {
+  body: BackupCodeRegenerateBodyDto;
+  path?: never;
+  query?: never;
+  url: '/backup-codes/regenerate';
+};
+
+export type BackupCodeControllerRegenerateErrors = {
+  /**
+   * `INVALID_CREDENTIALS` — 아이디 또는 비밀번호가 올바르지 않습니다.
+   */
+  401: ErrorResponseDto;
+};
+
+export type BackupCodeControllerRegenerateError = BackupCodeControllerRegenerateErrors[keyof BackupCodeControllerRegenerateErrors];
+
+export type BackupCodeControllerRegenerateResponses = {
+  200: BackupCodeRegenerateResponseDto;
+};
+
+export type BackupCodeControllerRegenerateResponse = BackupCodeControllerRegenerateResponses[keyof BackupCodeControllerRegenerateResponses];
 
 export type InvitationControllerCreateData = {
   body: CreateInvitationBodyDto;
@@ -665,6 +682,148 @@ export type InvitationControllerValidateResponses = {
 };
 
 export type InvitationControllerValidateResponse = InvitationControllerValidateResponses[keyof InvitationControllerValidateResponses];
+
+export type LoginControllerRegisterData = {
+  body: RegisterBodyDto;
+  path?: never;
+  query?: never;
+  url: '/auth/register';
+};
+
+export type LoginControllerRegisterErrors = {
+  /**
+   * `INVITATION_NOT_FOUND` — 유효하지 않은 초대 링크입니다.
+   */
+  404: ErrorResponseDto;
+  /**
+   * `INVITATION_ALREADY_USED` — 이미 사용된 초대 링크입니다.
+   * `USERNAME_TAKEN` — 이미 사용 중인 아이디입니다.
+   */
+  409: ErrorResponseDto;
+  /**
+   * `INVITATION_EXPIRED` — 만료된 초대 링크입니다.
+   */
+  410: ErrorResponseDto;
+  /**
+   * `REGISTRATION_FAILED` — 회원가입 중 오류가 발생했습니다.
+   * `ROLE_NOT_FOUND` — 역할 정보를 찾을 수 없습니다. 관리자에게 문의하세요.
+   */
+  500: ErrorResponseDto;
+};
+
+export type LoginControllerRegisterError = LoginControllerRegisterErrors[keyof LoginControllerRegisterErrors];
+
+export type LoginControllerRegisterResponses = {
+  201: RegisterResponseDto;
+};
+
+export type LoginControllerRegisterResponse = LoginControllerRegisterResponses[keyof LoginControllerRegisterResponses];
+
+export type LoginControllerLoginData = {
+  body: LoginBodyDto;
+  path?: never;
+  query?: never;
+  url: '/auth/login';
+};
+
+export type LoginControllerLoginErrors = {
+  /**
+   * `INVALID_CREDENTIALS` — 아이디 또는 비밀번호가 올바르지 않습니다.
+   */
+  401: ErrorResponseDto;
+  /**
+   * `ACCOUNT_DISABLED` — 비활성화된 계정입니다.
+   */
+  423: ErrorResponseDto;
+};
+
+export type LoginControllerLoginError = LoginControllerLoginErrors[keyof LoginControllerLoginErrors];
+
+export type LoginControllerLoginResponses = {
+  200:
+    | ({
+        status: 'AUTHENTICATED';
+      } & AuthenticatedResponseDto)
+    | ({
+        status: '2FA_REQUIRED';
+      } & TwoFaRequiredResponseDto);
+};
+
+export type LoginControllerLoginResponse = LoginControllerLoginResponses[keyof LoginControllerLoginResponses];
+
+export type LoginControllerLoginWithBackupData = {
+  body: BackupLoginBodyDto;
+  path?: never;
+  query?: never;
+  url: '/auth/login/backup';
+};
+
+export type LoginControllerLoginWithBackupErrors = {
+  /**
+   * `INVALID_CREDENTIALS` — 아이디 또는 비밀번호가 올바르지 않습니다.
+   * `BACKUP_CODE_INVALID` — 유효하지 않은 백업 코드입니다.
+   */
+  401: ErrorResponseDto;
+  /**
+   * `ACCOUNT_DISABLED` — 비활성화된 계정입니다.
+   */
+  423: ErrorResponseDto;
+};
+
+export type LoginControllerLoginWithBackupError = LoginControllerLoginWithBackupErrors[keyof LoginControllerLoginWithBackupErrors];
+
+export type LoginControllerLoginWithBackupResponses = {
+  200:
+    | ({
+        status: 'AUTHENTICATED';
+      } & AuthenticatedResponseDto)
+    | ({
+        status: '2FA_REQUIRED';
+      } & TwoFaRequiredResponseDto);
+};
+
+export type LoginControllerLoginWithBackupResponse = LoginControllerLoginWithBackupResponses[keyof LoginControllerLoginWithBackupResponses];
+
+export type LoginControllerRefreshData = {
+  body?: never;
+  path?: never;
+  query?: never;
+  url: '/auth/refresh';
+};
+
+export type LoginControllerRefreshErrors = {
+  /**
+   * `REFRESH_TOKEN_INVALID` — Refresh Token이 유효하지 않습니다.
+   */
+  401: ErrorResponseDto;
+};
+
+export type LoginControllerRefreshError = LoginControllerRefreshErrors[keyof LoginControllerRefreshErrors];
+
+export type LoginControllerRefreshResponses = {
+  200:
+    | ({
+        status: 'AUTHENTICATED';
+      } & AuthenticatedResponseDto)
+    | ({
+        status: '2FA_REQUIRED';
+      } & TwoFaRequiredResponseDto);
+};
+
+export type LoginControllerRefreshResponse = LoginControllerRefreshResponses[keyof LoginControllerRefreshResponses];
+
+export type LoginControllerLogoutData = {
+  body: LogoutBodyDto;
+  path?: never;
+  query?: never;
+  url: '/auth/logout';
+};
+
+export type LoginControllerLogoutResponses = {
+  204: void;
+};
+
+export type LoginControllerLogoutResponse = LoginControllerLogoutResponses[keyof LoginControllerLogoutResponses];
 
 export type FolderControllerGetRootData = {
   body?: never;
@@ -809,8 +968,8 @@ export type FileControllerSearchData = {
   body?: never;
   path?: never;
   query: {
-    scope: 'all' | 'folder';
     q: string;
+    scope: Object;
     folderId?: string;
   };
   url: '/files/search';

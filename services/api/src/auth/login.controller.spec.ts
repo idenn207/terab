@@ -71,14 +71,24 @@ describe('UserController', () => {
   });
 
   describe('logout', () => {
-    it('cookie에서 refreshToken을 추출해 service에 전달한다', async () => {
+    it('body에 pushToken 미첨부 시 service에 undefined 전달', async () => {
       const req = { cookies: { refreshToken: 'rt' } } as any;
       const res = {} as any;
       mockLoginService.logout.mockResolvedValue(undefined);
 
-      await controller.logout(req, res);
+      await controller.logout(req, {}, res);
 
-      expect(mockLoginService.logout).toHaveBeenCalledWith('rt', res);
+      expect(mockLoginService.logout).toHaveBeenCalledWith('rt', undefined, res);
+    });
+
+    it('body의 pushToken을 service에 전달한다', async () => {
+      const req = { cookies: { refreshToken: 'rt' } } as any;
+      const res = {} as any;
+      mockLoginService.logout.mockResolvedValue(undefined);
+
+      await controller.logout(req, { pushToken: 'token-abc' }, res);
+
+      expect(mockLoginService.logout).toHaveBeenCalledWith('rt', 'token-abc', res);
     });
   });
 });
