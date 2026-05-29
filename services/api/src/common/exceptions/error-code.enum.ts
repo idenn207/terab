@@ -140,6 +140,10 @@ export const ErrorCode = {
     message: 'ZIP 다운로드는 최대 100개까지 가능합니다.',
     status: HttpStatus.BAD_REQUEST,
   },
+  PARENT_IN_TRASH: {
+    message: '부모 항목이 휴지통에 있어 단독으로 처리할 수 없습니다.',
+    status: HttpStatus.BAD_REQUEST,
+  },
   // ───── Upload Session ──────────────────────────────
   FILE_TOO_LARGE: {
     message: '파일 크기가 한도(100GB)를 초과했습니다.',

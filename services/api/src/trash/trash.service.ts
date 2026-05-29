@@ -22,6 +22,9 @@ export class TrashService extends ServiceCore {
   }
 
   async restore(userId: string, id: string, type: 'file' | 'folder'): Promise<void> {
+    if (await this.trashRepository.isParentInTrash(id, type, userId)) {
+      throw new ApiException('PARENT_IN_TRASH');
+    }
     if (type === 'file') {
       const file = await this.trashRepository.findDeletedFile(id, userId);
       if (!file) throw new ApiException('FILE_NOT_FOUND');
@@ -34,6 +37,9 @@ export class TrashService extends ServiceCore {
   }
 
   async permanentDelete(userId: string, id: string, type: 'file' | 'folder'): Promise<void> {
+    if (await this.trashRepository.isParentInTrash(id, type, userId)) {
+      throw new ApiException('PARENT_IN_TRASH');
+    }
     if (type === 'file') {
       const minioKey = await this.trashRepository.permanentDeleteFile(id, userId);
       if (!minioKey) throw new ApiException('FILE_NOT_FOUND');

@@ -1,7 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import { DatabaseService, files, folders, RepositoryCore, TransactionContext } from '@terab/db';
+import { alias } from 'drizzle-orm/pg-core';
 import { TrashItemDto } from './dto';
-import { and, eq, isNotNull, sql } from 'drizzle-orm';
+import { and, eq, isNotNull, isNull, or, sql } from 'drizzle-orm';
 
 @Injectable()
 export class TrashRepository extends RepositoryCore {
@@ -10,15 +11,38 @@ export class TrashRepository extends RepositoryCore {
   }
 
   async findAllDeleted(userId: string): Promise<TrashItemDto[]> {
+    const parentFolders = alias(folders, 'parent_folders');
     const [deletedFiles, deletedFolders] = await Promise.all([
       this.conn
-        .select()
+        .select({
+          id: files.id,
+          name: files.name,
+          softDeletedAt: files.softDeletedAt,
+        })
         .from(files)
-        .where(and(eq(files.userId, userId), isNotNull(files.softDeletedAt))),
+        .leftJoin(folders, eq(files.folderId, folders.id))
+        .where(
+          and(
+            eq(files.userId, userId),
+            isNotNull(files.softDeletedAt),
+            or(isNull(files.folderId), isNull(folders.softDeletedAt)),
+          ),
+        ),
       this.conn
-        .select()
+        .select({
+          id: folders.id,
+          name: folders.name,
+          softDeletedAt: folders.softDeletedAt,
+        })
         .from(folders)
-        .where(and(eq(folders.userId, userId), isNotNull(folders.softDeletedAt))),
+        .leftJoin(parentFolders, eq(folders.parentId, parentFolders.id))
+        .where(
+          and(
+            eq(folders.userId, userId),
+            isNotNull(folders.softDeletedAt),
+            or(isNull(folders.parentId), isNull(parentFolders.softDeletedAt)),
+          ),
+        ),
     ]);
 
     const fileItems: TrashItemDto[] = deletedFiles.map((f) => ({
@@ -36,6 +60,27 @@ export class TrashRepository extends RepositoryCore {
     }));
 
     return [...fileItems, ...folderItems].sort((a, b) => b.deletedAt.getTime() - a.deletedAt.getTime());
+  }
+
+  async isParentInTrash(id: string, type: 'file' | 'folder', userId: string): Promise<boolean> {
+    if (type === 'file') {
+      const [row = null] = await this.conn
+        .select({ parentSoftDeletedAt: folders.softDeletedAt })
+        .from(files)
+        .leftJoin(folders, eq(files.folderId, folders.id))
+        .where(and(eq(files.id, id), eq(files.userId, userId)))
+        .limit(1);
+      return row !== null && row.parentSoftDeletedAt !== null;
+    }
+
+    const parentFolders = alias(folders, 'parent_folders');
+    const [row = null] = await this.conn
+      .select({ parentSoftDeletedAt: parentFolders.softDeletedAt })
+      .from(folders)
+      .leftJoin(parentFolders, eq(folders.parentId, parentFolders.id))
+      .where(and(eq(folders.id, id), eq(folders.userId, userId)))
+      .limit(1);
+    return row !== null && row.parentSoftDeletedAt !== null;
   }
 
   async findDeletedFile(id: string, userId: string) {
@@ -105,7 +150,7 @@ export class TrashRepository extends RepositoryCore {
         RETURNING f.minio_key
       ),
       deleted_folders AS (
-        DELETE FROM folders 
+        DELETE FROM folders
         WHERE id IN (SELECT id FROM subtree)
         RETURNING id
       )
