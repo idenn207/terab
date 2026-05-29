@@ -1,0 +1,16 @@
+[Unit]
+Description=Terab Storage Agent (sidecar)
+Documentation=https://github.com/idenn207/terab/blob/master/docs/adr/0005-sidecar-agent-systemd-only.md
+After=network.target
+
+[Service]
+Type=simple
+User=root
+ExecStart=/usr/local/bin/terab-agent -socket /run/terab-agent/agent.sock -log-level info
+Restart=on-failure
+RestartSec=5s
+RuntimeDirectory=terab-agent
+RuntimeDirectoryMode=0755
+
+[Install]
+WantedBy=multi-user.target

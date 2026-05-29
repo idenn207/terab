@@ -60,7 +60,7 @@ export class LoginService extends ServiceCore {
 
     return {
       accessToken,
-      user: { id: user.id, username: user.username, nickname: user.nickname },
+      user: await this.authService.buildUserResponse(user),
       backupCodes: rawCodes,
     };
   }
@@ -85,7 +85,7 @@ export class LoginService extends ServiceCore {
       return {
         status: 'AUTHENTICATED',
         accessToken,
-        user: { id: user.id, username: user.username, nickname: user.nickname },
+        user: await this.authService.buildUserResponse(user),
       };
     }
 
@@ -101,7 +101,7 @@ export class LoginService extends ServiceCore {
         return {
           status: 'AUTHENTICATED' as const,
           accessToken,
-          user: { id: user.id, username: user.username, nickname: user.nickname },
+          user: await this.authService.buildUserResponse(user),
         };
       });
     }
@@ -137,7 +137,7 @@ export class LoginService extends ServiceCore {
     return {
       status: 'AUTHENTICATED',
       accessToken,
-      user: { id: user.id, username: user.username, nickname: user.nickname },
+      user: await this.authService.buildUserResponse(user),
     };
   }
 
@@ -152,7 +152,7 @@ export class LoginService extends ServiceCore {
     return {
       status: 'AUTHENTICATED',
       accessToken,
-      user: { id: user.id, username: user.username, nickname: user.nickname },
+      user: await this.authService.buildUserResponse(user),
     };
   }
 

@@ -1,0 +1,28 @@
+#!/bin/sh
+
+set -u
+
+PKG_NAME="${SYNOPKG_PKGNAME:-terab-agent}"
+PKG_VAR="${SYNOPKG_PKGVAR:-/var/packages/${PKG_NAME}/var}"
+
+SOCKET_PATH="${PKG_VAR}/agent.sock"
+LOG_FILE="${PKG_VAR}/agent.log"
+UNIT="pkg-${PKG_NAME}.service"
+LOGGER_TAG="terab-agent-post"
+
+# H1 검증 — DSM 매니저가 postinst 를 root 권한으로 호출하는지 journalctl 로 확인
+logger -t "${LOGGER_TAG}" "postinst start uid=$(id -u) pkg=${PKG_NAME}"
+
+mkdir -p "${PKG_VAR}"
+touch "${LOG_FILE}"
+chmod 0750 "${PKG_VAR}"
+chmod 0640 "${LOG_FILE}"
+
+rm -f "${SOCKET_PATH}"
+
+# unit 을 pkgctl chain 에 enable — start-stop-status 가 systemctl 호출을 회피하므로 enable 만이 활성 경로
+err=$(/usr/bin/systemctl enable "${UNIT}" 2>&1)
+rc=$?
+logger -t "${LOGGER_TAG}" "systemctl enable ${UNIT} rc=${rc} err=${err}"
+
+exit 0

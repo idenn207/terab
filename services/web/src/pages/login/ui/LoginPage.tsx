@@ -27,7 +27,7 @@ export function LoginPage() {
 
   return (
     <div className="grid w-full max-w-sm grid-cols-1 gap-8">
-      <LogoLabel className="h-6 text-zinc-950 dark:text-white forced-colors:text-[CanvasText]" />
+      <LogoLabel className="text-text h-6 forced-colors:text-[CanvasText]" />
       <Heading>로그인</Heading>
       {errorMessage && (
         <div

@@ -1,0 +1,20 @@
+[Unit]
+Description=Terab Storage Agent
+BindsTo=pkgctl-terab-agent.service
+IgnoreOnIsolate=true
+DefaultDependencies=no
+
+[Service]
+Type=simple
+User=terab-agent
+Group=terab-agent
+Restart=on-failure
+RestartSec=5
+ExecStart=/var/packages/terab-agent/target/bin/agent -socket /var/packages/terab-agent/var/agent.sock -log-level info
+Slice=terab_agent.slice
+
+[X-Synology]
+InfoCenterDisplay=yes
+
+[Install]
+WantedBy=pkgctl-terab-agent.service

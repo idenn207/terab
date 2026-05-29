@@ -67,14 +67,14 @@ export function TwoFactorBackupEntry() {
         </FieldGroup>
       </Fieldset>
       {(apiError || formError) && (
-        <p role="alert" className="text-sm text-red-500">
+        <p role="alert" className="text-danger text-sm">
           {apiError?.message ?? formError}
         </p>
       )}
       <Button type="submit" disabled={isLoading}>
         {isLoading ? '로그인 중...' : '로그인'}
       </Button>
-      <Button type="button" className="text-sm text-gray-500 underline" onClick={() => navigate('/login')} plain>
+      <Button type="button" onClick={() => navigate('/login')} plain>
         일반 로그인으로 돌아가기
       </Button>
     </form>

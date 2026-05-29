@@ -17,6 +17,7 @@ import { FolderModule } from './folder/folder.module';
 import { HealthModule } from './health/health.module';
 import { InvitationModule } from './invitation/invitation.module';
 import { MinioModule } from './minio/minio.module';
+import { StorageAgentModule } from './storage-agent/storage-agent.module';
 import { TrashModule } from './trash/trash.module';
 import { TrustedDeviceModule } from './trusted-device/trusted-device.module';
 import { TwoFaModule } from './twofa/twofa.module';
@@ -58,6 +59,7 @@ import { UserModule } from './user/user.module';
     FolderModule,
     FileModule,
     TrashModule,
+    StorageAgentModule,
   ],
   providers: [
     // 전역 Guard: ThrottlerGuard → JwtAuthGuard(401) → PermissionGuard(403) 순서 보장

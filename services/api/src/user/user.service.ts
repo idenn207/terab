@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { ApiException, UserDto } from '@terab/common';
 import { DatabaseService, ServiceCore, TransactionContext, Users$Insert, Users$Select } from '@terab/db';
+import { RoleService } from '../auth/role/role.service';
 import { UserRepository } from './user.repository';
 
 @Injectable()
@@ -9,6 +10,7 @@ export class UserService extends ServiceCore {
     database: DatabaseService,
     txContext: TransactionContext,
     private readonly userRepository: UserRepository,
+    private readonly roleService: RoleService,
   ) {
     super(database, txContext);
   }
@@ -28,6 +30,7 @@ export class UserService extends ServiceCore {
   async getCurrentUser(userId: string): Promise<UserDto> {
     const user = await this.userRepository.findById(userId);
     if (!user) throw new ApiException('INVALID_CREDENTIALS');
-    return { id: user.id, username: user.username, nickname: user.nickname };
+    const permissions = await this.roleService.getPermissionsByUserId(user.id);
+    return { id: user.id, username: user.username, nickname: user.nickname, permissions };
   }
 }

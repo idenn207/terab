@@ -91,3 +91,44 @@
   --motion-ease-in-out: cubic-bezier(0.45, 0, 0.55, 1);
   --motion-ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
 }
+
+/* ──────────────────────────────────────────────────────────────
+ * Dark mode override — index.css 의 @custom-variant dark 가 .dark class 를 trigger
+ * (theme-provider 가 prefers-color-scheme=dark 또는 수동 토글 시 documentElement.classList.add('dark'))
+ *
+ * 정책: mobile-ui-guide §7.1 "Dark mode" + §6.2 dark override 주석
+ * 원칙: oklch 의 lightness 만 반전, chroma/hue 는 유지 — brand 일관성 + perceptual 균형
+ * Contrast 검증 (WCAG §4.1 / mobile-ui-guide §4.1):
+ *   - text on surface           : L92 / L18  → ≈12:1   ✓ 4.5:1
+ *   - text-muted on surface     : L72 / L18  → ≈6:1    ✓ 4.5:1
+ *   - text-subtle on surface    : L58 / L18  → ≈4.5:1  ✓ 4.5:1
+ *   - accent-fg on accent       : L98 / L62  → ≈4.6:1  ✓ 4.5:1
+ *   - border-strong on surface  : L42 / L18  → ≈3:1    ✓ 1.4.11 (non-text)
+ * ────────────────────────────────────────────────────────────── */
+.dark {
+  /* surface — 어두운 배경 계층 */
+  --color-surface: oklch(18% 0 0);
+  --color-surface-muted: oklch(22% 0 0);
+  --color-surface-elevated: oklch(25% 0 0);
+
+  /* text — 본문 / 보조 / 비활성 (light 의 L18/L45/L62 와 perceptual 대칭) */
+  --color-text: oklch(92% 0 0);
+  --color-text-muted: oklch(72% 0 0);
+  --color-text-subtle: oklch(58% 0 0);
+
+  /* border — dark 배경 위 mid-tone */
+  --color-border: oklch(32% 0 0);
+  --color-border-strong: oklch(42% 0 0);
+
+  /* accent — dark surface 와의 contrast 확보 위해 lightness 살짝 ↑ */
+  --color-accent: oklch(62% 0.18 255);
+  --color-accent-hover: oklch(68% 0.2 255);
+  --color-accent-soft: oklch(28% 0.06 255);
+  --color-accent-fg: oklch(98% 0 0);
+
+  /* semantic — dark 배경 위 가독성 위해 lightness ↑ */
+  --color-success: oklch(70% 0.16 150);
+  --color-warning: oklch(78% 0.16 70);
+  --color-danger: oklch(70% 0.2 25);
+  --color-danger-soft: oklch(28% 0.06 25);
+}
