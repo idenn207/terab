@@ -4,5 +4,5 @@
 @custom-variant dark (&:where(.dark, .dark *)); /* 다크모드 설정 */
 
 html {
-  @apply bg-white lg:bg-zinc-100 dark:bg-zinc-900 dark:lg:bg-zinc-950;
+  @apply bg-surface;
 }

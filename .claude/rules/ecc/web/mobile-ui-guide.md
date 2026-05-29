@@ -244,6 +244,8 @@ Tailwind 4 는 `--color-*` / `--text-*` / `--spacing-*` / `--radius-*` / `--moti
 
 > `zinc-*` (Tailwind 기본 팔레트) 는 *catalyst 잔존 사용처에서만* 허용 — 신규 컴포넌트는 위 token utility 만. catalyst 제거(§8) 시 일괄 교체 예정.
 
+> Dark mode 분기는 위 token utility 가 *자동 적용*한다 — tokens.css 의 `.dark` selector 가 surface·text·border·accent·semantic 값을 override. 컴포넌트는 `dark:` variant 를 *수동 추가하지 않고* `bg-surface text-text` 만 쓰면 light/dark 양쪽에서 올바른 톤이 나온다. 자세한 정책은 §7.1 "Dark mode" 행 참조.
+
 ### 6.3 `cn()` 유틸 — 조건부 class
 
 조건부·variant class 조합은 항상 [shared/lib/utils/cn.ts](../../../../services/web/src/shared/lib/utils/cn.ts) 의 `cn()` 유틸 경유. [coding-style.md](./coding-style.md) 의 "클래스 조합" 규칙을 따른다.
@@ -285,12 +287,12 @@ className={`rounded-md ${variant === 'primary' ? 'bg-accent ...' : ...}`}
 | 의미 있는 motion (220ms 이하) | modal/toast 진입, list 정렬, FAB | §2.3 motion token 안에서만. *장식용 motion 금지* |
 | Editorial typography (scale contrast) | drive 빈 상태 / 공유 받기 onboarding | §5.1 위계 우선순위 |
 | Soft surface + subtle shadow (Material elevation level 1~2) | card·modal·bottom sheet | https://m3.material.io/styles/elevation/overview |
+| Dark mode | 모든 표면 — tokens.css 의 `.dark` selector override 가 surface·text·border·accent·semantic 값을 분기 | system theme 추종(prefers-color-scheme) + 수동 토글 모두 지원. light/dark contrast 4.5:1 (§4.1) 통과 token 페어만 채택. **금지 trend §7.3 의 "Dark mode 강제 default" 와 구별** — 본 행은 *선택 가능한* dark, §7.3 은 *강제 default* |
 
 ### 7.2 v1.1 이후 검토
 
 | Trend | 미루는 이유 |
 |---|---|
-| Dark mode | tokens.css 에 dark 분기는 있으나 사용처 0건. v1.1 에서 *대비·이미지 톤·icon 분기* 전면 점검 후 켠다. |
 | Dark luxury / 큰 typography hero | drive 같은 *기능 앱*은 hero 가 약함. 마케팅 페이지 신설 시 검토. |
 | 3D / canvas-based 시각화 | Capacitor WebView 의 GPU 부담 검증 필요. v1.1 에서 *기기 표본 측정* 후. |
 | Glassmorphism (조건부 — 절제된 사용) | §7.3 의 금지 사유와 trade-off. v1.1 에서 *반드시 fallback 디자인 함께* 검토. |

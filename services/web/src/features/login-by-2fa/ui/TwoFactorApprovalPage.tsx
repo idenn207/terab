@@ -1,3 +1,4 @@
+import { Heading } from '@/shared/ui';
 import { useParams } from 'react-router-dom';
 import { useTwoFactorRespond } from '../model/useTwoFactorRespond';
 
@@ -6,41 +7,56 @@ export function TwoFactorApprovalPage() {
   const { options, respondStatus, respond } = useTwoFactorRespond(challengeId);
 
   if (respondStatus === 'loading') {
-    return <div className="p-8 text-center text-gray-500">불러오는 중...</div>;
+    return (
+      <section className="gap-gutter py-section flex w-full max-w-sm flex-col items-center">
+        <p aria-live="polite" className="text-text-muted text-base">
+          불러오는 중...
+        </p>
+      </section>
+    );
   }
 
   if (respondStatus === 'expired') {
     return (
-      <div className="p-8 text-center">
-        <p className="text-red-600">만료된 요청입니다.</p>
-      </div>
+      <section className="gap-gutter py-section flex w-full max-w-sm flex-col items-center text-center">
+        <Heading level={1}>요청이 만료되었습니다</Heading>
+        <p role="alert" className="text-danger text-base">
+          PC 에서 다시 로그인을 시도해 주세요.
+        </p>
+      </section>
     );
   }
 
   if (respondStatus === 'done') {
     return (
-      <div className="p-8 text-center">
-        <p className="font-bold text-green-600">선택 완료</p>
-        <p className="mt-2 text-sm text-gray-600">PC 화면에서 결과를 확인하세요.</p>
-      </div>
+      <section className="gap-gutter py-section flex w-full max-w-sm flex-col items-center text-center">
+        <p role="status" className="text-success text-2xl font-semibold">
+          선택 완료
+        </p>
+        <p className="text-text-muted text-base">PC 화면에서 결과를 확인하세요.</p>
+      </section>
     );
   }
 
   return (
-    <div className="flex flex-col items-center gap-6 p-8">
-      <h1 className="text-xl font-bold">로그인 승인</h1>
-      <p className="text-center text-sm text-gray-600">PC 화면에 표시된 숫자를 선택해 로그인을 승인해 주세요.</p>
-      <div className="flex gap-4">
+    <section className="gap-gutter py-section flex w-full max-w-sm flex-col">
+      <header className="flex flex-col gap-2 text-center">
+        <Heading level={1}>로그인 승인</Heading>
+        <p className="text-text-muted text-base">PC 화면에 표시된 숫자를 선택해 주세요.</p>
+      </header>
+
+      <div role="group" aria-label="승인 번호 선택" className="mx-auto flex gap-4">
         {options.map((opt) => (
           <button
             key={opt}
+            type="button"
             onClick={() => respond(opt)}
-            className="flex h-20 w-20 items-center justify-center rounded-lg border-2 text-2xl font-bold hover:bg-blue-50 active:bg-blue-100"
+            className="bg-surface-elevated text-text border-border-strong hover:bg-accent-soft hover:border-accent active:bg-accent-soft focus-visible:ring-accent duration-fast flex h-20 w-20 items-center justify-center rounded-xl border text-2xl font-semibold shadow-sm transition-colors ease-out focus-visible:ring-2 focus-visible:outline-none"
           >
             {opt}
           </button>
         ))}
       </div>
-    </div>
+    </section>
   );
 }
