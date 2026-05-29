@@ -23,4 +23,19 @@ export class RoleService extends ServiceCore {
   async getPermissionsByUserId(userId: string): Promise<string[]> {
     return this.roleRepository.findPermissionsByUserId(userId);
   }
+
+  async getRoleNamesByUserIds(userIds: string[]): Promise<Map<string, string[]>> {
+    const result = new Map<string, string[]>();
+    if (userIds.length === 0) return result;
+    const rows = await this.roleRepository.findRoleNamesByUserIds(userIds);
+    for (const { userId, name } of rows) {
+      const existing = result.get(userId);
+      if (existing) {
+        existing.push(name);
+      } else {
+        result.set(userId, [name]);
+      }
+    }
+    return result;
+  }
 }

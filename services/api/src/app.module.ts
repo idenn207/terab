@@ -9,6 +9,7 @@ import { ApiExceptionFilter, JwtAuthGuard, PermissionGuard } from '@terab/common
 import { DatabaseModule } from '@terab/db';
 import { LoggerModule, TraceInterceptor } from '@terab/logger';
 import { SecurityModule } from '@terab/security';
+import { AdminModule } from './admin/admin.module';
 import { AuthModule } from './auth/auth.module';
 import { LoginModule } from './auth/login.module';
 import { DeviceModule } from './device/device.module';
@@ -64,6 +65,7 @@ import { UserModule } from './user/user.module';
     StorageAgentModule,
     DriveModule,
     MountCredentialModule,
+    AdminModule,
   ],
   providers: [
     // 전역 Guard: ThrottlerGuard → JwtAuthGuard(401) → PermissionGuard(403) 순서 보장
