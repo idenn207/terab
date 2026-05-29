@@ -1,15 +1,16 @@
 ---
 name: sidecar-agent-systemd-only
 description: storage-agent 의 NAS 배포 architecture 를 DSM .spk 에서 systemd-only 로 전환한다 — Phase 3+ 의 LIO 커널 접근 요구·sole operator 환경의 운영 패턴·8 세션 .spk 시도의 잔존 blocker(DSM first-start abnormal) 종합 판단
-status: proposed
+status: accepted
 date: 2026-05-28
+accepted_date: 2026-05-29
 ---
 
 # ADR-0005: storage-agent 배포 architecture — DSM .spk 폐기, systemd-only 채택
 
 ## Status
 
-proposed — PR #?? (머지 시점에 `accepted` + PR 번호 + 머지일로 갱신)
+accepted — PR [#63](https://github.com/idenn207/terab/pull/63) 머지 (2026-05-29). 실 NAS round-trip 통과 + DSM 7 환경 4건 차이 보정 완료.
 
 ## Context
 
