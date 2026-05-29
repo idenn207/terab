@@ -26,7 +26,7 @@ export function BackupCodeSection() {
               </li>
             ))}
           </ul>
-          <Button onClick={clearGeneratedCodes} plain>
+          <Button onClick={clearGeneratedCodes} variant="text" tone="neutral">
             확인했습니다
           </Button>
         </div>
