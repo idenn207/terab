@@ -1,0 +1,53 @@
+#!/bin/sh
+
+set -u
+
+PKG_NAME="${SYNOPKG_PKGNAME:-terab-agent}"
+PKG_VAR="${SYNOPKG_PKGVAR:-/var/packages/${PKG_NAME}/var}"
+
+UNIT="pkg-${PKG_NAME}.service"
+LOG_FILE="${PKG_VAR}/agent.log"
+SYSTEMCTL="/usr/bin/systemctl"
+LOGGER_TAG="terab-agent-sss"
+
+# systemctl 호출 stderr 를 syslog 로 송출 — install 실패 시 `journalctl -t terab-agent-sss` 한 줄로 정확한 에러 추적
+run_systemctl() {
+    err=$("${SYSTEMCTL}" "$@" 2>&1 >/dev/null)
+    rc=$?
+    if [ -n "$err" ]; then
+        logger -t "${LOGGER_TAG}" "systemctl $* rc=$rc err=$err"
+    elif [ "$rc" -ne 0 ]; then
+        logger -t "${LOGGER_TAG}" "systemctl $* rc=$rc (no stderr)"
+    fi
+    return $rc
+}
+
+case "$1" in
+    start)
+        # 세션 7 architectural pivot — systemctl 호출 회피.
+        #   privilege.json 에 root 언급 시 DSM unsigned 패키지 install 차단되므로
+        #   pkgctl-* 가 [Install] WantedBy chain 으로 unit 을 자동 가동하는 경로로 위임
+        logger -t "${LOGGER_TAG}" "start invoked (no-op — unit driven by pkgctl WantedBy)"
+        exit 0
+        ;;
+    stop)
+        logger -t "${LOGGER_TAG}" "stop invoked (no-op — unit driven by pkgctl BindsTo)"
+        exit 0
+        ;;
+    status)
+        if "${SYSTEMCTL}" is-active --quiet "${UNIT}"; then
+            echo "running"
+            exit 0
+        fi
+        echo "stopped"
+        exit 1
+        ;;
+    log)
+        echo "${LOG_FILE}"
+        exit 0
+        ;;
+    *)
+        echo "usage: $0 {start|stop|status|log}" >&2
+        exit 1
+        ;;
+esac

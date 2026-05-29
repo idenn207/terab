@@ -161,6 +161,23 @@ export const ErrorCode = {
     message: '업로드된 파일 크기가 선언값과 다릅니다.',
     status: HttpStatus.BAD_REQUEST,
   },
+  // ───── Storage Agent (iSCSI sidecar) ──────────────────────────────
+  STORAGE_AGENT_UNAVAILABLE: {
+    message: '스토리지 에이전트에 연결할 수 없습니다.',
+    status: HttpStatus.SERVICE_UNAVAILABLE,
+  },
+  STORAGE_AGENT_TARGET_CONFLICT: {
+    message: '이미 동일한 IQN의 iSCSI 타깃이 존재합니다.',
+    status: HttpStatus.CONFLICT,
+  },
+  STORAGE_AGENT_TARGET_NOT_FOUND: {
+    message: '해당 IQN의 iSCSI 타깃을 찾을 수 없습니다.',
+    status: HttpStatus.NOT_FOUND,
+  },
+  STORAGE_AGENT_INTERNAL: {
+    message: '스토리지 에이전트 내부 오류가 발생했습니다.',
+    status: HttpStatus.INTERNAL_SERVER_ERROR,
+  },
 } as const satisfies Record<string, ErrorCodeDefinition>;
 
 export type ErrorCodeKey = keyof typeof ErrorCode;
