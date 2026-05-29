@@ -20,6 +20,13 @@ services/web 는 단일 빌드(웹 + Capacitor Android WebView)로 배포된다.
 
 > Material 과 HIG 가 충돌하면 Material 우선. Material/HIG 와 WCAG 가 충돌하면 WCAG 우선(접근성은 미적 결정을 압도). 그 외 충돌은 본 가이드 §2~§8 의 명시 규칙으로 판단.
 
+### v1.1 권위 보강 결정
+
+본 v1.1 milestone 1 시점에서 두 가지 추가 결정이 적용된다.
+
+- **Tailwind Plus URL 인용 안 함** — Tailwind Plus 의 UI Blocks 카탈로그는 ToS 상 "End Product 외부로 분리된 참조 배포 금지" 조항이 있어 회색지대다. 본 가이드는 Tailwind Plus 의 *디자인 어휘*(spacing, surface, component 톤) 를 v1.1 의 시각 참조로 *내부 이용* 하되, 가이드 본문·PR 설명·외부 공유 자산에 URL/스크린샷을 인용하지 않는다 — §2.2 footnote 가 동일 정책의 컴포넌트 단위 적용.
+- **§5 시각 위계는 catalyst dogfood 결과 보강분 포함** — v1.0 §5 의 4단계 위계 위에 §5.1.1 modular scale 사용처 매핑, §5.2.1 60/30/10 시각 비율, §5.5 페이지군 token 매핑 3종이 추가된다. 모두 *현재 services/web 에 정착된 패턴의 명시화* 이지, 신규 token 발명이 아니다.
+
 ### 읽는 순서
 
 1. 처음 읽는 세션은 §1 → §2 → §4 → §6 → §8 을 우선 (Material anatomy / a11y / token / catalyst).
@@ -64,6 +71,8 @@ services/web 는 단일 빌드(웹 + Capacitor Android WebView)로 배포된다.
 | Switch / Checkbox / Radio | https://m3.material.io/components/switch/overview | switch 는 boolean, checkbox 는 다중 선택, radio 는 단일 배타 — Material 의 의미 분리 그대로 |
 
 > 디자인 결정은 anatomy 만 답습하고 *색상은 본 프로젝트 토큰만* 사용한다. Material 의 dynamic color palette 는 v1.0 미채택 (단일 `--color-accent` 로 통일).
+
+> **Tailwind UI Blocks 참조 정책 (v1.1+)** — Material 3 의 anatomy 가 *구조*를 결정하면, Tailwind Plus 의 UI Blocks 는 *현실적 작업 시작점* 으로 *내부 참조*만 사용한다 (§1 "v1.1 권위 보강 결정" 의 ToS 정책과 일관). 즉, (a) Tailwind UI Blocks 의 markup·classname 을 직접 paste 하지 않고, (b) 그 구조에서 anatomy·token·a11y 만 본 가이드 기준으로 재해석해 headless 컴포넌트로 옮긴다. PR 본문·가이드·외부 공유 자산에 Tailwind UI Blocks URL/스크린샷 인용 금지.
 
 **부정 예시** — Modal 을 desktop·mobile 동일 centered dialog 로 통일. mobile 에서 손가락 도달성·키보드 차단 면적 모두 악화. mobile=BottomSheet, desktop=Dialog 분기 필수.
 
@@ -173,6 +182,22 @@ services/web 는 단일 빌드(웹 + Capacitor Android WebView)로 배포된다.
 3. **Weight (굵기)** — title 600 / body 400 / caption 400 + `--color-text-muted`. 600 이상은 sparingly.
 4. **Color contrast** — primary = `--color-text` / secondary = `--color-text-muted` / tertiary = `--color-text-subtle`. 색조 차이로 위계를 만들지 않는다 (색맹 트랩).
 
+#### 5.1.1 Modular scale × 사용처 매핑
+
+[tokens.css](../../../../services/web/src/shared/styles/tokens.css) 의 `--text-*` modular scale 은 *대략 1.25× ratio* 의 7단계로 정착되어 있다. 어떤 단계가 어떤 표면에서 쓰이는지 *고정* 해, 디자이너·구현자 양쪽이 "어느 텍스트가 무슨 역할인지" 같은 어휘로 합의한다.
+
+| Token | clamp 기준 값 | 주 사용처 |
+|---|---|---|
+| `--text-xs` | ≈ 0.75rem | caption · helper text · table footer · timestamp |
+| `--text-sm` | ≈ 0.875rem | secondary body · form helper · breadcrumb · tag |
+| `--text-base` | ≈ 1rem | 1차 본문 · input · button label · list row title |
+| `--text-lg` | ≈ 1.125rem | card title · section sub-heading · modal body emphasis |
+| `--text-xl` | ≈ 1.25rem | page section heading · modal title |
+| `--text-2xl` | ≈ 1.5rem | 페이지 H1(앱 내부) · drive 메인 카드 그룹 제목 |
+| `--text-3xl` | ≈ 1.875rem | 빈 상태(empty state) 의 *유일한 hero* · onboarding 첫 화면 H1 |
+
+> **부정 예시** — 같은 페이지에서 H1 두 개를 `--text-2xl` + `--text-3xl` 로 동시에 노출. 위계가 *둘 다 강함* 으로 보여 시선 우선순위가 무너진다. *한 페이지에 `--text-2xl` 이상 사용처는 1개* 가 default.
+
 ### 5.2 색상 system — 의미 단위
 
 | 의미 | Token | 사용처 |
@@ -187,6 +212,24 @@ services/web 는 단일 빌드(웹 + Capacitor Android WebView)로 배포된다.
 
 > `--color-accent-soft` 는 accent 색의 *희석 배경*(예: tag, badge, selected row) — 절대 본문 텍스트 색으로 사용 금지(contrast 부족).
 
+#### 5.2.1 60/30/10 시각 비율
+
+§5.2 의 의미 단위 색상이 *한 화면에서 어느 정도 면적을* 차지해야 하는지 정성 기준. 정확한 픽셀 비율이 아닌 *시선이 받아들이는 면적 인상* 의 ratio.
+
+| 비율 | 역할 | 본 프로젝트 매핑 |
+|---|---|---|
+| ≥ 60% (지배색) | 화면 base — 배경·구분선·중성 surface | `--color-surface` / `-muted` / `-elevated` + `--color-border` |
+| ≤ 30% (보조색) | 콘텐츠 본문·secondary surface·텍스트 위계 | `--color-text` / `-muted` / `-subtle` + `--color-border-strong` |
+| ≤ 10% (강조색) | 1차 행동·상태 알림·focus indicator | `--color-accent` / `-hover` + semantic (`--color-success` / `-warning` / `-danger`) |
+
+규칙:
+
+- *지배색 ≥ 60% / 보조색 ≤ 30% / 강조색 ≤ 10% 의 시각 면적 비율* — 측정은 정성 기준(스크린샷의 시선 인상) 이지 픽셀 측정이 아니다.
+- 강조색이 10% 를 초과하면 *1차 행동이 너무 많다*는 신호. CTA 후보를 secondary 로 강등하거나 다른 페이지로 분리한다.
+- `--color-accent-soft` 는 *강조색 면적에 포함되지 않는다* — 보조색(30%) 으로 계산. 그래서 selected row·badge 처럼 영역 큰 곳에 안전하게 쓸 수 있다.
+
+> **부정 예시** — drive 메인 페이지에 "업로드" / "공유" / "휴지통" / "공유받음" 4개 1차 행동을 모두 `--color-accent` filled button 으로 노출. 강조색 면적이 20% 를 넘어 *1차 행동이 사라진 효과*. tonal/text variant 로 위계 분산.
+
 ### 5.3 Spacing scale
 
 - vertical rhythm 의 단위는 `--spacing-section` (섹션 간), `--spacing-gutter` (블록 간), Tailwind 의 `space-{n}` (요소 간). 세 단위를 *섞지 말고*, 위계에 맞춰 한 단위만 사용.
@@ -197,6 +240,18 @@ services/web 는 단일 빌드(웹 + Capacitor Android WebView)로 배포된다.
 ### 5.4 Milestone 2 인계
 
 핵심 8개 컴포넌트의 default padding·gap·typography 는 §5.3 spacing scale + §5.1 위계 4단계만 사용 — 새 token 발명 금지.
+
+### 5.5 페이지군 → token 사용 매핑
+
+services/web 의 라우트는 *route prefix* 단위로 family 가 나뉘고, family 별로 §5.2.1 의 면적 비율을 *지키는 방식이 다르다*. 본 표는 family default — 페이지 단위에서 override 할 수 있지만 family 톤이 무너지면 PR 리뷰에서 호출.
+
+| Family | route prefix | 톤 default | 강조색 사용처 | 비고 |
+|---|---|---|---|---|
+| auth | `/auth/*` (login, 2FA, register) | `--color-surface` + 큰 여백 + 단일 hero card | 1개 1차 행동(`로그인`, `다음`) 만 `--color-accent` filled | 빈 상태가 default — `--text-3xl` H1 1개, 본문은 `--text-base` |
+| drive | `/drive/*` (file list, detail, upload, share) | `--color-surface-muted` background + card grid (`--color-surface` elevation) | 업로드 FAB 또는 sticky CTA 1개 한도, 카드 hover 는 `--color-accent-soft` ring | bento 허용 (§7.1), 강조색 ≤ 10% 유지가 가장 어려운 family |
+| admin | `/admin/*` (RBAC, 감사 로그, 시스템 상태) | `--color-surface` + dense table + sidebar nav | 위험 행동(`삭제`, `권한 회수`) 은 `--color-danger` outlined, 1차는 `--color-accent` | `--color-warning` / `-danger` 가 *정보 색* 으로 자주 등장 — 데코레이션 색 금지 |
+
+> auth 와 admin family 는 *desktop 비중도 높음* — desktop breakpoint(≥768px) 에서도 family 톤 유지. drive 는 mobile-first 가 strict default.
 
 ---
 
@@ -364,6 +419,37 @@ className={`rounded-md ${variant === 'primary' ? 'bg-accent ...' : ...}`}
 
 ---
 
+## 9. Atomic step-by-step gate
+
+**결정**: 신규 컴포넌트·페이지 작업은 본 가이드의 5단계를 *원자 순서* 로 통과한다. 한 단계 *내에서* 의 작업은 한 번에 끝내고 다음 단계로만 진행 — 단계 사이 왕복 금지. *체크리스트 통과는 Milestone 1 의 acceptance, Vitest snapshot 은 Milestone 2 의 acceptance.*
+
+### 9.1 5단계 매핑
+
+| 단계 | 무엇을 결정 | 본 가이드 source | 출력 |
+|---|---|---|---|
+| 1. Anatomy | 어떤 컴포넌트(또는 페이지)인가 — Material 의 어느 component family | §2.2 anatomy 표 + §2.1 dimension | 컴포넌트 anatomy 다이어그램(스케치 OK) |
+| 2. Token | §6.2 token 표의 어느 utility class 조합인가 — 새 token 발명 금지 | §6.2 token 표 + §5.2.1 60/30/10 + §5.5 family default | className 초안 (cn() 적용 전) |
+| 3. A11y | §4.1 의 8개 criterion 중 본 컴포넌트가 다뤄야 할 것 — focus·contrast·target·status message | §4.1 criterion 표 + §4.2 focus indicator + §4.3 ARIA 가이드 | a11y 결정 메모 (어떤 ARIA 쓸지, focus visible 어떻게) |
+| 4. Motion | §2.3 의 어느 motion token 인가 — duration·ease·금지 property | §2.3 motion 표 + [coding-style.md "Animation-Only"](./coding-style.md) | motion 결정 메모 (어떤 transform·opacity 만 쓸지) |
+| 5. Anti-template | §7.3 금지 trend 의 시각 어휘가 default 에 없는지 + [design-quality.md "Required Qualities"](./design-quality.md) 4개 이상 충족하는지 | §7.3 + design-quality.md required-4 | 자기 점검 메모 (4개 quality 어느 것 만족) |
+
+> 단계 *내에서* 왕복하지 않는다. 예: 3 (a11y) 를 끝낸 뒤 2 (token) 으로 돌아가지 않는다. token 결정 시점에 a11y contrast 를 *함께* 보고 결정.
+
+### 9.2 Acceptance gate
+
+- **Milestone 1 (현재 v1.1)**: §9.3 의 체크리스트 통과 — PR 리뷰가 본 체크리스트로 컴포넌트별 점검.
+- **Milestone 2 (다음 v1.1 sprint)**: 핵심 8개 컴포넌트에 대해 Vitest snapshot 도입 — anatomy·token·a11y attr 의 회귀 자동 차단. Milestone 2 plan 의 task 로 직접 인계.
+
+### 9.3 Atomic 체크리스트 (PR 리뷰가 인용)
+
+- [ ] **1. Anatomy** — Material 3 의 어떤 component family 인지 PR 본문에 1줄로 명시 (§2.2 의 출처 URL 또는 표 row 이름).
+- [ ] **2. Token** — 모든 className 이 §6.2 utility 만 사용 + 새 token 발명 0건 (tokens.css 갱신 PR 분리 시는 본 PR 본문에서 cross-link).
+- [ ] **3. A11y** — focus-visible 스타일 존재 / contrast 4.5:1 통과(axe-core) / target ≥ 48dp / 상태 알림은 `aria-live` (§4.1).
+- [ ] **4. Motion** — §2.3 token 만 사용 + layout-bound property animate 0건 + prefers-reduced-motion 처리.
+- [ ] **5. Anti-template** — §7.3 금지 trend 의 시각 어휘가 default 에 0건 + [design-quality.md required-4](./design-quality.md) 만족.
+
+---
+
 ## 종료 체크리스트
 
 새 컴포넌트·페이지·widget 을 만들기 전 — 그리고 PR 을 올리기 전 — 본 체크리스트 통과.
@@ -379,3 +465,7 @@ className={`rounded-md ${variant === 'primary' ? 'bg-accent ...' : ...}`}
 - [ ] **inline style·hardcoded color** 없음, `cn()` 유틸 사용.
 - [ ] **§7.3 금지 trend** 의 시각 어휘가 default 에 등장하지 않음.
 - [ ] **신규 catalyst import 0건** (§8.2) — 기존 사용처는 TODO 주석 + Milestone 2 인계.
+- [ ] **(v1.1) Tailwind UI Blocks URL/스크린샷 인용 0건** — 본문·PR 본문·외부 공유 자산 모두 (§1 "v1.1 권위 보강 결정" + §2.2 footnote).
+- [ ] **(v1.1) 시각 위계 = §5.1.1 modular scale + §5.2.1 60/30/10** — 강조색 ≤ 10%, `--text-2xl` 이상 한 페이지에 1개, `--color-accent-soft` 는 보조색으로 계산.
+- [ ] **(v1.1) §5.5 family 톤** — route prefix(`/auth/*`, `/drive/*`, `/admin/*`) 의 default 톤 유지 + 위반 시 PR 본문에 사유 명시.
+- [ ] **(v1.1) §9 Atomic 5단계** — anatomy→token→a11y→motion→anti-template 순서로 PR 본문에 5줄 메모.
