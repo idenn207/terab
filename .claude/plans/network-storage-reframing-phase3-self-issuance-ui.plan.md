@@ -569,3 +569,18 @@ EXPECT: 모든 `.ts`/`.tsx` 가 CRLF.
 - Phase 0 spike 의 raw `synowebapi` 응답 (DSM 자동 생성 IQN `iqn.2000-01.com.synology:...`) 과 본 phase 의 명시 IQN (`iqn.2026-05.com.terab:{driveId}`) 은 다른 namespace — synowebapi 가 명시 IQN 을 그대로 받는지 Phase 2 의 `internal/dsm/synowebapi.go` 구현 확인 필요 (Task 2 시작 전 점검)
 - password 를 `crypto.randomBytes(16).toString('base64url')` 로 생성 — PowerShell special character escape risk 원천 차단 (base64url charset = `[A-Za-z0-9_-]`)
 - 본 plan 은 `/ecc:prp-implement` TDD validation loop 가 적용되는 가장 큰 phase
+
+## Follow-up 결함 (resume 세션 2026-05-30 발견 — 본 phase 책임 밖)
+
+본 phase 의 API surface (Task 1~5 + Task 9 API e2e) 가 검증되는 동안 *base v0.1 영역* 또는 *Phase 1 schema 영역* 의 결함 3건 발견. 본 PR 의 acceptance criteria 가 아니며 별도 worktree / PRD 로 처리.
+
+- **F1**: `services/api/src/metadata.ts` (swagger plugin 산출물) 가 base v0.1 에서부터 존재하지 않는 DTO (`./common/dto/user.dto`, `./twofa/dto/totp-list-response.dto` 등) 를 import → 전체 `npx tsc --noEmit` 깨짐. Phase 3 모듈 isolated tsc 는 결함 0. memory `project_trash_build_errors_pending_fix` 가족. 별도 worktree `fix/trash-build-errors` 영역
+- **F2**: `node_modules/@otplib/plugin-base32-scure/src/index.ts:1:1` ESM/CJS interop 결함 → `auth.e2e-spec.ts`·`trusted-device.e2e-spec.ts`·본 phase `mount-credential.e2e-spec.ts` 모두 AppModule import 시 jest 로딩 실패. NAS production 환경 외 e2e 실행 불가. jest config `transformIgnorePatterns` 갱신 또는 otplib 버전 고정 — base 인프라 영역
+- **F3**: `mount_credentials` schema 의 `(driveId, userId, protocol)` unique 가 *active 필터 없음* — revoke 후 동일 (drive, user, iscsi) 재발급 시 service 의 `findActiveByDriveAndProtocol` 가 `null` 반환해도 DB unique violation. plan Manual Validation §"회수 후 재발급 시 정상 동작" 항목이 manual smoke 에서 실패할 가능성. Phase 1 schema 수정 (partial unique `WHERE revoked_at IS NULL`) 또는 service revoke 의 hard delete 전환 — 후속 plan `network-storage-reframing-phase3-fixup-revoke-reissue.plan.md` 후보
+
+## Resume 세션 산출물 (2026-05-30)
+
+- `services/api/test/mount-credential.e2e-spec.ts` 신규 (Task 9 API e2e 부분) — fakedsm + agent binary spawn (Phase 2 e2e 답습) + AppModule + JWT 인증 (auth.e2e 답습) + 4 케이스 (round-trip / 중복 발급 409 / Bearer 부재 401 / 존재 X 회수 404). `STORAGE_AGENT_E2E=1` 가드, NAS Linux 환경에서만 실행
+- mount-credential 모듈 12개 ts 파일 EOL CRLF 통일 (논리 변경 0) — 이전 commit `49bd47d` 가 LF 로 저장한 정책 위반을 회복
+- 검증 통과: Phase 3 단위 테스트 44/44, isolated tsc 0 error, 보안 grep 4종 0건, EOL CRLF 26/26, Swagger metadata 중복 0건, script-template placeholder 잔존 0건
+- Web 측 (Task 6~8) + Task 9 manual smoke 는 별도 세션 — plan frontmatter `status` 는 `in-progress` 유지
