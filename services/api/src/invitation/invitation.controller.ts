@@ -1,22 +1,14 @@
-import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, ParseUUIDPipe, Post } from '@nestjs/common';
+import { Controller, Delete, Get, HttpCode, HttpStatus, Param, ParseUUIDPipe } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
-import { ApiError, type AuthUser, CurrentUser, Public, RequirePermission } from '@terab/common';
+import { ApiError, Public, RequirePermission } from '@terab/common';
 import { InvitationService } from './invitation.service';
-import { CreateInvitationBodyDto, InvitationResponseDto, ValidateInvitationResponseDto } from './dto';
+import { ValidateInvitationResponseDto } from './dto';
 
 @Controller('invitations')
 @ApiTags('Invitation')
 export class InvitationController {
   constructor(private readonly invitationService: InvitationService) {}
-
-  @RequirePermission('user:invite')
-  @Post()
-  @ApiOperation({ summary: '초대장 생성' })
-  @ApiResponse({ status: HttpStatus.CREATED, type: InvitationResponseDto })
-  async create(@CurrentUser() user: AuthUser, @Body() body: CreateInvitationBodyDto): Promise<InvitationResponseDto> {
-    return this.invitationService.create(user.userId, body.expiresInDays);
-  }
 
   @Public()
   @Throttle({ default: { ttl: 60000, limit: 30 } })
