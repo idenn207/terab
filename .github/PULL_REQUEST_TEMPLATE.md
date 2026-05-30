@@ -21,3 +21,5 @@
 
 ## 참고 사항
 <!-- 리뷰어가 알아야 할 추가 정보가 있으면 작성해 주세요 -->
+
+> 디자인 변경(컴포넌트/페이지/widget 신설·수정) PR 은 [`?template=web-component.md`](./PULL_REQUEST_TEMPLATE/web-component.md) 를 사용하세요.
