@@ -1,1 +1,1 @@
-export * from './ui/AdminPlaceholderPage';
+export * from './users';

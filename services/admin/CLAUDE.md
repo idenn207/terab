@@ -33,16 +33,20 @@ src/
     api-provider.tsx                # QueryClientProvider
     router/{config.tsx, index.tsx}  # createBrowserRouter — /login / /admin / fallback
   pages/
-    login/, login-twofa/, admin/    # AuthLayout / AdminLayout 자식 페이지
+    login/, login-twofa/            # AuthLayout 자식 페이지
+    admin/users/                    # AdminLayout 자식 페이지 (M3 — 사용자 목록 + 초대)
   widgets/
     auth-layout/                    # /login* 공통 shell (Outlet)
-    admin-layout/                   # /admin 좌측 사이드바 placeholder + 로그아웃 헤더
+    admin-layout/                   # /admin 좌측 사이드바(NavLink "사용자") + 로그아웃 헤더
   features/
     login-by-credentials/           # ID/PW 폼 (useLogin)
     login-by-2fa/                   # push polling + backup code (useTwoFactorPolling, useBackupLogin)
     logout/                         # /auth/logout mutation (useLogout)
+    user-list/                      # UserListSection + Table/Empty/Error (M3)
+    user-invite/                    # InviteDialog + useInvite (RHF + mutation, M3)
   entities/
     user/                           # useUserStore (zustand) + useMeQuery + User type (permissions 포함)
+    admin-user/                     # useAdminUserListQuery + AdminUser type (M3 — 관리자가 보는 사용자 엔티티)
   shared/
     api/                            # 단일 axiosInstance + 401 refresh queue + parseApiError + generated codegen
     router/                         # PrivateRoute + AdminGate (admin 전용 permission gate)
@@ -52,7 +56,7 @@ src/
 
 `/2fa/:id` push approval 페이지(모바일 deep link 진입)는 admin 운영 사용 사례 부재로 본 M2 에서 제외 — 후속 결정 사항.
 
-M3 (사용자 초대 + 사용자 목록) 진입 시 `services/api/src/admin/` 모듈 신설 + `features/user-invite/`, `features/user-list/`, `pages/admin/users/` 가 추가될 예정.
+M3 (사용자 초대 + 사용자 목록) 시점에 `services/api/src/admin/` 모듈 + `features/user-invite/`, `features/user-list/`, `entities/admin-user/`, `pages/admin/users/` 가 추가되었다. `/admin` index 는 `/admin/users` 로 redirect 한다 (이전 `AdminPlaceholderPage` 제거).
 
 ## 의존성 정책
 
@@ -80,7 +84,7 @@ services/web 의 dependency 중 **그대로 유지하는 항목**:
 ## ADMIN 전용 정책
 
 - **AdminGate**: `/admin` shell 진입 전 `user:manage` permission 검사. 미보유 시 `clearAuth()` + `/login?error=not_admin`. 매직 문자열은 `ADMIN_ENTRY_PERMISSION` 상수로 추출 ([src/shared/router/AdminGate.tsx](src/shared/router/AdminGate.tsx))
-- **단일 axios 인스턴스**: web 의 `axiosBasic`/`axiosAuth` 별칭은 admin 에는 도입하지 않는다. 단일 `axiosInstance` 가 `isPublicPath` 분기로 Authorization 헤더를 부착/생략한다 — public 라우트(`/auth/login`, `/auth/refresh` 등)는 자동 분기.
+- **단일 axios 인스턴스**: web 의 `axiosBasic`/`axiosAuth` 별칭은 admin 에는 도입하지 않는다. 단일 `axiosInstance` 가 `isPublicPath(method, url)` 분기로 Authorization 헤더를 부착/생략한다 — public 라우트(`/auth/login`, `/auth/refresh` 등)는 자동 분기. **method-aware** — `/invitations/{token}` GET 은 public 이지만 DELETE 는 admin 인 mixed-security 를 안전하게 분리한다 ([ADR-0006](../../docs/adr/0006-admin-api-prefix-and-module.md), M3).
 - **codegen 산출물 lint 무시**: `scripts/disable-lint-on-generated.mjs` 가 codegen 직후 `/* eslint-disable */` 배너를 모든 `src/shared/api/generated/**/*.ts` 에 prepend 한다. eslint.config.js 의 `globalIgnores` 를 건드리지 않는 source-level 해결책.
 - **API DTO 변경 시 codegen 재실행 필수**: `services/api` 의 `LoginResponseDto.user.permissions` 같은 필드 추가는 `npm run openapi:codegen` 으로 admin types.gen.ts 에 반영해야 한다. AdminGate 가 `permissions` 필드를 읽으므로 drift 시 빌드 실패.
 - **모든 신규 admin 엔드포인트는 서버측 `@Permission('user:manage')` (또는 동등) guard 의무**: AdminGate 는 client-side advisory — 서버측 guard 가 1차 방어선. `services/api/src/admin/*` 신설 시 모든 controller method 가 권한 guard 를 부착해야 하며, 누락된 endpoint 가 머지되면 admin 권한 우회가 가능해진다.

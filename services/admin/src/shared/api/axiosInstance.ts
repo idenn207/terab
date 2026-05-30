@@ -8,7 +8,7 @@ export const axiosInstance = axios.create({
 });
 
 axiosInstance.interceptors.request.use((config) => {
-  if (config.url && isPublicPath(config.url)) {
+  if (config.url && isPublicPath(config.method, config.url)) {
     return config;
   }
   const token = useUserStore.getState().accessToken;
@@ -49,7 +49,7 @@ axiosInstance.interceptors.response.use(
       throw error;
     }
 
-    if (originalRequest.url && isPublicPath(originalRequest.url)) {
+    if (originalRequest.url && isPublicPath(originalRequest.method, originalRequest.url)) {
       throw error;
     }
 

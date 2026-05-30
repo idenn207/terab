@@ -1098,3 +1098,49 @@ export type TrashControllerPermanentDeleteResponses = {
 };
 
 export type TrashControllerPermanentDeleteResponse = TrashControllerPermanentDeleteResponses[keyof TrashControllerPermanentDeleteResponses];
+
+export type AdminUserListItemDto = {
+  id: string;
+  username: string;
+  nickname: string;
+  createdAt: string;
+  roleNames: string[];
+};
+
+export type AdminUserListResponseDto = {
+  items: AdminUserListItemDto[];
+  total: number;
+  limit: number;
+  offset: number;
+};
+
+export type ListUsersQueryDto = {
+  limit?: number;
+  offset?: number;
+};
+
+export type UserAdminControllerListData = {
+  body?: never;
+  path?: never;
+  query?: ListUsersQueryDto;
+  url: '/admin/users';
+};
+
+export type UserAdminControllerListResponses = {
+  200: AdminUserListResponseDto;
+};
+
+export type UserAdminControllerListResponse = UserAdminControllerListResponses[keyof UserAdminControllerListResponses];
+
+export type InvitationAdminControllerCreateData = {
+  body: CreateInvitationBodyDto;
+  path?: never;
+  query?: never;
+  url: '/admin/users/invitations';
+};
+
+export type InvitationAdminControllerCreateResponses = {
+  201: InvitationResponseDto;
+};
+
+export type InvitationAdminControllerCreateResponse = InvitationAdminControllerCreateResponses[keyof InvitationAdminControllerCreateResponses];

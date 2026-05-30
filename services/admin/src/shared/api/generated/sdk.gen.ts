@@ -4,6 +4,11 @@
 import type { Client, Options as Options2, TDataShape } from './client';
 import { client } from './client.gen';
 import type {
+  AdminUserListResponseDto,
+  InvitationAdminControllerCreateData,
+  InvitationAdminControllerCreateResponses,
+  UserAdminControllerListData,
+  UserAdminControllerListResponses,
   AuthControllerCompleteTwoFaData,
   AuthControllerCompleteTwoFaErrors,
   AuthControllerCompleteTwoFaResponses,
@@ -544,6 +549,30 @@ export const trashControllerRestore = <ThrowOnError extends boolean = false>(opt
 export const trashControllerPermanentDelete = <ThrowOnError extends boolean = false>(options: Options<TrashControllerPermanentDeleteData, ThrowOnError>) =>
   (options.client ?? client).delete<TrashControllerPermanentDeleteResponses, TrashControllerPermanentDeleteErrors, ThrowOnError>({
     url: '/trash/{id}',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    },
+  });
+
+/**
+ * 관리자 — 사용자 목록 조회
+ */
+export const userAdminControllerList = <ThrowOnError extends boolean = false>(options?: Options<UserAdminControllerListData, ThrowOnError>) =>
+  (options?.client ?? client).get<UserAdminControllerListResponses, unknown, ThrowOnError>({
+    responseType: 'json',
+    url: '/admin/users',
+    ...options,
+  });
+
+/**
+ * 관리자 — 사용자 초대 생성
+ */
+export const invitationAdminControllerCreate = <ThrowOnError extends boolean = false>(options: Options<InvitationAdminControllerCreateData, ThrowOnError>) =>
+  (options.client ?? client).post<InvitationAdminControllerCreateResponses, unknown, ThrowOnError>({
+    responseType: 'json',
+    url: '/admin/users/invitations',
     ...options,
     headers: {
       'Content-Type': 'application/json',
