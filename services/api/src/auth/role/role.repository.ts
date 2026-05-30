@@ -42,6 +42,7 @@ export class RoleRepository extends RepositoryCore {
       .select({ userId: userRoles.userId, name: roles.name })
       .from(userRoles)
       .innerJoin(roles, eq(roles.id, userRoles.roleId))
-      .where(inArray(userRoles.userId, userIds));
+      .where(inArray(userRoles.userId, userIds))
+      .orderBy(userRoles.userId, roles.name);
   }
 }
