@@ -1,8 +1,10 @@
 ---
 name: admin-m3-pr70-review-fix
 description: PR #70 (feat/admin-m3-users-invite-list) 의 code review (.claude/reviews/pr-70-review.md) 가 박제한 CRITICAL 1 + HIGH 3 + MEDIUM 1 (M-2) 후속 — CI 빌드 차단 해소 + 모듈 경계 정상화 + endpoint 이중 노출 결정. M-1/M-3/M-5/M-6 은 별도 plan slug 로 인계.
-status: in-progress
+status: done
 created: 2026-05-30
+completed: 2026-05-30
+report: .claude/reports/admin-m3-pr70-review-fix-report.md
 decisions:
   - 2026-05-30 — slug 컨벤션: `admin-m3-pr70-review-fix` (PR 번호 + review 후속). source PRD 는 admin-service-bootstrap 의 M3 row 와 동일 — 본 plan 은 그 row 의 *코드 정합성 정정 phase*.
   - 2026-05-30 — H-2 방향 결정 보류: DTO 이동(A) vs service 시그니처 변경(B) 중 어느 쪽인지 *Task 4 시작 시* 사용자 confirm. 본 plan 의 default 권장은 (A) — nestjs/coding-style.md 의 "domain DTO 는 `src/{domain}/dto/`" 컨벤션 및 ADR-0006 의 "admin 전용 service/repository 신설 금지" 와 일관.
