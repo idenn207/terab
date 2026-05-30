@@ -52,7 +52,7 @@ We'll know we're right when:
 - [ ] UseCase 시나리오 개수와 구체 내용 — Phase 1에서 확정, Plan 단계 input
 - [ ] 기존 `services/web 테스트 커버리지 PRD/Plan`(브랜치 `test/services-web-usecase-coverage`, 직전 커밋에서 신설됐다고 표기)과의 관계 — 두 PRD가 어디서 만나고 어디서 분리되는지 명시 필요. 현재 `.claude/prds/`·`.claude/plans/` 글로브에서 찾지 못함 → 다른 경로에 있을 가능성, 또는 작업 중인 브랜치에 있을 가능성
 - [ ] Capacitor WebView가 큰 파일(>100MB) 업로드/다운로드를 어떻게 처리하는지 — 기본 fetch만으로 충분한지, 네이티브 플러그인이 필요한지 (필요하면 별도 phase로 분리)
-- [ ] 검색 범위 — 파일명만? 메타데이터 포함? API 동작 확인 필요
+- [x] 검색 범위 — 파일명만? 메타데이터 포함? API 동작 확인 필요 — **파일명만. `GET /file/search` 의 `q` 단일 파라미터 + `scope=all|folder` (folderId 동반). 메타데이터·폴더 자체 검색은 v1+. (Phase 9 plan 결정)**
 - [x] 이미지 미리보기(viewer)의 지원 포맷·이미지 외 파일(PDF/동영상) 처리 정책 — **v1 = 이미지 (`image/*`) 만 inline catalyst Dialog preview (headlessui 기반), 그 외 mime 은 자동 download fallback (Phase 4 결정)**
 
 ---
@@ -185,7 +185,7 @@ so I can **클라우드 서비스 의존 없이 내 NAS만으로 모바일↔PC 
 | 6 | MVP Verification | MVP 시나리오 완주 검증 (모바일↔PC, Capacitor Android), UseCase E2E N개 작성. 5는 services/admin 완성 후 합류 | pending | - | 3, 4, (5: admin 완성) | - |
 | 7 | Should - Folder CRUD | `features/folder-create/-rename/-move/-delete`, drive 페이지 breadcrumb + URL state | done | with 8 | 2 | [phase7-should-folder-crud](../plans/services-web-feature-parity-phase7-should-folder-crud.plan.md) + [phase7-fixup](../plans/services-web-feature-parity-phase7-fixup.plan.md) |
 | 8 | Should - Trash | `features/trash-restore/purge`, 휴지통 페이지 | pending | with 7 | 2 | - |
-| 9 | Should - Search | `features/file-search` — API 범위 확인 후 결정 | pending | - | 7, 8 | - |
+| 9 | Should - Search | `features/file-search` — API 범위 확인 후 결정 | in-progress | - | 7, 8 | [phase9-should-search](../plans/services-web-feature-parity-phase9-should-search.plan.md) |
 | 10 | Could - Polish | 공유 링크(API 확인 후), 디바이스 관리, 접근성/반응형 마무리 | pending | - | 9 | - |
 
 ### Phase Details
@@ -288,6 +288,10 @@ so I can **클라우드 서비스 의존 없이 내 NAS만으로 모바일↔PC 
 | Phase 8 fixup — Trash root 정의 (2026-05-29) | `GET /trash` 는 *부모가 휴지통이 아닌* 자식만 반환 (LEFT JOIN + `parent.soft_deleted_at IS NULL` 필터) | (a) 모든 soft-deleted 항목 반환 (b) `TrashItemDto` 에 `trashRootId`/`parentId` 노출 후 client filter | Google Drive·Dropbox 표준 — 사용자 멘탈 모델 일치. server 가 root 만 반환 = 단일 진실원. client filter 는 메모리 비효율 + 페이지네이션 깨짐. hierarchy view 가 필요해지면 그때 추가 (YAGNI) |
 | Phase 8 fixup — cascade child restore/purge 거부 (2026-05-29) | `restore` / `permanentDelete` 시작부에 `isParentInTrash` 가드 → `PARENT_IN_TRASH` (400) | (a) cascade-restore — 부모 chain 함께 복원 (b) 그냥 처리 | (a) 는 *사용자가 의도하지 않은 부모/형제 subtree 가 함께 복원*되는 부작용. (b) 는 race + 중복 처리. defense-in-depth (직접 API 호출 차단) + KISS. UI 가 trash root 만 노출하므로 정상 흐름에선 발생하지 않음 |
 | Phase 8 fixup — parent chain 검사 깊이 (2026-05-29) | 1단계 LEFT JOIN 만 (`immediate parent` 의 `soft_deleted_at` 비교) | 재귀 CTE 로 전체 chain | 부모가 휴지통이면 grand-parent 도 자동으로 hide (자식이 안 보이므로 호출 안 됨). 직접 API 호출 방어 시에도 1단 검사로 충분. 단순 + 빠름 |
+| Phase 9 검색 범위 = 파일명만 (2026-05-29) | `GET /file/search` 의 `q` 단일 파라미터 사용 | 메타데이터(tag/태그·생성일 범위·소유자) 추가 / Elastic 도입 | API DTO 가 `q` 단일 노출 — 추가 필드는 server 작업 동반. v1 검증 가설은 "파일명만으로 Swagger 의존 제거" 이므로 파일명으로 충분. 메타데이터는 v1+ |
+| Phase 9 폴더 자체 검색 v1+ 인계 (2026-05-29) | scope=folder 는 "*현재 폴더 안 파일*" 한정으로 채택, 폴더 객체 자체 검색은 v9 제외 | 폴더 검색 endpoint 신설 후 같은 슬라이스에서 통합 | API 에 폴더 검색 endpoint 없음. drive 사용자 멘탈은 *파일을 찾는다* 가 1순위, 폴더는 breadcrumb·트리 탐색으로 도달 — 검증 시나리오 충분 |
+| Phase 9 URL state 채택 (2026-05-29) | `?q=…&scope=…` URL search param | Zustand store 만 / pathname 분기 (`/search/...`) | Phase 7 URL state 정책과 일관 — 새로고침·뒤로가기·공유 자연스러움. pathname 분기는 라우터 설정 변경 비용 + 기존 페이지 분기 복잡 |
+| Phase 9 IME composition debounce 일시정지 (2026-05-29) | `compositionstart` 시 debounce 일시정지, `compositionend` 후 재개 | composition 무시하고 매 input 마다 debounce | 한글 조합 중 부분 토큰("ㅎㅏㄴ") 으로 API 호출되면 결과 무의미 + 네트워크 낭비. composition 종료 후 1회 발화가 사용자 의도와 일치 |
 
 ---
 
@@ -309,6 +313,6 @@ so I can **클라우드 서비스 의존 없이 내 NAS만으로 모바일↔PC 
 ---
 
 *Generated: 2026-05-26*
-*Last Updated: 2026-05-29 — Phase 8 done (본체 + cascade-semantics fixup 완료)*
-*Status: ACTIVE — Phase 8 done, Phase 6 는 admin 완성 대기 / Phase 9 (Search) 다음*
-*Open: UseCase 시나리오 개수 (Phase 6 진입 시 확정) / Capacitor 큰 파일 / 검색 범위 (Phase 9) / services/admin PRD 신설 시점*
+*Last Updated: 2026-05-30 — Phase 9 in-progress (구현 완료, PR 대기)*
+*Status: ACTIVE — Phase 9 (Search) 구현 완료 · PR 머지 대기, Phase 6 는 admin 완성 대기*
+*Open: UseCase 시나리오 개수 (Phase 6 진입 시 확정) / Capacitor 큰 파일 / services/admin PRD 신설 시점*

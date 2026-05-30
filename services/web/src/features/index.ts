@@ -2,6 +2,7 @@ export * from './back-button';
 export * from './deep-link';
 export * from './file-download';
 export * from './file-preview';
+export * from './file-search';
 export * from './file-upload';
 export * from './folder-create';
 export * from './folder-delete';
