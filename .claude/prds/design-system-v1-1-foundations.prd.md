@@ -80,7 +80,7 @@ created: 2026-05-29
 
 | # | Milestone | Outcome | Status | Plan |
 |---|---|---|---|---|
-| 1 | mobile-ui-guide.md §2.2 / §5.1 / §5.2 / §5.5 / §9 patch (M1~M4) | 디자인 정책이 명시 + 강제 가능 표 형태로 박제됨 | pending | — |
+| 1 | mobile-ui-guide.md §2.2 / §5.1 / §5.2 / §5.5 / §9 patch (M1~M4) | 디자인 정책이 명시 + 강제 가능 표 형태로 박제됨 | done (commit d65ab43, PR #67, 2026-05-29) | [design-system-v1-1-foundations.plan.md](../plans/design-system-v1-1-foundations.plan.md) |
 | 2 | 4단 cross-check 강제 메커니즘 도입 (plan checklist + PR template + agent prompt + eslint + Vitest snapshot) | claude / 사용자가 plan / PR / review 3단계 자동 차단 가능 | pending | — |
 | 3 | 신규 design PR 3건 dogfood 검증 — hypothesis 측정 | E1~E5 패턴 재현 0건 확인 또는 정책 보정 PRD 도출 | pending | — |
 
