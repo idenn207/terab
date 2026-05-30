@@ -49,10 +49,10 @@ export function PurgeConfirmDialog({ open, onClose, itemId, itemType, itemName }
         </p>
       )}
       <AlertActions>
-        <Button plain type="button" onClick={handleClose} disabled={isPending}>
+        <Button variant="text" tone="neutral" type="button" onClick={handleClose} disabled={isPending}>
           취소
         </Button>
-        <Button color="red" type="button" onClick={handleConfirm} disabled={isPending}>
+        <Button variant="filled" tone="danger" type="button" onClick={handleConfirm} disabled={isPending}>
           {isPending ? '삭제 중...' : '영구 삭제'}
         </Button>
       </AlertActions>
