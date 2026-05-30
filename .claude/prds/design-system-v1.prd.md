@@ -72,7 +72,7 @@
 |---|---|---|---|---|
 | 1 | mobile-ui-guide.md 박제 + CLAUDE.md 참조 추가 | 모든 새 claude 세션이 web plan 작성 시 가이드를 자동 로드하고 인용함 | done | [design-system-v1-mobile-ui-guide.plan.md](../plans/design-system-v1-mobile-ui-guide.plan.md) |
 | 2 | 핵심 8개 컴포넌트 headless 마이그레이션 | catalyst의 8개 컴포넌트 사용처 0건, headless 버전이 WCAG 2.2 AA 통과 | done | [design-system-v1-headless-migration.plan.md](../plans/completed/design-system-v1-headless-migration.plan.md) |
-| 3 | catalyst 종속 표면화 + 신규 import 차단 | 신규 catalyst import 시 경고, README로 마이그레이션 대상임을 선언 | pending | — |
+| 3 | catalyst 종속 표면화 + 신규 import 차단 | 신규 catalyst import 시 경고, README로 마이그레이션 대상임을 선언 | done | [design-system-v1-catalyst-lockdown.plan.md](../plans/design-system-v1-catalyst-lockdown.plan.md) |
 
 ## Open Questions
 - [ ] **headless 라이브러리 채택 vs 100% 직접 구현** — Radix UI / Headless UI / ariakit / 0 dep 직접 구현 중 plan 단계에서 결정. trade-off: 직접 구현 = ARIA 정확성 위험·코드 부담 / 라이브러리 = 의존성 추가·번들 사이즈
