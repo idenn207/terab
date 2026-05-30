@@ -2,7 +2,7 @@
 
 ## Status
 
-proposed — 2026-05-29
+accepted — 2026-05-30 (옵션 A 완수: 기존 `POST /invitations` 제거 — PR #70 review H-3)
 
 ## Context
 
@@ -50,7 +50,8 @@ services/api 에 **`src/admin/`** 신규 도메인 모듈을 도입한다.
 
 - PRD: `.claude/prds/admin-service-bootstrap.prd.md` — M3 가설 검증 ("본인이 사용자 1명 초대 → 가입 → 로그인")
 - Plan: `.claude/plans/admin-user-invite-list.plan.md` — M3 의 구현 단위 (이 ADR 의 첫 구현)
-- 구현 PR: feat/admin-m3-users-invite-list (TBD — 본 ADR 의 reference 갱신 시점)
+- 구현 PR: feat/admin-m3-users-invite-list — PR #70 (M3 첫 구현) + PR #70 review fix (옵션 A 완수)
+- review 후속 plan: [.claude/plans/admin-m3-pr70-review-fix.plan.md](../../.claude/plans/admin-m3-pr70-review-fix.plan.md)
 - 코드: `services/api/src/admin/admin.module.ts`, `services/api/src/admin/invitation-admin.controller.ts`, `services/api/src/admin/user-admin.controller.ts`
 - 관련 컨벤션: [services/api/CLAUDE.md](../../services/api/CLAUDE.md) §"신규 모듈 생성 시 체크리스트", `@RequirePermission` decorator 사용 정책
 - 관련 ADR: 0001 (Swagger 기반 codegen — `/admin/*` path 자동 인식), 0002 (2FA Strategy — 권한 게이트 일관성)

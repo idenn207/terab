@@ -49,7 +49,7 @@ terab 운영(사용자 초대/가입/관리, 스토리지 모니터링, 감사)�
 |---|---|---|---|
 | M1 | 서비스 부트스트랩 | done | services/admin 디렉토리, Vite, React 19 + TS, Dockerfile, Docker Swarm stack 등록, nginx 라우팅(`admin.drive.skypark207.com`), 헬스체크 |
 | M2 | A-01 관리자 로그인 (Layout-C) | done | 일반 사용자 D-01 의 Push 2FA + backup code 인증 정책 그대로 재사용. 동일 access token + ADMIN role claim 검증 |
-| M3 + M4 | A-05 사용자 초대 + A-03 사용자 목록 (Layout-B) | code complete — NAS 배포 + e2e pending | 가장 아픈 운영 공백 — `services/api/src/admin/` 모듈 + `POST /admin/users/invitations` + `GET /admin/users`, services/admin `features/user-invite/`, `features/user-list/`, `pages/admin/users/`. 동일 plan ([admin-user-invite-list.plan.md](../plans/admin-user-invite-list.plan.md))으로 묶어 진행 ([ADR-0006](../../docs/adr/0006-admin-api-prefix-and-module.md)) |
+| M3 + M4 | A-05 사용자 초대 + A-03 사용자 목록 (Layout-B) | code complete — NAS 배포 + e2e pending | 가장 아픈 운영 공백 — `services/api/src/admin/` 모듈 + `POST /admin/users/invitations` + `GET /admin/users`, services/admin `features/user-invite/`, `features/user-list/`, `pages/admin/users/`. plan 2 phase: ([admin-user-invite-list.plan.md](../plans/admin-user-invite-list.plan.md) = 1차 구현) + ([admin-m3-pr70-review-fix.plan.md](../plans/admin-m3-pr70-review-fix.plan.md) = PR #70 review fix — C-1 빌드 차단 해소 + 모듈 경계 정상화 + endpoint 이중 노출 해소). ([ADR-0006](../../docs/adr/0006-admin-api-prefix-and-module.md) — 옵션 A accepted) |
 
 ### Out of scope
 
