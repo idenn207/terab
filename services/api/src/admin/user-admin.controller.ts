@@ -2,7 +2,7 @@ import { Controller, Get, HttpStatus, Query } from '@nestjs/common';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { RequirePermission } from '@terab/common';
 import { UserService } from '../user/user.service';
-import { AdminUserListResponseDto, ListUsersQueryDto } from './dto';
+import { AdminUserListResponseDto, ListUsersQueryDto } from '../user/dto';
 
 @Controller('admin/users')
 @ApiTags('AdminUser')

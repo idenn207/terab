@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { ApiException, UserDto } from '@terab/common';
 import { DatabaseService, ServiceCore, TransactionContext, Users$Insert, Users$Select } from '@terab/db';
 import { RoleService } from '../auth/role/role.service';
-import { AdminUserListResponseDto, ListUsersQueryDto } from '../admin/dto';
+import { AdminUserListResponseDto, ListUsersQueryDto } from './dto';
 import { UserRepository } from './user.repository';
 
 @Injectable()
