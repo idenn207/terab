@@ -14,5 +14,25 @@ export default defineConfig([
       ecmaVersion: 2020,
       globals: globals.browser,
     },
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              group: ['@/shared/ui/catalyst', '@/shared/ui/catalyst/*'],
+              message:
+                'catalyst 는 v1.X 제거 예정 — 신규 import 금지. @/shared/ui (barrel) 경유로 import. 정책: services/web/src/shared/ui/catalyst/README.md',
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
+    files: ['src/shared/ui/catalyst/**', 'src/shared/ui/index.ts'],
+    rules: {
+      'no-restricted-imports': 'off',
+    },
   },
 ]);
