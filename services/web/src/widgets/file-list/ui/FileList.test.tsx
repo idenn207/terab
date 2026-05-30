@@ -218,4 +218,47 @@ describe('FileList', () => {
 
     expect(screen.getByRole('dialog', { name: 'delete-d1' })).toBeInTheDocument();
   });
+
+  describe('mode="search"', () => {
+    it('search 모드에서는 useFileList 를 호출하지 않는다', () => {
+      render(<FileList mode="search" files={[]} isLoading={false} />);
+      expect(mockUseFileList).not.toHaveBeenCalled();
+    });
+
+    it('search 모드 + 빈 결과 + !isLoading 면 "일치하는 파일이 없습니다" 메시지가 노출된다', () => {
+      render(<FileList mode="search" files={[]} isLoading={false} />);
+      expect(screen.getByText('일치하는 파일이 없습니다')).toBeInTheDocument();
+    });
+
+    it('search 모드 + isLoading 이면 스켈레톤이 노출된다', () => {
+      render(<FileList mode="search" files={[]} isLoading={true} />);
+      expect(screen.getByRole('status')).toHaveTextContent('목록을 불러오는 중');
+    });
+
+    it('search 모드의 결과 목록은 aria-label="검색 결과" 로 노출되고 폴더는 표시되지 않는다', () => {
+      render(
+        <FileList
+          mode="search"
+          isLoading={false}
+          files={[{ id: 'f1', folderId: null, name: 'matched.png', size: 1, mimeType: 'image/png', createdAt: '', updatedAt: '' }]}
+        />,
+      );
+
+      expect(screen.getByRole('list', { name: '검색 결과' })).toBeInTheDocument();
+      expect(screen.getByText('matched.png')).toBeInTheDocument();
+      expect(screen.queryByRole('list', { name: '파일 목록' })).not.toBeInTheDocument();
+    });
+
+    it('search 모드의 이미지 파일 클릭 시 preview.open 이 호출된다', async () => {
+      render(
+        <FileList
+          mode="search"
+          isLoading={false}
+          files={[{ id: 'f1', folderId: null, name: 'matched.png', size: 1, mimeType: 'image/png', createdAt: '', updatedAt: '' }]}
+        />,
+      );
+      await userEvent.click(screen.getByRole('button', { name: 'matched.png' }));
+      expect(mockPreview.open).toHaveBeenCalledWith({ id: 'f1', name: 'matched.png', mimeType: 'image/png' });
+    });
+  });
 });

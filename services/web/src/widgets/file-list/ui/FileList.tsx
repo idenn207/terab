@@ -23,12 +23,28 @@ const SKELETON_COUNT = 6;
 
 type FolderModalKind = 'rename' | 'move' | 'delete';
 
-interface FileListProps {
+interface BrowseProps {
+  mode?: 'browse';
   folderId: string | null;
   onFolderOpen: (folder: Pick<Folder, 'id' | 'name'>) => void;
 }
 
-export function FileList({ folderId, onFolderOpen }: FileListProps) {
+interface SearchProps {
+  mode: 'search';
+  files: DomainFile[];
+  isLoading: boolean;
+}
+
+type FileListProps = BrowseProps | SearchProps;
+
+export function FileList(props: FileListProps) {
+  if (props.mode === 'search') {
+    return <SearchModeList files={props.files} isLoading={props.isLoading} />;
+  }
+  return <BrowseModeList folderId={props.folderId} onFolderOpen={props.onFolderOpen} />;
+}
+
+function BrowseModeList({ folderId, onFolderOpen }: Required<Pick<BrowseProps, 'folderId' | 'onFolderOpen'>>) {
   const { folders, files, isLoading, error, refetch } = useFileList({ folderId });
   const preview = useFilePreview();
   const download = useDownloadFile();
@@ -42,14 +58,7 @@ export function FileList({ folderId, onFolderOpen }: FileListProps) {
   };
 
   if (isLoading) {
-    return (
-      <div role="status" aria-live="polite" className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
-        {Array.from({ length: SKELETON_COUNT }).map((_, idx) => (
-          <div key={idx} className="h-24 animate-pulse rounded-lg bg-zinc-200 dark:bg-zinc-800" aria-hidden="true" />
-        ))}
-        <span className="sr-only">목록을 불러오는 중</span>
-      </div>
-    );
+    return <SkeletonGrid />;
   }
 
   if (error) {
@@ -99,6 +108,66 @@ export function FileList({ folderId, onFolderOpen }: FileListProps) {
         onClose={preview.close}
       />
     </>
+  );
+}
+
+function SearchModeList({ files, isLoading }: { files: DomainFile[]; isLoading: boolean }) {
+  const preview = useFilePreview();
+  const download = useDownloadFile();
+
+  const handleFileClick = (file: DomainFile) => {
+    if (isImageMimeType(file.mimeType)) {
+      void preview.open({ id: file.id, name: file.name, mimeType: file.mimeType });
+      return;
+    }
+    void download.trigger(file.id, file.name);
+  };
+
+  if (isLoading) {
+    return <SkeletonGrid />;
+  }
+
+  if (files.length === 0) {
+    return (
+      <div className="flex flex-col items-center gap-3 rounded-lg border border-dashed border-zinc-300 p-12 text-center dark:border-zinc-700">
+        <p className="text-base font-medium text-zinc-800 dark:text-zinc-200">일치하는 파일이 없습니다</p>
+        <p className="text-sm text-zinc-500 dark:text-zinc-400">다른 키워드로 다시 시도해 보세요.</p>
+      </div>
+    );
+  }
+
+  return (
+    <>
+      <ul role="list" className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4" aria-label="검색 결과">
+        {files.map((file) => (
+          <li
+            key={file.id}
+            className="rounded-lg border border-zinc-200 bg-white p-4 transition hover:border-zinc-300 dark:border-white/10 dark:bg-zinc-900 dark:hover:border-white/20"
+          >
+            <FileRow file={file} onClick={() => handleFileClick(file)} />
+          </li>
+        ))}
+      </ul>
+      <FilePreviewDialog
+        isOpen={preview.isOpen}
+        target={preview.target}
+        blobUrl={preview.blobUrl}
+        isLoading={preview.isLoading}
+        error={preview.error}
+        onClose={preview.close}
+      />
+    </>
+  );
+}
+
+function SkeletonGrid() {
+  return (
+    <div role="status" aria-live="polite" className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+      {Array.from({ length: SKELETON_COUNT }).map((_, idx) => (
+        <div key={idx} className="h-24 animate-pulse rounded-lg bg-zinc-200 dark:bg-zinc-800" aria-hidden="true" />
+      ))}
+      <span className="sr-only">목록을 불러오는 중</span>
+    </div>
   );
 }
 
