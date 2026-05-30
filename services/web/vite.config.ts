@@ -27,6 +27,8 @@ export default defineConfig({
     setupFiles: './src/__tests__/setup.ts',
     css: true,
     passWithNoTests: true,
+    // Playwright spec 은 별도 runner (playwright test) 가 실행 — vitest discovery 에서 제외
+    exclude: ['**/node_modules/**', '**/dist/**', '**/e2e/**'],
   },
   build: {
     rolldownOptions: {

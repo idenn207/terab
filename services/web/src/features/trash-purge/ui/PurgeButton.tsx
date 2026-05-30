@@ -14,7 +14,7 @@ export function PurgeButton({ itemId, itemType, itemName }: PurgeButtonProps) {
 
   return (
     <>
-      <Button color="red" type="button" onClick={() => setIsDialogOpen(true)} aria-label={`${itemName} 영구 삭제`}>
+      <Button variant="filled" tone="danger" type="button" onClick={() => setIsDialogOpen(true)} aria-label={`${itemName} 영구 삭제`}>
         영구 삭제
       </Button>
       <PurgeConfirmDialog open={isDialogOpen} onClose={() => setIsDialogOpen(false)} itemId={itemId} itemType={itemType} itemName={itemName} />

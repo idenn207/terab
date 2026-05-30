@@ -31,7 +31,7 @@ export function RestoreButton({ itemId, itemType, itemName }: RestoreButtonProps
 
   return (
     <div className="flex flex-col items-end gap-1">
-      <Button outline type="button" onClick={handleClick} disabled={isPending} aria-label={`${itemName} 복원`}>
+      <Button variant="outlined" tone="neutral" type="button" onClick={handleClick} disabled={isPending} aria-label={`${itemName} 복원`}>
         {isPending ? '복원 중...' : '복원'}
       </Button>
       {errorMessage && (

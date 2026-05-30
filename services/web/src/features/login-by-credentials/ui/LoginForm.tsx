@@ -1,5 +1,5 @@
 import { TrustThisDeviceCheckbox } from '@/features/trusted-device';
-import { Button, Field, Input, Label } from '@/shared/ui';
+import { Button, Input } from '@/shared/ui';
 import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { LOGIN_ERROR_MESSAGES } from '../model/loginErrors';
@@ -31,10 +31,11 @@ export function LoginForm() {
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="grid w-full max-w-sm grid-cols-1 gap-6">
-      <Field>
-        <Label htmlFor="username">아이디</Label>
+      <div className="grid gap-3">
+        <label htmlFor="username" className="text-text text-sm font-medium">
+          아이디
+        </label>
         <Input
-          // ID
           id="username"
           type="text"
           autoComplete="username"
@@ -43,11 +44,12 @@ export function LoginForm() {
             onChange: resetError,
           })}
         />
-      </Field>
-      <Field>
-        <Label htmlFor="password">비밀번호</Label>
+      </div>
+      <div className="grid gap-3">
+        <label htmlFor="password" className="text-text text-sm font-medium">
+          비밀번호
+        </label>
         <Input
-          // PW
           id="password"
           type="password"
           autoComplete="current-password"
@@ -56,7 +58,7 @@ export function LoginForm() {
             onChange: resetError,
           })}
         />
-      </Field>
+      </div>
       {displayError && (
         <p role="alert" className="text-sm text-red-500">
           {displayError}
