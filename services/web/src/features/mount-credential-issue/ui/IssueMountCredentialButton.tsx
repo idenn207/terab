@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Button, Modal } from '@/shared/ui';
 import { useIssueMountCredential } from '../model/useIssueMountCredential';
 
@@ -28,8 +28,13 @@ export function IssueMountCredentialButton({ driveId }: IssueMountCredentialButt
   const { issue, issued, clearIssued, isIssuing, error } = useIssueMountCredential();
   const [showPassword, setShowPassword] = useState(false);
 
-  // 발급 다이얼로그를 닫지 않고 컴포넌트가 unmount 되면 password 가 메모리에 남는다 — cleanup 으로 GC
-  useEffect(() => clearIssued, [clearIssued]);
+  const clearIssuedRef = useRef(clearIssued);
+  clearIssuedRef.current = clearIssued;
+
+  // 발급 다이얼로그를 닫지 않고 컴포넌트가 unmount 되면 password 가 메모리에 남는다 — cleanup 으로 GC.
+  // clearIssued 를 의존성에 직접 넣으면 신원이 바뀔 때마다 cleanup 이 재실행돼
+  // 발급 직후 리렌더에서 다이얼로그가 즉시 닫힌다 — ref 경유로 unmount 시에만 실행
+  useEffect(() => () => clearIssuedRef.current(), []);
 
   const handleIssue = () => {
     setShowPassword(false);
