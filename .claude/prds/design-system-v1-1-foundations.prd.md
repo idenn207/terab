@@ -66,6 +66,7 @@ created: 2026-05-29
 | 4. Vitest snapshot | 페이지군 단위 token 사용 회귀 test (기존 pages 의 baseline 확보 후 회귀 자동 차단) | `services/web/src/pages/__tests__/` |
 
 > 4단 동시 도입의 false-positive 리스크는 **단계적 활성화** mitigation 으로 처리 — Risks 표 참조.
+> Stage 1 = M2 phase 1 (#73 머지). Stage 2/3/4 = deferred — 후속 PRD `design-system-v1-1-enforcement-stage2-4` 로 분기 (M3 dogfood 측정 결과에 따라 도입 여부 결정).
 
 ### Out of scope — v1.1 에서 명시적으로 안 함
 
@@ -81,8 +82,8 @@ created: 2026-05-29
 | # | Milestone | Outcome | Status | Plan |
 |---|---|---|---|---|
 | 1 | mobile-ui-guide.md §2.2 / §5.1 / §5.2 / §5.5 / §9 patch (M1~M4) | 디자인 정책이 명시 + 강제 가능 표 형태로 박제됨 | done (commit d65ab43, PR #67, 2026-05-29) | [design-system-v1-1-foundations.plan.md](../plans/design-system-v1-1-foundations.plan.md) |
-| 2 | 4단 cross-check 강제 메커니즘 도입 (plan checklist + PR template + agent prompt + eslint + Vitest snapshot) | claude / 사용자가 plan / PR / review 3단계 자동 차단 가능 | in-progress | [design-system-v1-1-enforcement.plan.md](../plans/design-system-v1-1-enforcement.plan.md) |
-| 3 | 신규 design PR 3건 dogfood 검증 — hypothesis 측정 | E1~E5 패턴 재현 0건 확인 또는 정책 보정 PRD 도출 | pending | — |
+| 2 | 4단 cross-check 강제 메커니즘 도입 (plan checklist + PR template + agent prompt + eslint + Vitest snapshot) — Stage 2~4 는 후속 PRD `design-system-v1-1-enforcement-stage2-4` 로 분기 | claude / 사용자가 plan / PR / review 3단계 자동 차단 가능 | done (phase 1 only — 4단 중 stage 1, commit 889bc95 시점 acceptance 충족, sync commit TBD) | [completed/design-system-v1-1-enforcement.plan.md](../plans/completed/design-system-v1-1-enforcement.plan.md) |
+| 3 | 신규 design PR 3건 dogfood 검증 — hypothesis 측정 | E1~E5 패턴 재현 0건 확인 또는 정책 보정 PRD 도출 | blocked (design PR 3건 도착 대기) | [design-system-v1-1-m3-dogfood-verification.plan.md](../plans/design-system-v1-1-m3-dogfood-verification.plan.md) |
 
 ## Open Questions
 
