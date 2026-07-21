@@ -11,6 +11,8 @@ export * from './folder-rename';
 export * from './login-by-2fa';
 export * from './login-by-credentials';
 export * from './logout';
+export * from './mount-credential-issue';
+export * from './mount-credential-revoke';
 export * from './push-notification';
 export * from './register-by-invitation';
 export * from './trash-purge';

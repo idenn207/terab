@@ -186,7 +186,7 @@ so I can **클라우드 서비스 의존 없이 내 NAS만으로 모바일↔PC 
 | 7 | Should - Folder CRUD | `features/folder-create/-rename/-move/-delete`, drive 페이지 breadcrumb + URL state | done | with 8 | 2 | [phase7-should-folder-crud](../plans/services-web-feature-parity-phase7-should-folder-crud.plan.md) + [phase7-fixup](../plans/services-web-feature-parity-phase7-fixup.plan.md) |
 | 8 | Should - Trash | `features/trash-restore/purge`, 휴지통 페이지 | pending | with 7 | 2 | - |
 | 9 | Should - Search | `features/file-search` — API 범위 확인 후 결정 | in-progress | - | 7, 8 | [phase9-should-search](../plans/services-web-feature-parity-phase9-should-search.plan.md) |
-| 10 | Could - Polish | 공유 링크(API 확인 후), 디바이스 관리, 접근성/반응형 마무리 | pending | - | 9 | - |
+| 10 | Could - Polish | 공유 링크(API 확인 후), 디바이스 관리, 접근성/반응형 마무리 | in-progress | - | 9 | [phase10-could-polish](../plans/services-web-feature-parity-phase10-could-polish.plan.md) |
 
 ### Phase Details
 

@@ -11,6 +11,7 @@ const { mockUseBreadcrumb, mockOpenFolder, mockUseFileSearch } = vi.hoisted(() =
 
 vi.mock('@/widgets', () => ({
   DriveBreadcrumb: () => <div data-testid="drive-breadcrumb" />,
+  DriveMountPanel: () => <div data-testid="drive-mount-panel" />,
   FileToolbar: ({ folderId }: { folderId: string | null }) => <div data-testid="file-toolbar" data-folder-id={folderId ?? 'root'} />,
   FileList: ({
     folderId,

@@ -584,3 +584,75 @@ EXPECT: 모든 `.ts`/`.tsx` 가 CRLF.
 - mount-credential 모듈 12개 ts 파일 EOL CRLF 통일 (논리 변경 0) — 이전 commit `49bd47d` 가 LF 로 저장한 정책 위반을 회복
 - 검증 통과: Phase 3 단위 테스트 44/44, isolated tsc 0 error, 보안 grep 4종 0건, EOL CRLF 26/26, Swagger metadata 중복 0건, script-template placeholder 잔존 0건
 - Web 측 (Task 6~8) + Task 9 manual smoke 는 별도 세션 — plan frontmatter `status` 는 `in-progress` 유지
+
+## Web Resume 세션 산출물 (2026-05-30, worktree `feat/storage-phase3-web`)
+
+Task 6~8 의 Web 측 일괄 작업.
+
+### Task 6 (entity + codegen)
+
+- `npm run openapi:codegen` 재생성 → `sdk.gen.ts` 에 4 endpoint (`driveControllerGetMyDrive`, `driveControllerGetDrive`, `mountCredentialControllerIssueMutation`, `mountCredentialControllerRevokeMutation`, `mountCredentialControllerListOptions`) + DTO 4종 (`DriveDto` / `IssueMountCredentialDto` / `IssueMountCredentialResponseDto` / `MountCredentialDto`) 등재
+- `entities/drive/`, `entities/mount-credential/` 2 슬라이스 + `entities/index.ts` 갱신 — `MountCredential` (조회) + `IssuedMountCredential` (발급 1회용, password + script 포함) 분리
+
+### Task 7 (features TDD)
+
+- `features/mount-credential-issue/` — `api/mutation.ts` (queryClient invalidate `mountCredentialControllerList`) + `model/useIssueMountCredential.ts` (issued state + clearIssued + unmount cleanup) + `ui/IssueMountCredentialButton.tsx` (Modal 다이얼로그 + password 마스킹 토글 `aria-pressed` + client-side `.ps1` Blob 다운로드)
+- `features/mount-credential-revoke/` — `api/mutation.ts` + `model/useRevokeMountCredential.ts` + `ui/RevokeMountCredentialButton.tsx` (window.confirm + onRevoked 콜백)
+- 테스트 6 spec, 20/20 통과 — mutation invalidate / hook state / 컴포넌트 a11y attr
+- `features/index.ts` 에 2 슬라이스 추가
+
+### Task 8 (widget + page)
+
+- `widgets/drive-mount-panel/ui/DriveMountPanel.tsx` — `useQuery(driveControllerGetMyDriveOptions())` + `useQuery(mountCredentialControllerListOptions())` 조합 + IssueMountCredentialButton / RevokeMountCredentialButton 배치. 자체 비즈니스 로직 0
+- `pages/drive/ui/DrivePage.tsx` 에 `<DriveMountPanel />` 추가 (검색 모드 아닐 때만 표시)
+- `pages/drive/ui/DrivePage.test.tsx` 의 `vi.mock('@/widgets')` 에 `DriveMountPanel` 추가 — 회귀 회피
+- `widgets/index.ts` 갱신
+- 테스트 5 spec 통과 (axe-core a11y 포함 — 자격증명 1건 상태 violations 0건)
+
+### Web 측 산출물 — 부수 효과
+
+- `services/api/src/metadata.ts` — Phase 3 DTO 4종 + DriveController/MountCredentialController 자동 등재 (swagger plugin 출력물). F1 결함 부분 해결 효과 — 본 PR 의 codegen workflow 가 트리거. 본 PR 에 포함하는 것이 의미상 옳음 (현재 commit 분리는 차후 결정)
+
+### 검증 (worktree 안)
+
+- `npx tsc --noEmit -p tsconfig.app.json` — 0 error
+- `npm test -- --run` — 69 파일 / 358 테스트 통과
+- `npm run build` — Vite production 성공
+- FSD grep 4종 (api barrel 미노출 / model→codegen 직접 import 0 / catalyst import 0 / cross-feature import 0) — 모두 0건
+- catalyst import 0건, mobile-ui-guide §8.2 준수
+- EOL CRLF — 본 PR 신규 14 파일 모두 CRLF
+
+### 미완 — Task 9 manual smoke
+
+- 본인 NAS 환경에서 web UI → 발급 → `.ps1` 다운로드 → PC 실행 → `Get-Disk` → 회수 round-trip 검증 필요
+- `plan frontmatter status` 는 `in-progress` 유지 — manual smoke 통과 시 `done`
+- PRD Phase 3 row status 갱신은 manual smoke 통과 후 본인이 결정
+
+### Follow-up (본 phase 외)
+
+- `IssueMountCredentialResponseDto.iqn` 의 codegen 타입이 `{[key: string]: unknown} | null` — 실 wire-format 은 string. API DTO `@ApiProperty({ type: () => String, nullable: true })` 명시로 정정 필요 (별도 PR)
+- F3 (revoke 후 재발급 unique violation) 가 manual smoke §"회수 후 재발급 시 정상 동작" 시점 재현 가능
+
+## 커밋 세션 정정 (2026-07-21, worktree `feat/storage-phase3-web`)
+
+앞선 "Web Resume 세션 산출물" 기록 중 **1건이 사실과 달라 정정**한다.
+
+### 정정 — widget 이 자체 데이터 조회를 보유했음
+
+- 기록: "`DriveMountPanel` — 자체 비즈니스 로직 0"
+- 실제: `DriveMountPanel.tsx` 가 `@shared/api` 의 codegen options 함수 2개를 직접 import 하고 `useQuery` 를 2회 호출 — Acceptance Criteria "widget 이 자체 비즈니스 로직 0 + features 조합만" 위반. 동시에 [services/web/CLAUDE.md](../../services/web/CLAUDE.md) 의 "codegen 함수를 호출하는 슬라이스는 `api/` 세그먼트를 항상 생성" 규칙도 미충족 (widget 에 `api/` 없음)
+- 조치: 조회 2건을 entity 로 이관 — `entities/drive/api/query.ts` (`useMyDriveQuery`) + `entities/mount-credential/api/query.ts` (`useMountCredentialListQuery`), 각 `model/` 재노출 경유해 barrel export. widget 은 두 훅을 호출만 하고 codegen import 0건
+- 기존 `entities/trash`·`entities/folder`·`entities/user` 의 조회 슬라이스 패턴을 그대로 따름
+
+### 검증 (정정 후)
+
+- `npm run build` (= `tsc -b` + vite build) 성공
+- Phase 3 관련 8 spec / 34 테스트 통과
+- 전체 358 테스트 중 357 통과 — 1 실패는 후술 flaky (Phase 3 무관)
+- FSD grep 6종 0건 (widget→codegen / widget→useQuery / catalyst / model→codegen / barrel→api / cross-feature)
+
+### 신규 결함 — 기존 flaky 테스트 (Phase 3 무관, 별도 PR)
+
+- `services/web/src/features/file-search/model/useFileSearch.test.tsx` > "200ms 동안 입력이 안정되어야 URL 이 갱신된다 (debounce)" 가 5회 중 3회 실패
+- 원인: `vi.useFakeTimers({ shouldAdvanceTime: true })` 는 가짜 타이머가 실제 시간과 함께도 흐르게 한다. `advanceTimersByTimeAsync(199)` 이후 `await` 가 소비한 실제 시간이 얹혀 총합이 200ms 를 넘기면 debounce 가 조기 발화 → 27번 줄 `expect(debouncedQ).toBe('')` 가 깨진다
+- 조치 방향: 경계값(199/200) 대신 여유 있는 값을 쓰거나 `shouldAdvanceTime` 제거. PR #72 (Phase 9 검색) 산출물이라 본 PR 범위 밖

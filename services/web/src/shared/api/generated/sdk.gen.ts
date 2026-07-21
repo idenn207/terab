@@ -25,6 +25,11 @@ import type {
   DeviceControllerRemoveData,
   DeviceControllerRemoveErrors,
   DeviceControllerRemoveResponses,
+  DriveControllerGetDriveData,
+  DriveControllerGetDriveErrors,
+  DriveControllerGetDriveResponses,
+  DriveControllerGetMyDriveData,
+  DriveControllerGetMyDriveResponses,
   FileControllerCopyData,
   FileControllerCopyErrors,
   FileControllerCopyResponses,
@@ -92,6 +97,14 @@ import type {
   LoginControllerRegisterData,
   LoginControllerRegisterErrors,
   LoginControllerRegisterResponses,
+  MountCredentialControllerIssueData,
+  MountCredentialControllerIssueErrors,
+  MountCredentialControllerIssueResponses,
+  MountCredentialControllerListData,
+  MountCredentialControllerListResponses,
+  MountCredentialControllerRevokeData,
+  MountCredentialControllerRevokeErrors,
+  MountCredentialControllerRevokeResponses,
   TotpControllerCompleteSetupData,
   TotpControllerCompleteSetupErrors,
   TotpControllerCompleteSetupResponses,
@@ -625,4 +638,57 @@ export const trashControllerPermanentDelete = <ThrowOnError extends boolean = fa
       'Content-Type': 'application/json',
       ...options.headers,
     },
+  });
+
+/**
+ * 본인 personal drive 조회 — 없으면 lazy 생성
+ */
+export const driveControllerGetMyDrive = <ThrowOnError extends boolean = false>(options?: Options<DriveControllerGetMyDriveData, ThrowOnError>) =>
+  (options?.client ?? client).get<DriveControllerGetMyDriveResponses, unknown, ThrowOnError>({
+    responseType: 'json',
+    url: '/drives/me',
+    ...options,
+  });
+
+/**
+ * drive 단건 조회 — 본인 소유만 접근 가능
+ */
+export const driveControllerGetDrive = <ThrowOnError extends boolean = false>(options: Options<DriveControllerGetDriveData, ThrowOnError>) =>
+  (options.client ?? client).get<DriveControllerGetDriveResponses, DriveControllerGetDriveErrors, ThrowOnError>({
+    responseType: 'json',
+    url: '/drives/{id}',
+    ...options,
+  });
+
+/**
+ * 본인의 활성 마운트 자격증명 목록
+ */
+export const mountCredentialControllerList = <ThrowOnError extends boolean = false>(options?: Options<MountCredentialControllerListData, ThrowOnError>) =>
+  (options?.client ?? client).get<MountCredentialControllerListResponses, unknown, ThrowOnError>({
+    responseType: 'json',
+    url: '/mount-credentials',
+    ...options,
+  });
+
+/**
+ * 마운트 자격증명 발급 — password/script 는 1회만 응답
+ */
+export const mountCredentialControllerIssue = <ThrowOnError extends boolean = false>(options: Options<MountCredentialControllerIssueData, ThrowOnError>) =>
+  (options.client ?? client).post<MountCredentialControllerIssueResponses, MountCredentialControllerIssueErrors, ThrowOnError>({
+    responseType: 'json',
+    url: '/mount-credentials',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    },
+  });
+
+/**
+ * 마운트 자격증명 회수 — agent target 삭제 + secret 제거 + DB soft-revoke
+ */
+export const mountCredentialControllerRevoke = <ThrowOnError extends boolean = false>(options: Options<MountCredentialControllerRevokeData, ThrowOnError>) =>
+  (options.client ?? client).delete<MountCredentialControllerRevokeResponses, MountCredentialControllerRevokeErrors, ThrowOnError>({
+    url: '/mount-credentials/{id}',
+    ...options,
   });

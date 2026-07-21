@@ -1,5 +1,16 @@
 import { TrustedDeviceSection, TrustThisDeviceCheckbox, TwoFactorApprovalPage, TwoFactorBackupEntry, TwoFactorWaiting } from '@/features';
-import { BackupCodeIssuePage, DrivePage, LoginPage, RegisterPage, TrashPage, TwoFAApprovalPage, TwoFABackupPage, TwoFAWaitPage } from '@/pages';
+import {
+  BackupCodeIssuePage,
+  DevicesPage,
+  DrivePage,
+  LoginPage,
+  RegisterPage,
+  SettingsPage,
+  TrashPage,
+  TwoFAApprovalPage,
+  TwoFABackupPage,
+  TwoFAWaitPage,
+} from '@/pages';
 import { AuthLayout, DriveLayout } from '@/widgets';
 import { type AppRouteHandle, PrivateRoute } from '@shared/router';
 import { Navigate, Outlet, type RouteObject } from 'react-router-dom';
@@ -65,6 +76,18 @@ const appRoutes: RouteObject[] = [
       </PrivateRoute>
     ),
     children: [{ index: true, element: <TrashPage /> }],
+  },
+  {
+    path: '/settings',
+    element: (
+      <PrivateRoute>
+        <DriveLayout />
+      </PrivateRoute>
+    ),
+    children: [
+      { index: true, element: <SettingsPage /> },
+      { path: 'devices', element: <DevicesPage /> },
+    ],
   },
   {
     path: '/2fa/:id',

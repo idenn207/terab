@@ -1,6 +1,7 @@
 export * from './auth-layout';
 export * from './drive-breadcrumb';
 export * from './drive-layout';
+export * from './drive-mount-panel';
 export * from './drive-sidebar';
 export * from './file-list';
 export * from './file-toolbar';
