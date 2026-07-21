@@ -1,5 +1,6 @@
 # 환경 설정 (절대 커밋 금지)
-secrets/
+# 슬래시 없음 — worktree-bootstrap.sh 가 만드는 secrets 심볼릭 링크까지 매칭
+secrets
 *.env
 redis.prod.conf
 
