@@ -115,6 +115,16 @@ describe('DriveMountPanel', () => {
     await waitFor(() => expect(screen.getByTestId('issue-btn')).toHaveAttribute('data-drive-id', 'drive-1'));
   });
 
+  it('목록 조회 실패는 빈 상태가 아니라 오류로 표시된다', async () => {
+    mockGetList.mockRejectedValue(new Error('network down'));
+
+    renderWithProviders(<DriveMountPanel />);
+
+    await waitFor(() => expect(screen.getByRole('alert')).toBeInTheDocument());
+    expect(screen.getByText(/마운트 정보를 불러오지 못했습니다/)).toBeInTheDocument();
+    expect(screen.queryByText(/활성 마운트 자격증명이 없습니다/)).not.toBeInTheDocument();
+  });
+
   it('axe-core a11y violations 0건 — 자격증명 1건 상태', async () => {
     mockGetList.mockResolvedValue([
       {

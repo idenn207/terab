@@ -656,3 +656,46 @@ Task 6~8 의 Web 측 일괄 작업.
 - `services/web/src/features/file-search/model/useFileSearch.test.tsx` > "200ms 동안 입력이 안정되어야 URL 이 갱신된다 (debounce)" 가 5회 중 3회 실패
 - 원인: `vi.useFakeTimers({ shouldAdvanceTime: true })` 는 가짜 타이머가 실제 시간과 함께도 흐르게 한다. `advanceTimersByTimeAsync(199)` 이후 `await` 가 소비한 실제 시간이 얹혀 총합이 200ms 를 넘기면 debounce 가 조기 발화 → 27번 줄 `expect(debouncedQ).toBe('')` 가 깨진다
 - 조치 방향: 경계값(199/200) 대신 여유 있는 값을 쓰거나 `shouldAdvanceTime` 제거. PR #72 (Phase 9 검색) 산출물이라 본 PR 범위 밖
+
+## Codex gate 결과 (2026-07-21) — mccp-plan-codex / mccp-implement-codex
+
+두 gate 를 `codex exec` 로 실제 실행. 발견 17건 (계획 11 / 구현 6).
+
+### 수정 완료 (CRITICAL 2 · HIGH 2)
+
+| # | severity | 위치 | 문제 | 조치 |
+|---|---|---|---|---|
+| I-1 | CRITICAL | `IssueMountCredentialButton.tsx:32` | `useEffect(() => clearIssued, [clearIssued])` 의 `clearIssued` 가 매 렌더 새 함수 → 발급 직후 리렌더에서 직전 cleanup 이 `setIssued(null)` 실행 → **다이얼로그가 뜨지 않아 1회용 password 영구 소실** | `clearIssued` 를 `useCallback` 안정화 + effect 를 ref 경유 unmount 전용으로 변경 |
+| I-2 | CRITICAL | `api/mutation.ts` | 발급 응답(password/script)이 TanStack MutationCache 에 UI 수명보다 오래 잔존 | `clearIssued` 가 `mutation.reset()` 동반 호출 |
+| I-3 | HIGH | `useIssueMountCredential.ts` | 중복 발급 in-flight 가드 없음 → 먼저 받은 password 가 덮어써져 유실 | `inFlightRef` 가드 추가 |
+| I-5 | HIGH | `DriveMountPanel.tsx` | 조회 실패 시 error 분기가 없어 "자격증명 없음" 빈 상태로 오인 | `hasError` 분기 + `role="alert"` |
+
+I-1 은 재현 테스트로 실증 확인함 (수정 전 다이얼로그 미표시). **기존 테스트가 이를 검출하지 못한 이유**: `useIssueMountCredential` 훅 전체를 mock 하고 `clearIssued` 를 안정적인 no-op `vi.fn()` 으로 대체 → model↔ui 계약이 검증 대상에서 제외됨.
+
+회귀 테스트 `IssueMountCredentialButton.integration.test.tsx` 신설 — **api 경계만 mock** 하고 model 은 실제 구현 사용. 이 슬라이스의 렌더 사이클 결함을 잡는 유일한 층.
+
+### 미해결 — 별도 PR 인계
+
+| # | severity | 내용 |
+|---|---|---|
+| I-4 | HIGH | 발급 in-flight 중 unmount 시 credential 은 생성되나 비밀 표시 경로 소실. 1회용 설계상 재조회 불가 — 서버측 보상(발급 확인 ack) 설계 필요 |
+| P-1 | CRITICAL | 회수→재발급 시 unique `(drive_id,user_id,protocol)` violation (기존 F3). password 분실 사용자의 복구 경로가 막힘 — backend |
+| P-3 | HIGH | `.ps1` 이 Downloads/OneDrive/백업/검색인덱스에 평문 CHAP password 로 장기 잔존. "1회용" 은 UI 표시 정책일 뿐 |
+| P-4 | HIGH | `grep logger.*password` 는 nested AxiosError(`config.data.osPassword`) 직렬화 누출을 못 잡음 — backend 로깅 검증 보강 |
+| P-5 | HIGH | 계획 UX 에는 password copy 버튼이 있으나 구현에 없음 — 문서/구현 불일치. 클립보드 잔존 위험도 Risks 미등재 |
+| P-6 | HIGH | 다중 탭 동시 발급/회수, 세션 만료 중 발급 시나리오가 Risks 미등재 |
+| P-9 | MEDIUM | AC "codegen drift 0건" 이 이미 깨져 있음 — `iqn` 이 object-like 로 생성돼 `formatIqn(unknown)` 우회 중 |
+| P-10 | MEDIUM | `.ps1` 전달 방식이 문서 내 충돌 — Open Decisions 는 서버 endpoint 권장, Task 7 은 client Blob 구현 |
+
+### 기각 (근거 있음)
+
+- **I-6 (MEDIUM) 다이얼로그 Esc 닫기 차단** — `dismissible={false}` 는 1회용 비밀 화면의 우발적 닫힘 방지를 위한 의도된 선택. 명시적 "닫기" 버튼이 키보드로 도달 가능하므로 탈출 경로는 존재. 유지.
+
+### Task 9 manual smoke — 항목 정정
+
+기존 항목 4·5 가 논리적으로 모순이었다: 항목 4 에서 회수한 뒤 항목 5 가 "같은 driveId 즉시 재발급 시 `MOUNT_CREDENTIAL_DUPLICATE_PROTOCOL`" 을 기대하나, 회수 후에는 duplicate 가 발생해선 안 된다. 정정:
+
+- [ ] 발급 직후(회수 전) 같은 driveId 재발급 → `MOUNT_CREDENTIAL_DUPLICATE_PROTOCOL` 응답
+- [ ] 회수 후 재발급 → 정상 발급 (P-1 이 여기서 재현될 수 있음)
+
+항목 8("특수문자 password 로 시도")도 생성기가 base64url 고정이라 수동 재현 불가 — 단위 테스트 영역으로 이관하고 smoke 에서 제외한다.

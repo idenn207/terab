@@ -8,11 +8,12 @@ function formatIqn(iqn: unknown): string {
 }
 
 export function DriveMountPanel() {
-  const { data: drive, isLoading: isDriveLoading } = useMyDriveQuery();
-  const { data: credentials, isLoading: isListLoading } = useMountCredentialListQuery();
+  const { data: drive, isLoading: isDriveLoading, error: driveError } = useMyDriveQuery();
+  const { data: credentials, isLoading: isListLoading, error: listError } = useMountCredentialListQuery();
+  const hasError = driveError !== null || listError !== null;
 
   return (
-    <section aria-labelledby="drive-mount-panel-heading" className="rounded-2xl border border-border bg-surface-elevated p-6 shadow-sm">
+    <section aria-labelledby="drive-mount-panel-heading" className="rounded-xl border border-border bg-surface-elevated p-6 shadow-sm">
       <header className="flex items-start justify-between gap-4">
         <div>
           <h2 id="drive-mount-panel-heading" className="text-lg font-semibold text-text">
@@ -28,6 +29,10 @@ export function DriveMountPanel() {
       {isDriveLoading || isListLoading ? (
         <p className="mt-6 text-sm text-text-muted" aria-live="polite">
           불러오는 중…
+        </p>
+      ) : hasError ? (
+        <p role="alert" className="mt-6 rounded-xl bg-danger-soft px-4 py-6 text-center text-sm text-danger">
+          마운트 정보를 불러오지 못했습니다. 잠시 후 다시 시도해주세요.
         </p>
       ) : credentials && credentials.length > 0 ? (
         <ul className="mt-6 flex flex-col gap-3">
