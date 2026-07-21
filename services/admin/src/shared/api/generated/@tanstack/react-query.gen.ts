@@ -6,6 +6,8 @@ import type { AxiosError } from 'axios';
 
 import { client } from '../client.gen';
 import {
+  invitationAdminControllerCreate,
+  userAdminControllerList,
   authControllerCompleteTwoFa,
   authControllerLogin,
   authControllerLoginWithBackup,
@@ -47,6 +49,10 @@ import {
   twoFaControllerRespond,
 } from '../sdk.gen';
 import type {
+  InvitationAdminControllerCreateData,
+  InvitationAdminControllerCreateResponse,
+  UserAdminControllerListData,
+  UserAdminControllerListResponse,
   AuthControllerCompleteTwoFaData,
   AuthControllerCompleteTwoFaError,
   AuthControllerCompleteTwoFaResponse,
@@ -967,6 +973,44 @@ export const trashControllerPermanentDeleteMutation = (
   > = {
     mutationFn: async (fnOptions) => {
       const { data } = await trashControllerPermanentDelete({
+        ...options,
+        ...fnOptions,
+        throwOnError: true,
+      });
+      return data;
+    },
+  };
+  return mutationOptions;
+};
+
+export const userAdminControllerListQueryKey = (options?: Options<UserAdminControllerListData>) => createQueryKey('userAdminControllerList', options);
+
+/**
+ * 관리자 — 사용자 목록 조회
+ */
+export const userAdminControllerListOptions = (options?: Options<UserAdminControllerListData>) =>
+  queryOptions<UserAdminControllerListResponse, AxiosError<DefaultError>, UserAdminControllerListResponse, ReturnType<typeof userAdminControllerListQueryKey>>({
+    queryFn: async ({ queryKey, signal }) => {
+      const { data } = await userAdminControllerList({
+        ...options,
+        ...queryKey[0],
+        signal,
+        throwOnError: true,
+      });
+      return data;
+    },
+    queryKey: userAdminControllerListQueryKey(options),
+  });
+
+/**
+ * 관리자 — 사용자 초대 생성
+ */
+export const invitationAdminControllerCreateMutation = (
+  options?: Partial<Options<InvitationAdminControllerCreateData>>,
+): UseMutationOptions<InvitationAdminControllerCreateResponse, AxiosError<DefaultError>, Options<InvitationAdminControllerCreateData>> => {
+  const mutationOptions: UseMutationOptions<InvitationAdminControllerCreateResponse, AxiosError<DefaultError>, Options<InvitationAdminControllerCreateData>> = {
+    mutationFn: async (fnOptions) => {
+      const { data } = await invitationAdminControllerCreate({
         ...options,
         ...fnOptions,
         throwOnError: true,

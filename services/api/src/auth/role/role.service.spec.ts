@@ -8,6 +8,7 @@ const mockRoleRepository = {
   findByName: jest.fn(),
   insertUserRole: jest.fn(),
   findPermissionsByUserId: jest.fn(),
+  findRoleNamesByUserIds: jest.fn(),
 };
 
 describe('RoleService', () => {
@@ -42,6 +43,37 @@ describe('RoleService', () => {
       const result = await service.getPermissionsByUserId('user-1');
 
       expect(result).toEqual(['file:read']);
+    });
+  });
+
+  describe('getRoleNamesByUserIds', () => {
+    it('빈 배열을 받으면 빈 Map을 반환하고 repository를 호출하지 않는다', async () => {
+      const result = await service.getRoleNamesByUserIds([]);
+
+      expect(result).toEqual(new Map());
+      expect(mockRoleRepository.findRoleNamesByUserIds).not.toHaveBeenCalled();
+    });
+
+    it('userId별로 role 이름을 그룹핑한 Map을 반환한다', async () => {
+      mockRoleRepository.findRoleNamesByUserIds.mockResolvedValue([
+        { userId: 'u1', name: 'ADMIN' },
+        { userId: 'u1', name: 'USER' },
+        { userId: 'u2', name: 'USER' },
+      ]);
+
+      const result = await service.getRoleNamesByUserIds(['u1', 'u2']);
+
+      expect(mockRoleRepository.findRoleNamesByUserIds).toHaveBeenCalledWith(['u1', 'u2']);
+      expect(result.get('u1')).toEqual(['ADMIN', 'USER']);
+      expect(result.get('u2')).toEqual(['USER']);
+    });
+
+    it('역할이 없는 userId는 Map에 등장하지 않는다', async () => {
+      mockRoleRepository.findRoleNamesByUserIds.mockResolvedValue([]);
+
+      const result = await service.getRoleNamesByUserIds(['u1', 'u2']);
+
+      expect(result.size).toBe(0);
     });
   });
 });

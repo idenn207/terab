@@ -1,4 +1,4 @@
-import { AdminPlaceholderPage, LoginPage, TwoFABackupPage, TwoFAWaitPage } from '@/pages';
+import { AdminUsersPage, LoginPage, TwoFABackupPage, TwoFAWaitPage } from '@/pages';
 import { AdminGate, PrivateRoute } from '@shared/router';
 import { AdminLayout, AuthLayout } from '@/widgets';
 import { Navigate, type RouteObject } from 'react-router-dom';
@@ -28,7 +28,10 @@ const adminRoutes: RouteObject[] = [
         </AdminGate>
       </PrivateRoute>
     ),
-    children: [{ index: true, element: <AdminPlaceholderPage /> }],
+    children: [
+      { index: true, element: <Navigate to="/admin/users" replace /> },
+      { path: 'users', element: <AdminUsersPage /> },
+    ],
   },
 ];
 

@@ -21,3 +21,4 @@
 | 0003 | [Storage SoT 를 NAS filesystem 으로 이전](0003-storage-sot-nas-filesystem.md) | proposed | 2026-05-27 |
 | 0004 | [v1 은 iSCSI 우선 통합 · SMB 보류](0004-iscsi-priority-smb-deferred.md) | proposed | 2026-05-27 |
 | 0005 | [storage-agent 배포 — DSM .spk 폐기, systemd-only 채택](0005-sidecar-agent-systemd-only.md) | proposed | 2026-05-28 |
+| 0006 | [ADMIN-only API 의 `/admin` prefix + `src/admin` 모듈](0006-admin-api-prefix-and-module.md) | accepted | 2026-05-30 |

@@ -1,6 +1,7 @@
 /* eslint-disable */
 export default async () => {
     const t = {
+        ["./user/dto/admin-user-list.dto"]: await import("./user/dto/admin-user-list.dto"),
         ["./common/dto/user.dto"]: await import("./common/dto/user.dto"),
         ["./twofa/dto/totp-list-response.dto"]: await import("./twofa/dto/totp-list-response.dto"),
         ["./file/dto/file-item.dto"]: await import("./file/dto/file-item.dto"),
@@ -8,9 +9,9 @@ export default async () => {
         ["./file/dto/upload-complete-body.dto"]: await import("./file/dto/upload-complete-body.dto"),
         ["./folder/dto/folder-item.dto"]: await import("./folder/dto/folder-item.dto"),
         ["./trash/dto/trash-item.dto"]: await import("./trash/dto/trash-item.dto"),
-        ["./device/dto/device-response.dto"]: await import("./device/dto/device-response.dto"),
-        ["./invitation/dto/invitation-response.dto"]: await import("./invitation/dto/invitation-response.dto"),
         ["./invitation/dto/validate-invitation-response.dto"]: await import("./invitation/dto/validate-invitation-response.dto"),
+        ["./invitation/dto/invitation-response.dto"]: await import("./invitation/dto/invitation-response.dto"),
+        ["./device/dto/device-response.dto"]: await import("./device/dto/device-response.dto"),
         ["./trusted-device/dto/trusted-device-response.dto"]: await import("./trusted-device/dto/trusted-device-response.dto"),
         ["./twofa/backup-code/dto/backup-code-regenerate-response.dto"]: await import("./twofa/backup-code/dto/backup-code-regenerate-response.dto"),
         ["./twofa/dto/resend-challenge-response.dto"]: await import("./twofa/dto/resend-challenge-response.dto"),

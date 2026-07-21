@@ -9,7 +9,7 @@ import {
   roles,
   userRoles,
 } from '@terab/db';
-import { eq } from 'drizzle-orm';
+import { eq, inArray } from 'drizzle-orm';
 
 @Injectable()
 export class RoleRepository extends RepositoryCore {
@@ -35,5 +35,14 @@ export class RoleRepository extends RepositoryCore {
       .innerJoin(permissions, eq(permissions.id, rolePermissions.permissionId))
       .where(eq(userRoles.userId, userId));
     return [...new Set(rows.map((r) => `${r.resource}:${r.action}`))];
+  }
+
+  async findRoleNamesByUserIds(userIds: string[]): Promise<Array<{ userId: string; name: string }>> {
+    return this.conn
+      .select({ userId: userRoles.userId, name: roles.name })
+      .from(userRoles)
+      .innerJoin(roles, eq(roles.id, userRoles.roleId))
+      .where(inArray(userRoles.userId, userIds))
+      .orderBy(userRoles.userId, roles.name);
   }
 }
