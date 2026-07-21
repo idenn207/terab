@@ -6,6 +6,10 @@ export type ClientOptions = {
 
 export type UserDto = {
   id: string;
+  /**
+   * 사용자가 보유한 RBAC permission 키 목록 (예: file:read, user:manage).
+   */
+  permissions: Array<string>;
   username: string;
   nickname: string;
 };
@@ -269,6 +273,55 @@ export type TrashActionBodyDto = {
   type: {
     [key: string]: unknown;
   };
+};
+
+export type DriveDto = {
+  id: string;
+  kind: 'PRIVATE';
+  name: string;
+  mountPath: string;
+  createdAt: string;
+};
+
+export type IssueMountCredentialDto = {
+  /**
+   * 미지정 시 본인 personal drive 사용
+   */
+  driveId?: string;
+};
+
+export type IssueMountCredentialResponseDto = {
+  id: string;
+  driveId: string;
+  protocol: 'iscsi';
+  iqn: {
+    [key: string]: unknown;
+  } | null;
+  /**
+   * 1회용 CHAP secret. 다음 GET 응답에는 미포함 — 즉시 안전한 곳에 보관해야 한다.
+   */
+  password: string;
+  /**
+   * 1회용 PowerShell 마운트 스크립트 본문. UTF-8 / CRLF.
+   */
+  script: string;
+  osUsername: string;
+  portalHost: string;
+  portalPort: number;
+  createdAt: string;
+};
+
+export type MountCredentialDto = {
+  id: string;
+  driveId: string;
+  protocol: 'iscsi';
+  iqn: {
+    [key: string]: unknown;
+  } | null;
+  osUsername: string;
+  portalHost: string;
+  portalPort: number;
+  createdAt: string;
 };
 
 export type HealthControllerCheckData = {
@@ -1217,6 +1270,10 @@ export type TrashControllerRestoreData = {
 
 export type TrashControllerRestoreErrors = {
   /**
+   * `PARENT_IN_TRASH` — 부모 항목이 휴지통에 있어 단독으로 처리할 수 없습니다.
+   */
+  400: ErrorResponseDto;
+  /**
    * `FILE_NOT_FOUND` — 파일을 찾을 수 없습니다.
    * `FOLDER_NOT_FOUND` — 폴더를 찾을 수 없습니다.
    */
@@ -1242,6 +1299,10 @@ export type TrashControllerPermanentDeleteData = {
 
 export type TrashControllerPermanentDeleteErrors = {
   /**
+   * `PARENT_IN_TRASH` — 부모 항목이 휴지통에 있어 단독으로 처리할 수 없습니다.
+   */
+  400: ErrorResponseDto;
+  /**
    * `FILE_NOT_FOUND` — 파일을 찾을 수 없습니다.
    * `FOLDER_NOT_FOUND` — 폴더를 찾을 수 없습니다.
    */
@@ -1255,3 +1316,133 @@ export type TrashControllerPermanentDeleteResponses = {
 };
 
 export type TrashControllerPermanentDeleteResponse = TrashControllerPermanentDeleteResponses[keyof TrashControllerPermanentDeleteResponses];
+
+export type DriveControllerGetMyDriveData = {
+  body?: never;
+  path?: never;
+  query?: never;
+  url: '/drives/me';
+};
+
+export type DriveControllerGetMyDriveResponses = {
+  200: DriveDto;
+};
+
+export type DriveControllerGetMyDriveResponse = DriveControllerGetMyDriveResponses[keyof DriveControllerGetMyDriveResponses];
+
+export type DriveControllerGetDriveData = {
+  body?: never;
+  path: {
+    id: string;
+  };
+  query?: never;
+  url: '/drives/{id}';
+};
+
+export type DriveControllerGetDriveErrors = {
+  /**
+   * `DRIVE_FORBIDDEN` — 해당 드라이브에 접근할 권한이 없습니다.
+   */
+  403: ErrorResponseDto;
+  /**
+   * `DRIVE_NOT_FOUND` — 드라이브를 찾을 수 없습니다.
+   */
+  404: ErrorResponseDto;
+};
+
+export type DriveControllerGetDriveError = DriveControllerGetDriveErrors[keyof DriveControllerGetDriveErrors];
+
+export type DriveControllerGetDriveResponses = {
+  200: DriveDto;
+};
+
+export type DriveControllerGetDriveResponse = DriveControllerGetDriveResponses[keyof DriveControllerGetDriveResponses];
+
+export type MountCredentialControllerListData = {
+  body?: never;
+  path?: never;
+  query?: never;
+  url: '/mount-credentials';
+};
+
+export type MountCredentialControllerListResponses = {
+  200: Array<MountCredentialDto>;
+};
+
+export type MountCredentialControllerListResponse = MountCredentialControllerListResponses[keyof MountCredentialControllerListResponses];
+
+export type MountCredentialControllerIssueData = {
+  body: IssueMountCredentialDto;
+  path?: never;
+  query?: never;
+  url: '/mount-credentials';
+};
+
+export type MountCredentialControllerIssueErrors = {
+  /**
+   * `DRIVE_FORBIDDEN` — 해당 드라이브에 접근할 권한이 없습니다.
+   */
+  403: ErrorResponseDto;
+  /**
+   * `DRIVE_NOT_FOUND` — 드라이브를 찾을 수 없습니다.
+   */
+  404: ErrorResponseDto;
+  /**
+   * `MOUNT_CREDENTIAL_DUPLICATE_PROTOCOL` — 해당 드라이브에 같은 프로토콜의 활성 자격증명이 이미 존재합니다.
+   * `STORAGE_AGENT_TARGET_CONFLICT` — 이미 동일한 IQN의 iSCSI 타깃이 존재합니다.
+   */
+  409: ErrorResponseDto;
+  /**
+   * `MOUNT_CREDENTIAL_SECRET_WRITE_FAILED` — 마운트 자격증명 비밀 저장에 실패했습니다.
+   * `STORAGE_AGENT_INTERNAL` — 스토리지 에이전트 내부 오류가 발생했습니다.
+   */
+  500: ErrorResponseDto;
+  /**
+   * `STORAGE_AGENT_UNAVAILABLE` — 스토리지 에이전트에 연결할 수 없습니다.
+   */
+  503: ErrorResponseDto;
+};
+
+export type MountCredentialControllerIssueError = MountCredentialControllerIssueErrors[keyof MountCredentialControllerIssueErrors];
+
+export type MountCredentialControllerIssueResponses = {
+  201: IssueMountCredentialResponseDto;
+};
+
+export type MountCredentialControllerIssueResponse = MountCredentialControllerIssueResponses[keyof MountCredentialControllerIssueResponses];
+
+export type MountCredentialControllerRevokeData = {
+  body?: never;
+  path: {
+    id: string;
+  };
+  query?: never;
+  url: '/mount-credentials/{id}';
+};
+
+export type MountCredentialControllerRevokeErrors = {
+  /**
+   * `MOUNT_CREDENTIAL_NOT_FOUND` — 마운트 자격증명을 찾을 수 없습니다.
+   */
+  404: ErrorResponseDto;
+  /**
+   * `MOUNT_CREDENTIAL_REVOKED` — 이미 회수된 마운트 자격증명입니다.
+   */
+  410: ErrorResponseDto;
+  /**
+   * `STORAGE_AGENT_INTERNAL` — 스토리지 에이전트 내부 오류가 발생했습니다.
+   */
+  500: ErrorResponseDto;
+  /**
+   * `STORAGE_AGENT_UNAVAILABLE` — 스토리지 에이전트에 연결할 수 없습니다.
+   */
+  503: ErrorResponseDto;
+};
+
+export type MountCredentialControllerRevokeError = MountCredentialControllerRevokeErrors[keyof MountCredentialControllerRevokeErrors];
+
+export type MountCredentialControllerRevokeResponses = {
+  204: void;
+};
+
+export type MountCredentialControllerRevokeResponse = MountCredentialControllerRevokeResponses[keyof MountCredentialControllerRevokeResponses];

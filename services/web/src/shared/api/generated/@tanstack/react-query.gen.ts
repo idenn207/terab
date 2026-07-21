@@ -13,6 +13,8 @@ import {
   deviceControllerList,
   deviceControllerRegister,
   deviceControllerRemove,
+  driveControllerGetDrive,
+  driveControllerGetMyDrive,
   fileControllerCopy,
   fileControllerMove,
   fileControllerRemove,
@@ -37,6 +39,9 @@ import {
   loginControllerLogout,
   loginControllerRefresh,
   loginControllerRegister,
+  mountCredentialControllerIssue,
+  mountCredentialControllerList,
+  mountCredentialControllerRevoke,
   type Options,
   totpControllerCompleteSetup,
   totpControllerList,
@@ -73,6 +78,11 @@ import type {
   DeviceControllerRemoveData,
   DeviceControllerRemoveError,
   DeviceControllerRemoveResponse,
+  DriveControllerGetDriveData,
+  DriveControllerGetDriveError,
+  DriveControllerGetDriveResponse,
+  DriveControllerGetMyDriveData,
+  DriveControllerGetMyDriveResponse,
   FileControllerCopyData,
   FileControllerCopyError,
   FileControllerCopyResponse,
@@ -140,6 +150,14 @@ import type {
   LoginControllerRegisterData,
   LoginControllerRegisterError,
   LoginControllerRegisterResponse,
+  MountCredentialControllerIssueData,
+  MountCredentialControllerIssueError,
+  MountCredentialControllerIssueResponse,
+  MountCredentialControllerListData,
+  MountCredentialControllerListResponse,
+  MountCredentialControllerRevokeData,
+  MountCredentialControllerRevokeError,
+  MountCredentialControllerRevokeResponse,
   TotpControllerCompleteSetupData,
   TotpControllerCompleteSetupError,
   TotpControllerCompleteSetupResponse,
@@ -1096,6 +1114,129 @@ export const trashControllerPermanentDeleteMutation = (
   > = {
     mutationFn: async (fnOptions) => {
       const { data } = await trashControllerPermanentDelete({
+        ...options,
+        ...fnOptions,
+        throwOnError: true,
+      });
+      return data;
+    },
+  };
+  return mutationOptions;
+};
+
+export const driveControllerGetMyDriveQueryKey = (options?: Options<DriveControllerGetMyDriveData>) => createQueryKey('driveControllerGetMyDrive', options);
+
+/**
+ * 본인 personal drive 조회 — 없으면 lazy 생성
+ */
+export const driveControllerGetMyDriveOptions = (options?: Options<DriveControllerGetMyDriveData>) =>
+  queryOptions<
+    DriveControllerGetMyDriveResponse,
+    AxiosError<DefaultError>,
+    DriveControllerGetMyDriveResponse,
+    ReturnType<typeof driveControllerGetMyDriveQueryKey>
+  >({
+    queryFn: async ({ queryKey, signal }) => {
+      const { data } = await driveControllerGetMyDrive({
+        ...options,
+        ...queryKey[0],
+        signal,
+        throwOnError: true,
+      });
+      return data;
+    },
+    queryKey: driveControllerGetMyDriveQueryKey(options),
+  });
+
+export const driveControllerGetDriveQueryKey = (options: Options<DriveControllerGetDriveData>) => createQueryKey('driveControllerGetDrive', options);
+
+/**
+ * drive 단건 조회 — 본인 소유만 접근 가능
+ */
+export const driveControllerGetDriveOptions = (options: Options<DriveControllerGetDriveData>) =>
+  queryOptions<
+    DriveControllerGetDriveResponse,
+    AxiosError<DriveControllerGetDriveError>,
+    DriveControllerGetDriveResponse,
+    ReturnType<typeof driveControllerGetDriveQueryKey>
+  >({
+    queryFn: async ({ queryKey, signal }) => {
+      const { data } = await driveControllerGetDrive({
+        ...options,
+        ...queryKey[0],
+        signal,
+        throwOnError: true,
+      });
+      return data;
+    },
+    queryKey: driveControllerGetDriveQueryKey(options),
+  });
+
+export const mountCredentialControllerListQueryKey = (options?: Options<MountCredentialControllerListData>) =>
+  createQueryKey('mountCredentialControllerList', options);
+
+/**
+ * 본인의 활성 마운트 자격증명 목록
+ */
+export const mountCredentialControllerListOptions = (options?: Options<MountCredentialControllerListData>) =>
+  queryOptions<
+    MountCredentialControllerListResponse,
+    AxiosError<DefaultError>,
+    MountCredentialControllerListResponse,
+    ReturnType<typeof mountCredentialControllerListQueryKey>
+  >({
+    queryFn: async ({ queryKey, signal }) => {
+      const { data } = await mountCredentialControllerList({
+        ...options,
+        ...queryKey[0],
+        signal,
+        throwOnError: true,
+      });
+      return data;
+    },
+    queryKey: mountCredentialControllerListQueryKey(options),
+  });
+
+/**
+ * 마운트 자격증명 발급 — password/script 는 1회만 응답
+ */
+export const mountCredentialControllerIssueMutation = (
+  options?: Partial<Options<MountCredentialControllerIssueData>>,
+): UseMutationOptions<MountCredentialControllerIssueResponse, AxiosError<MountCredentialControllerIssueError>, Options<MountCredentialControllerIssueData>> => {
+  const mutationOptions: UseMutationOptions<
+    MountCredentialControllerIssueResponse,
+    AxiosError<MountCredentialControllerIssueError>,
+    Options<MountCredentialControllerIssueData>
+  > = {
+    mutationFn: async (fnOptions) => {
+      const { data } = await mountCredentialControllerIssue({
+        ...options,
+        ...fnOptions,
+        throwOnError: true,
+      });
+      return data;
+    },
+  };
+  return mutationOptions;
+};
+
+/**
+ * 마운트 자격증명 회수 — agent target 삭제 + secret 제거 + DB soft-revoke
+ */
+export const mountCredentialControllerRevokeMutation = (
+  options?: Partial<Options<MountCredentialControllerRevokeData>>,
+): UseMutationOptions<
+  MountCredentialControllerRevokeResponse,
+  AxiosError<MountCredentialControllerRevokeError>,
+  Options<MountCredentialControllerRevokeData>
+> => {
+  const mutationOptions: UseMutationOptions<
+    MountCredentialControllerRevokeResponse,
+    AxiosError<MountCredentialControllerRevokeError>,
+    Options<MountCredentialControllerRevokeData>
+  > = {
+    mutationFn: async (fnOptions) => {
+      const { data } = await mountCredentialControllerRevoke({
         ...options,
         ...fnOptions,
         throwOnError: true,

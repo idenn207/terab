@@ -1,5 +1,5 @@
 import { useFileSearch } from '@/features';
-import { DriveBreadcrumb, FileList, FileToolbar, useBreadcrumbTrail } from '@/widgets';
+import { DriveBreadcrumb, DriveMountPanel, FileList, FileToolbar, useBreadcrumbTrail } from '@/widgets';
 
 export function DrivePage() {
   const { currentFolderId, openFolder } = useBreadcrumbTrail();
@@ -21,6 +21,7 @@ export function DrivePage() {
         ) : (
           <FileList folderId={currentFolderId} onFolderOpen={openFolder} />
         )}
+        {!isSearching && <DriveMountPanel />}
       </section>
       <aside
         data-region="secondary"
