@@ -21,13 +21,17 @@ describe('useFileSearch', () => {
     act(() => result.current.setValue('hello'));
     expect(result.current.debouncedQ).toBe('');
 
+    // shouldAdvanceTime 은 가짜 타이머를 실제 시간과 함께도 흐르게 한다 —
+    // 199ms 처럼 경계 바로 아래를 단언하면 await 가 소비한 실제 시간이 얹혀
+    // 총합이 200ms 를 넘기고 debounce 가 조기 발화한다 (느린 CI 러너에서 재현).
+    // 창 내부는 여유 있는 지점으로 확인한다.
     await act(async () => {
-      await vi.advanceTimersByTimeAsync(199);
+      await vi.advanceTimersByTimeAsync(120);
     });
     expect(result.current.debouncedQ).toBe('');
 
     await act(async () => {
-      await vi.advanceTimersByTimeAsync(1);
+      await vi.advanceTimersByTimeAsync(130);
     });
     await waitFor(() => expect(result.current.debouncedQ).toBe('hello'));
   });
