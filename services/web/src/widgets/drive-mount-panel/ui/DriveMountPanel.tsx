@@ -13,7 +13,7 @@ export function DriveMountPanel() {
   const hasError = driveError !== null || listError !== null;
 
   return (
-    <section aria-labelledby="drive-mount-panel-heading" className="rounded-2xl border border-border bg-surface-elevated p-6 shadow-sm">
+    <section aria-labelledby="drive-mount-panel-heading" className="rounded-xl border border-border bg-surface-elevated p-6 shadow-sm">
       <header className="flex items-start justify-between gap-4">
         <div>
           <h2 id="drive-mount-panel-heading" className="text-lg font-semibold text-text">
