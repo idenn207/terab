@@ -20,8 +20,19 @@ volumes/storage/
 .claude/*.local.*
 .claude/skills/
 .claude/PRPs/
-everything-claude-code/
-/ECC/
+.claude/receipts/
+.claude/state/loop-counter.json
+.claude/state/*.lock
+.claude/state/completion-ledger/*.lock
+.claude/state/completion-ledger/*.tmp
+.claude/state/codex-stop-loop-input.txt
+.claude/state/dogfood-*/
+.claude/state/hook-trace/
+.claude/state/hook-caps.json
+.claude/state/auto-handoff-log.jsonl
+.claude/state/session-ledgers/
+.claude/cache/
+.claude/tmp/
 
 # OS
 .DS_Store
