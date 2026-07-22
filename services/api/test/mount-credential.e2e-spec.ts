@@ -193,6 +193,45 @@ async function waitForSocket(socketPath: string, timeoutMs: number): Promise<voi
     expect(afterListRes.body).toHaveLength(0);
   });
 
+  it('round-trip: issue → revoke → 재발급 성공 → active 1건', async () => {
+    // 1. 발급
+    const first = await request(app!.getHttpServer())
+      .post('/mount-credentials')
+      .set('Authorization', bearer())
+      .send({});
+    expect(first.status).toBe(201);
+    const firstId = first.body.id as string;
+
+    // 2. 회수
+    await request(app!.getHttpServer())
+      .delete(`/mount-credentials/${firstId}`)
+      .set('Authorization', bearer())
+      .expect(204);
+
+    // 3. 같은 drive 재발급 — partial unique index 가 revoked 행을 제약에서 제외하므로 성공해야 한다
+    //    (구 unconditional unique 제약에서는 여기서 23505 → 500 이 발생했다: P-1 재현 지점)
+    const reissue = await request(app!.getHttpServer())
+      .post('/mount-credentials')
+      .set('Authorization', bearer())
+      .send({});
+    expect(reissue.status).toBe(201);
+    expect(reissue.body.id).not.toBe(firstId);
+
+    // 4. 목록에 active 1건만 (재발급 건)
+    const listRes = await request(app!.getHttpServer())
+      .get('/mount-credentials')
+      .set('Authorization', bearer());
+    expect(listRes.status).toBe(200);
+    expect(listRes.body).toHaveLength(1);
+    expect(listRes.body[0].id).toBe(reissue.body.id);
+
+    // cleanup
+    await request(app!.getHttpServer())
+      .delete(`/mount-credentials/${reissue.body.id}`)
+      .set('Authorization', bearer())
+      .expect(204);
+  });
+
   it('active 자격증명 존재 상태에서 재발급 시 MOUNT_CREDENTIAL_DUPLICATE_PROTOCOL', async () => {
     // 첫 발급
     const first = await request(app!.getHttpServer())

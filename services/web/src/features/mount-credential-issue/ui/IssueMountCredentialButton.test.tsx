@@ -26,14 +26,12 @@ vi.mock('../model/useIssueMountCredential', () => ({
   useIssueMountCredential: mockUseIssue,
 }));
 
-// codegen 의 iqn 필드가 잘못된 OpenAPI 추론으로 `{[key: string]: unknown} | null` 로 나옴 —
-// 실 wire-format 은 string. Follow-up: API DTO @ApiProperty 정정 plan 분리 예정.
 const SAMPLE_IQN = 'iqn.2026-05.com.terab:drive-1';
 const sampleIssued = {
   id: 'cred-1',
   driveId: 'drive-1',
   protocol: 'iscsi' as const,
-  iqn: SAMPLE_IQN as unknown as IssuedMountCredential['iqn'],
+  iqn: SAMPLE_IQN,
   password: 'abc-XYZ_pwd-123',
   script: '# powershell mount script',
   osUsername: 'terab-cred-1',

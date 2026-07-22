@@ -6,12 +6,6 @@ interface IssueMountCredentialButtonProps {
   driveId?: string;
 }
 
-function formatIqn(iqn: unknown): string {
-  if (typeof iqn === 'string') return iqn;
-  if (iqn == null) return '—';
-  return JSON.stringify(iqn);
-}
-
 function downloadScript(filename: string, body: string) {
   const blob = new Blob([body], { type: 'application/x-powershell;charset=utf-8' });
   const url = URL.createObjectURL(blob);
@@ -91,7 +85,7 @@ export function IssueMountCredentialButton({ driveId }: IssueMountCredentialButt
               </dd>
 
               <dt className="text-sm font-medium text-text-muted">IQN</dt>
-              <dd className="font-mono text-sm break-all select-all">{formatIqn(issued.iqn)}</dd>
+              <dd className="font-mono text-sm break-all select-all">{issued.iqn ?? '—'}</dd>
 
               <dt className="text-sm font-medium text-text-muted">Portal</dt>
               <dd className="font-mono text-sm break-all select-all">

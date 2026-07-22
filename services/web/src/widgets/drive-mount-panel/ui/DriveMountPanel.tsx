@@ -1,12 +1,6 @@
 import { useMountCredentialListQuery, useMyDriveQuery } from '@/entities';
 import { IssueMountCredentialButton, RevokeMountCredentialButton } from '@/features';
 
-function formatIqn(iqn: unknown): string {
-  if (typeof iqn === 'string') return iqn;
-  if (iqn == null) return '—';
-  return JSON.stringify(iqn);
-}
-
 export function DriveMountPanel() {
   const { data: drive, isLoading: isDriveLoading, error: driveError } = useMyDriveQuery();
   const { data: credentials, isLoading: isListLoading, error: listError } = useMountCredentialListQuery();
@@ -45,7 +39,7 @@ export function DriveMountPanel() {
                 <dt className="text-text-muted">사용자명</dt>
                 <dd className="font-mono select-all">{cred.osUsername}</dd>
                 <dt className="text-text-muted">IQN</dt>
-                <dd className="font-mono break-all select-all">{formatIqn(cred.iqn)}</dd>
+                <dd className="font-mono break-all select-all">{cred.iqn ?? '—'}</dd>
                 <dt className="text-text-muted">Portal</dt>
                 <dd className="font-mono select-all">
                   {cred.portalHost}:{cred.portalPort}

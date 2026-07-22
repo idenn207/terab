@@ -2,7 +2,12 @@ import { ConfigService } from '@nestjs/config';
 import { Test } from '@nestjs/testing';
 import { ApiException } from '@terab/common';
 import { DatabaseService, TransactionContext } from '@terab/db';
-import { mockDatabaseService, mockTransactionContext } from '@terab/test';
+import {
+  mockDatabaseService,
+  mockDbTransaction,
+  mockTransactionContext,
+  setupMockDbTransactionChain,
+} from '@terab/test';
 import { getLoggerToken } from 'nestjs-pino';
 import { DriveService } from '../drive/drive.service';
 import { StorageAgentClient } from '../storage-agent/storage-agent.client';
@@ -89,26 +94,21 @@ describe('MountCredentialService', () => {
     }).compile();
     service = module.get(MountCredentialService);
     jest.clearAllMocks();
+    setupMockDbTransactionChain();
     driveService.ensurePersonalDrive.mockResolvedValue(driveSample);
     driveService.findByIdOrThrow.mockResolvedValue(driveSample);
   });
 
   describe('issue', () => {
-    it('성공 시 secret write → agent create → DB insert 순서 + password+script 포함 응답', async () => {
+    it('성공 시 DB insert → agent create 순서(트랜잭션) + password+script 포함 응답', async () => {
       repo.findActiveByDriveAndProtocol.mockResolvedValue(null);
       secretStore.write.mockResolvedValue('mount-cred-x');
-      agentClient.createTarget.mockResolvedValue({ id: 1, iqn: 'x' });
       repo.insertIssued.mockResolvedValue(rowSample);
+      agentClient.createTarget.mockResolvedValue({ id: 1, iqn: 'x' });
 
       const result = await service.issue('user-1');
 
       expect(secretStore.write).toHaveBeenCalled();
-      expect(agentClient.createTarget).toHaveBeenCalledWith(
-        expect.objectContaining({
-          iqn: 'iqn.2026-05.com.terab:drive-1',
-          name: '내 드라이브',
-        }),
-      );
       expect(repo.insertIssued).toHaveBeenCalledWith(
         expect.objectContaining({
           driveId: 'drive-1',
@@ -117,38 +117,95 @@ describe('MountCredentialService', () => {
           iqn: 'iqn.2026-05.com.terab:drive-1',
         }),
       );
+      expect(agentClient.createTarget).toHaveBeenCalledWith(
+        expect.objectContaining({
+          iqn: 'iqn.2026-05.com.terab:drive-1',
+          name: '내 드라이브',
+        }),
+      );
+      // 순서 역전: insert 가 createTarget 앞
+      expect(repo.insertIssued.mock.invocationCallOrder[0]).toBeLessThan(
+        agentClient.createTarget.mock.invocationCallOrder[0],
+      );
       expect(result.password).toMatch(/^[A-Za-z0-9_-]+$/);
       expect(result.script).toContain('New-IscsiTargetPortal');
       expect(result.portalHost).toBe('192.168.0.5');
       expect(result.portalPort).toBe(3260);
     });
 
-    it('동일 protocol active 자격증명 존재 시 MOUNT_CREDENTIAL_DUPLICATE_PROTOCOL', async () => {
+    it('동일 protocol active 자격증명 존재(사전 검사) 시 MOUNT_CREDENTIAL_DUPLICATE_PROTOCOL', async () => {
       repo.findActiveByDriveAndProtocol.mockResolvedValue(rowSample);
       await expect(service.issue('user-1')).rejects.toBeInstanceOf(ApiException);
       expect(secretStore.write).not.toHaveBeenCalled();
+      expect(repo.insertIssued).not.toHaveBeenCalled();
       expect(agentClient.createTarget).not.toHaveBeenCalled();
     });
 
-    it('agent.createTarget 실패 시 secret rollback + agent rollback 미호출', async () => {
+    it('insert 가 partial unique index 위반(23505/active_unique) 시 DUPLICATE_PROTOCOL + secret 제거 + target 미생성', async () => {
       repo.findActiveByDriveAndProtocol.mockResolvedValue(null);
       secretStore.write.mockResolvedValue('mount-cred-x');
+      repo.insertIssued.mockRejectedValue({
+        code: '23505',
+        constraint: 'mount_credentials_active_unique',
+      });
+
+      await expect(service.issue('user-1')).rejects.toMatchObject({
+        code: 'MOUNT_CREDENTIAL_DUPLICATE_PROTOCOL',
+      });
+      expect(agentClient.createTarget).not.toHaveBeenCalled();
+      expect(agentClient.deleteTarget).not.toHaveBeenCalled();
+      expect(secretStore.remove).toHaveBeenCalledTimes(1);
+    });
+
+    it('무관한 unique 위반(다른 constraint)은 DUPLICATE 로 오분류하지 않고 원본 오류 전파', async () => {
+      repo.findActiveByDriveAndProtocol.mockResolvedValue(null);
+      secretStore.write.mockResolvedValue('mount-cred-x');
+      repo.insertIssued.mockRejectedValue({ code: '23505', constraint: 'some_other_unique' });
+
+      await expect(service.issue('user-1')).rejects.toMatchObject({
+        code: '23505',
+        constraint: 'some_other_unique',
+      });
+      expect(secretStore.remove).toHaveBeenCalledTimes(1);
+    });
+
+    it('createTarget 실패(insert 성공 후) 시 tx 롤백 + secret 제거, deleteTarget 미호출', async () => {
+      repo.findActiveByDriveAndProtocol.mockResolvedValue(null);
+      secretStore.write.mockResolvedValue('mount-cred-x');
+      repo.insertIssued.mockResolvedValue(rowSample);
       agentClient.createTarget.mockRejectedValue(new ApiException('STORAGE_AGENT_INTERNAL'));
 
       await expect(service.issue('user-1')).rejects.toBeInstanceOf(ApiException);
-      expect(secretStore.remove).toHaveBeenCalledTimes(1);
+      expect(repo.insertIssued).toHaveBeenCalledTimes(1);
       expect(agentClient.deleteTarget).not.toHaveBeenCalled();
-      expect(repo.insertIssued).not.toHaveBeenCalled();
+      expect(secretStore.remove).toHaveBeenCalledTimes(1);
     });
 
-    it('DB insert 실패 시 agent.deleteTarget + secret.remove 둘 다 호출 (full rollback)', async () => {
+    it('insert 가 일반 DB 오류면 createTarget 미호출 + secret 제거 + 원본 오류 전파', async () => {
       repo.findActiveByDriveAndProtocol.mockResolvedValue(null);
       secretStore.write.mockResolvedValue('mount-cred-x');
-      agentClient.createTarget.mockResolvedValue({ id: 1, iqn: 'x' });
       repo.insertIssued.mockRejectedValue(new Error('db down'));
 
-      await expect(service.issue('user-1')).rejects.toThrow();
+      await expect(service.issue('user-1')).rejects.toThrow('db down');
+      expect(agentClient.createTarget).not.toHaveBeenCalled();
+      expect(agentClient.deleteTarget).not.toHaveBeenCalled();
+      expect(secretStore.remove).toHaveBeenCalledTimes(1);
+    });
+
+    it('createTarget 성공 후 tx commit 실패 시 orphan target 을 deleteTarget 로 보상 + secret 제거', async () => {
+      repo.findActiveByDriveAndProtocol.mockResolvedValue(null);
+      secretStore.write.mockResolvedValue('mount-cred-x');
+      repo.insertIssued.mockResolvedValue(rowSample);
+      agentClient.createTarget.mockResolvedValue({ id: 1, iqn: 'x' });
+      // 콜백은 정상 완료(targetCreated=true)했으나 commit 단계에서 실패
+      mockDbTransaction.mockImplementation(async (cb: (tx: unknown) => Promise<unknown>) => {
+        await cb({});
+        throw new Error('commit failed');
+      });
+
+      await expect(service.issue('user-1')).rejects.toThrow('commit failed');
       expect(agentClient.deleteTarget).toHaveBeenCalledTimes(1);
+      expect(agentClient.deleteTarget).toHaveBeenCalledWith('iqn.2026-05.com.terab:drive-1');
       expect(secretStore.remove).toHaveBeenCalledTimes(1);
     });
   });

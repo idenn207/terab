@@ -13,7 +13,7 @@ export class MountCredentialDto {
 
   osUsername!: string;
 
-  @ApiProperty({ nullable: true })
+  @ApiProperty({ type: String, nullable: true })
   iqn!: string | null;
 
   portalHost!: string;

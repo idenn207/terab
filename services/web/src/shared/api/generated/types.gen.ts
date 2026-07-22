@@ -294,9 +294,7 @@ export type IssueMountCredentialResponseDto = {
   id: string;
   driveId: string;
   protocol: 'iscsi';
-  iqn: {
-    [key: string]: unknown;
-  } | null;
+  iqn: string | null;
   /**
    * 1회용 CHAP secret. 다음 GET 응답에는 미포함 — 즉시 안전한 곳에 보관해야 한다.
    */
@@ -315,9 +313,7 @@ export type MountCredentialDto = {
   id: string;
   driveId: string;
   protocol: 'iscsi';
-  iqn: {
-    [key: string]: unknown;
-  } | null;
+  iqn: string | null;
   osUsername: string;
   portalHost: string;
   portalPort: number;

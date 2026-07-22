@@ -15,6 +15,14 @@ import { SecretStoreFactory } from './secret-store';
 const PROTOCOL_ISCSI = 'iscsi';
 const IQN_PREFIX = 'iqn.2026-05.com.terab';
 const SECRET_PREFIX = 'mount-cred-';
+const ACTIVE_UNIQUE_CONSTRAINT = 'mount_credentials_active_unique';
+const PG_UNIQUE_VIOLATION = '23505';
+
+// active partial unique index 위반만 도메인 중복으로 판정 — 무관한 unique 위반을 오분류하지 않도록 제약명까지 확인
+function isActiveUniqueViolation(err: unknown): boolean {
+  const e = err as { code?: string; constraint?: string };
+  return e?.code === PG_UNIQUE_VIOLATION && e?.constraint === ACTIVE_UNIQUE_CONSTRAINT;
+}
 
 export interface IssueResult {
   credential: MountCredentials$Select;
@@ -56,45 +64,55 @@ export class MountCredentialService extends ServiceCore {
     await store.write(secretRef, password);
     let targetCreated = false;
     try {
-      await this.storageAgentClient.createTarget({
-        iqn,
-        name: drive.name,
-        osUsername: secretRef,
-        osPassword: password,
-      });
-      targetCreated = true;
+      // insert 를 createTarget 앞에 두고 한 트랜잭션으로 묶는다 — partial unique index 가
+      // 동시 발급 패배자를 외부 target 생성 전에 거르고, createTarget 실패 시 insert 가 자동 롤백된다
+      const response = await this.runInTx(async () => {
+        const row = await this.mountCredentialRepository.insertIssued({
+          driveId: drive.id,
+          userId,
+          protocol: PROTOCOL_ISCSI,
+          osUsername: secretRef,
+          secretRef,
+          iqn,
+        });
 
-      const row = await this.mountCredentialRepository.insertIssued({
-        driveId: drive.id,
-        userId,
-        protocol: PROTOCOL_ISCSI,
-        osUsername: secretRef,
-        secretRef,
-        iqn,
+        await this.storageAgentClient.createTarget({
+          iqn,
+          name: drive.name,
+          osUsername: secretRef,
+          osPassword: password,
+        });
+        targetCreated = true;
+
+        const portal = this.portal();
+        const dto = toMountCredentialDto(row, portal);
+        const script = renderPowerShellMountScript({
+          portalHost: portal.host,
+          portalPort: portal.port,
+          iqn,
+          chapUsername: secretRef,
+          chapPassword: password,
+          driveName: drive.name,
+          issuedAt: row.createdAt,
+        });
+        return { ...dto, password, script };
       });
 
       this.logger.info(
-        { userId, driveId: drive.id, credentialId: row.id },
+        { userId, driveId: drive.id, credentialId: response.id },
         'mount credential issued',
       );
-
-      const portal = this.portal();
-      const dto = toMountCredentialDto(row, portal);
-      const script = renderPowerShellMountScript({
-        portalHost: portal.host,
-        portalPort: portal.port,
-        iqn,
-        chapUsername: secretRef,
-        chapPassword: password,
-        driveName: drive.name,
-        issuedAt: row.createdAt,
-      });
-      return { ...dto, password, script };
+      return response;
     } catch (err) {
+      if (isActiveUniqueViolation(err)) {
+        await store.remove(secretRef);
+        throw new ApiException('MOUNT_CREDENTIAL_DUPLICATE_PROTOCOL');
+      }
       this.logger.warn(
         { err, userId, driveId: drive.id, targetCreated },
         'mount credential issue failed — rolling back',
       );
+      // createTarget 성공 뒤 tx 가 abort(예: commit 실패)하면 행은 롤백되나 외부 target 은 남으므로 보상
       if (targetCreated) {
         try {
           await this.storageAgentClient.deleteTarget(iqn);

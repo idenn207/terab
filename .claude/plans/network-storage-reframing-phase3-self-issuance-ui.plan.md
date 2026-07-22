@@ -525,6 +525,18 @@ EXPECT: 모든 `.ts`/`.tsx` 가 CRLF.
 | `STORAGE_AGENT_PORTAL_HOST` 환경변수가 dev/staging/prod 마다 다름 — issue 응답이 잘못된 host 로 가는 사고 | L | H | startup 시 `ConfigService.getOrThrow('STORAGE_AGENT_PORTAL_HOST')` 로 부재 시 즉시 fail. e2e 가 명시 env 로 검증 |
 | issue 응답에 `script` 본문 포함 (D3 (B)) 가 OpenAPI doc 에서 large response example 로 noise | L | L | DTO 의 `@ApiProperty({ description: '1회용 PowerShell 스크립트. 다음 GET 응답에는 미포함.' })` 명시 |
 
+### Phase 3 hardening 설계 결정 (P-2 · P-3 · I-4) — 2026-07-22
+
+> [network-storage-reframing-phase3-hardening.plan.md](network-storage-reframing-phase3-hardening.plan.md) Task 5 의 산출물. 즉시 수정 가능한 버그가 아니라 설계 결정이 필요했던 3건에 대해 채택/기각을 확정한다.
+
+| # | 항목 | 결정 | 근거 |
+|---|---|---|---|
+| P-2 | 1회용 비밀의 실제 노출면 (Network panel / heap snapshot / XSS) | **부분 채택** — 위협 모델 경계 명시 + XSS 대응은 CSP 로 이관 | 1회용 password 는 사용자에게 보여줘야 하는 값이라 브라우저 메모리·Network panel·heap snapshot 노출이 본질적이며, "1회용 + 즉시 회수 가능" 으로 완화된다. XSS 를 위협 모델에 넣으면 어떤 in-app 대응(마스킹·ref)도 무의미하므로 방어 무게중심을 [web/security.md](../rules/ecc/web/security.md) 의 CSP 강화(nonce script-src, `object-src 'none'`)로 옮긴다 — 별도 nginx PR 로 분리. password 를 network 에서 은닉하려는 시도는 **기각**(근본적으로 은닉 불가, 복잡도만 증가·YAGNI) |
+| P-3 | `.ps1` 이 Downloads/OneDrive/백업에 평문 password 로 장기 잔존 | **(a) 채택 / (b) 기각(현 시점)** | (a) script-template 상단 "사용 후 삭제" 경고 주석 + 발급 다이얼로그 UI 안내 — 저비용·즉효, **채택**. (b) 서버 다운로드 endpoint + `Cache-Control: no-store` — password 가 서버 로그·프록시 캐시를 거치는 새 노출면을 만들고 단일 사용자 NAS 에서 이득 불명확, **기각**(향후 필요 시 별도 plan). (a) 채택으로 "파일 자체가 1회용·삭제 대상" 이 명시돼 **P-10**(문서 내 `.ps1` 전달 방식 충돌)도 함께 해소 |
+| I-4 | 발급 in-flight 중 unmount 시 credential 은 생성되나 비밀 표시 경로 소실 | **서버측 발급 확인 ack 미도입 (기각)** | ack 도입은 서버 상태 머신(pending→confirmed)을 늘려 복잡도가 크고 단일 사용자 NAS 에서 빈도가 낮다. Task 1 의 partial index + 23505 매핑으로 **회수 후 재발급이 신뢰성 있게 동작**하므로, "확인 못 한 credential 은 사용자가 회수 후 재발급" 이 저비용 공식 복구 경로가 된다 — Task 1 이 본 결정의 전제조건 |
+
+> P-3 (a) 의 "경고 주석 + UI 안내" 실제 반영은 script-template 및 발급 다이얼로그를 건드리는 별도 작업으로, 본 hardening plan 의 코드 범위(Task 1~4)에는 포함되지 않는다 — 결정만 확정하고 구현은 후속.
+
 ---
 
 ## Acceptance Criteria

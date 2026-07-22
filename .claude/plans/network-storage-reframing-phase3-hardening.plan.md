@@ -139,6 +139,12 @@ DB 제약을 애플리케이션 의미(`active 인 것만 중복`)와 일치시�
 >
 > RED 는 "동시 발급 2건 중 1건만 성공하고, 실패한 쪽이 `MOUNT_CREDENTIAL_DUPLICATE_PROTOCOL` 이며, 성공한 쪽의 target 이 살아있다" 를 단언한다.
 
+> **Codex 구현 게이트 정정 (G1·G2, 2026-07-22 implement)** — 순서 역전은 *반드시 트랜잭션 안*에서 해야 한다. insert 를 createTarget 앞으로 옮기되 둘을 `ServiceCore.runInTx(...)` 로 감싸지 않으면, insert 가 커밋된 뒤 createTarget 가 실패할 때 **target 없는 active 행(orphan)** 이 남아 partial index 슬롯을 점유하고 재발급을 영구히 막는다 (G1, CRITICAL).
+>
+> 1. **트랜잭션 래핑** — `this.runInTx(async () => { const row = await insertIssued(...); await createTarget(...); ... })`. `RepositoryCore.conn` 이 `txContext.current` 를 타므로 insert 가 tx 에 참여하고, createTarget throw 시 insert 가 자동 롤백된다
+> 2. **target 보상은 tx 밖** — createTarget 성공(`targetCreated=true`) 후 tx 가 abort 하면 롤백은 행만 되돌리고 외부 target 은 남으므로, 바깥 catch 에서 `deleteTarget(iqn)` + `store.remove(secretRef)` 로 보상한다
+> 3. **23505 는 제약명으로 판별** (G2) — bare `code==='23505'` 는 무관한 unique 위반을 오분류한다. `err.constraint === 'mount_credentials_active_unique'` 일 때만 `MOUNT_CREDENTIAL_DUPLICATE_PROTOCOL` 로 매핑하고, 아니면 rethrow
+
 ### Task 2 — P-1 후속: 재발급 경로의 e2e 보강
 
 `services/api/test/mount-credential.e2e-spec.ts` 에 round-trip 케이스 추가.
@@ -394,3 +400,22 @@ receipt 에는 **`divergent`** 를 기록한다.
 - `divergent` 은 실제로 일어난 일 그대로다. Codex 는 Task 1·3·4 **전부에서** plan 의 주장과 갈라섰고, 그 결과로 세 Task 가 수정됐다
 
 부수 효과로 cross-gate dedupe 가 `converged` 이외의 값에 fail-closed 로 동작하므로, `/mccp:pr` 단계에서 이 plan 은 다시 검증을 요구받는다 — 수정 후 재리뷰가 없는 현 상태에서 이는 올바른 방향이다.
+
+
+## Codex Implementation Review
+
+- 호출: `node "C:/Program Files/nodejs/node_modules/@openai/codex/bin/codex.js" exec --sandbox read-only` (직접 exec 경로 — mccp `codex-invoke.js` 래퍼는 이 머신에서 stdin 미종료로 hang, plan 게이트와 동일 우회). `CODEX_EXIT=0`
+- 라운드 수: 1 (R1 흡수로 해소 — ACCEPT_NOW CRITICAL/HIGH 잔존 0)
+- 합치 결론: Task 3(로깅)·Task 4(codegen 순서)는 sound. Task 1 은 순서 역전을 **트랜잭션 안**에서 하고 23505 를 **제약명으로 판별**해야 안전 (G1·G2 를 Task 1 본문에 흡수).
+- YAGNI Triage:
+  | Finding | Severity | Verdict | Why |
+  |---|---|---|---|
+  | G1 순서 역전 orphan 행 (트랜잭션 부재) `service.ts:67` | CRITICAL | ACCEPT_NOW | Task 1 핵심 — `runInTx` 로 감싸고 target/secret 보상. R1 에서 Task 1 본문에 흡수 |
+  | G2 bare 23505 오분류 `repository.ts:55` | MEDIUM | ACCEPT_NOW | 제약명 `mount_credentials_active_unique` 일 때만 매핑. R1 흡수 |
+  | G3 `revoke()` 외부정리→DB 순서 `service.ts:117` | HIGH | DEFER_TO_BACKLOG | revoke() 재정렬은 plan Task 범위 밖. 현재 순서는 idempotent 재-revoke 로 self-heal, DB-first/outbox 는 orphan-target 악화 또는 단일 사용자 NAS 과설계 |
+- Deferred to backlog: 1 (G3) → `.claude/plans/codex-findings-backlog.md`
+- Open Questions: 없음 — ACCEPT_NOW CRITICAL/HIGH 전부 R1 에서 Task 1 본문에 흡수 (G1·G2). auto-CRITICAL 카탈로그 해당: 없음 (해소된 finding 은 open question 아님)
+- Security Reviewer: 통과 — `mccp:security-reviewer` 실행 완료(auto-fallback 아님). 5개 finding 전부 plan F1~F13 에 이미 흡수된 항목과 1:1 대응, 신규 CRITICAL 0건. 인가(ownership) 검증·목록 응답의 password/script 제외 정상 확인
+- impeccable: `silent_skip (no-signal)` — 게이트 시점 diff 가 비어 design surface 미검출(`skill_available=true`, `design_signal=false`). informational, non-blocking
+- Codex session 참조: 직접 exec (stderr streaming ~337KB), stdout 최종 3-finding + `CONCLUSION: divergent`
+- receipt verdict: `divergent` — Codex 가 Task 1 에서 plan 과 갈라섰고(G1·G2 신규), 그 결과 Task 1 이 수정됨. 흡수 후 재리뷰 없음 → cross-gate dedupe fail-closed 로 `/mccp:pr` 에서 재검증 요구 (올바른 방향)
