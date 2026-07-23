@@ -23,6 +23,9 @@ test-results/
 playwright-report/
 .playwright/
 
+# Claude Code 세션 hook-trace / 상태 산출물 (services/web 를 cwd 로 실행한 세션이 생성하는 임시 파일)
+.claude/
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

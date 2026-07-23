@@ -1,6 +1,6 @@
 import { ConfigService } from '@nestjs/config';
 import { Test } from '@nestjs/testing';
-import { createPinoLoggerProvider } from '@terab/test';
+import { createPinoLoggerProvider, mockPinoLogger } from '@terab/test';
 import { StorageAgentClient } from './storage-agent.client';
 
 type RequestArgs = { method: 'GET' | 'POST' | 'DELETE'; url: string; data?: unknown };
@@ -76,6 +76,32 @@ describe('StorageAgentClient', () => {
       await expect(
         client.createTarget({ iqn: TEST_IQN, name: 'x', osUsername: 'u', osPassword: 'p' }),
       ).rejects.toMatchObject({ code: 'STORAGE_AGENT_UNAVAILABLE' });
+    });
+
+    it('네트워크 실패 시 로그 출력에 평문 password 가 없다 (AxiosError.config.data 누출 차단)', async () => {
+      const SECRET = 'super-secret-osPassword-value';
+      // axios 는 request body 를 JSON 문자열로 직렬화하므로 err.config.data 는 password 를 품은 문자열이다.
+      // 원본 AxiosError 를 그대로 로깅하면 이 문자열이 log transport 로 새어나간다.
+      const axiosErr = Object.assign(new Error('socket hang up'), {
+        code: 'ECONNREFUSED',
+        config: {
+          data: JSON.stringify({ iqn: TEST_IQN, name: 'd', osUsername: 'u', osPassword: SECRET }),
+          url: '/v1/targets',
+          method: 'post',
+        },
+      });
+      requestMock.mockRejectedValue(axiosErr);
+
+      await expect(
+        client.createTarget({ iqn: TEST_IQN, name: 'd', osUsername: 'u', osPassword: SECRET }),
+      ).rejects.toMatchObject({ code: 'STORAGE_AGENT_UNAVAILABLE' });
+
+      const allLogArgs = JSON.stringify([
+        ...mockPinoLogger.error.mock.calls,
+        ...mockPinoLogger.warn.mock.calls,
+        ...mockPinoLogger.info.mock.calls,
+      ]);
+      expect(allLogArgs).not.toContain(SECRET);
     });
   });
 

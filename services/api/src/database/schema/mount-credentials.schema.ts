@@ -1,3 +1,4 @@
+import { sql } from 'drizzle-orm';
 import * as t from 'drizzle-orm/pg-core';
 import { pgTable as table } from 'drizzle-orm/pg-core';
 import { drives } from './drives.schema';
@@ -27,7 +28,11 @@ export const mountCredentials = table(
   (table) => [
     t.index().on(table.driveId),
     t.index().on(table.userId),
-    t.unique().on(table.driveId, table.userId, table.protocol),
+    // active(회수 전) 자격증명만 유니크 — revoked 행은 제약에서 빠져 회수 후 재발급 허용
+    t
+      .uniqueIndex('mount_credentials_active_unique')
+      .on(table.driveId, table.userId, table.protocol)
+      .where(sql`${table.revokedAt} IS NULL`),
   ],
 );
 

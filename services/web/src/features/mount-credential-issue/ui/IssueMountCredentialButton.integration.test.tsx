@@ -1,3 +1,4 @@
+/// <reference types="node" />
 import { renderWithProviders } from '@/__tests__/wrappers';
 import { fireEvent, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -91,6 +92,29 @@ describe('IssueMountCredentialButton — 실제 model 훅 연동', () => {
     await waitFor(() =>
       expect(screen.getByText('마운트 자격증명이 발급되었습니다')).toBeInTheDocument(),
     );
+  });
+
+  // issue() 는 실패 시 reject 하는 것이 model 계약이다 (useIssueMountCredential.test.tsx 참조).
+  // onClick 은 핸들러 반환값을 버리므로, ui 가 그 reject 를 처리하지 않으면 unhandled rejection 이 된다.
+  it('발급 실패가 unhandled rejection 을 만들지 않는다', async () => {
+    mockMutateAsync.mockRejectedValue(new Error('STORAGE_AGENT_UNAVAILABLE'));
+
+    const unhandled: unknown[] = [];
+    const onUnhandled = (reason: unknown) => unhandled.push(reason);
+    process.on('unhandledRejection', onUnhandled);
+
+    try {
+      renderWithProviders(<IssueMountCredentialButton driveId="drive-1" />);
+      clickIssue();
+
+      // reject 전파 → microtask drain → node 가 unhandledRejection 을 방출하는 시점까지 대기
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      await new Promise((resolve) => setTimeout(resolve, 0));
+
+      expect(unhandled).toEqual([]);
+    } finally {
+      process.off('unhandledRejection', onUnhandled);
+    }
   });
 
   it('unmount 시 password 가 정리된다', async () => {

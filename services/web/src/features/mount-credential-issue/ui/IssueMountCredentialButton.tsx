@@ -6,12 +6,6 @@ interface IssueMountCredentialButtonProps {
   driveId?: string;
 }
 
-function formatIqn(iqn: unknown): string {
-  if (typeof iqn === 'string') return iqn;
-  if (iqn == null) return '—';
-  return JSON.stringify(iqn);
-}
-
 function downloadScript(filename: string, body: string) {
   const blob = new Blob([body], { type: 'application/x-powershell;charset=utf-8' });
   const url = URL.createObjectURL(blob);
@@ -36,9 +30,15 @@ export function IssueMountCredentialButton({ driveId }: IssueMountCredentialButt
   // 발급 직후 리렌더에서 다이얼로그가 즉시 닫힌다 — ref 경유로 unmount 시에만 실행
   useEffect(() => () => clearIssuedRef.current(), []);
 
-  const handleIssue = () => {
+  // issue() 는 실패 시 reject 하는 것이 model 계약이다. onClick 은 핸들러 반환값을 버리므로
+  // 여기서 받지 않으면 unhandled rejection 이 된다 — 실패 자체는 error state 가 role="alert" 로 노출한다
+  const handleIssue = async () => {
     setShowPassword(false);
-    return issue(driveId);
+    try {
+      await issue(driveId);
+    } catch {
+      // 표시는 error state 가 담당 — 여기서는 전파만 멈춘다
+    }
   };
 
   const handleClose = () => {
@@ -85,7 +85,7 @@ export function IssueMountCredentialButton({ driveId }: IssueMountCredentialButt
               </dd>
 
               <dt className="text-sm font-medium text-text-muted">IQN</dt>
-              <dd className="font-mono text-sm break-all select-all">{formatIqn(issued.iqn)}</dd>
+              <dd className="font-mono text-sm break-all select-all">{issued.iqn ?? '—'}</dd>
 
               <dt className="text-sm font-medium text-text-muted">Portal</dt>
               <dd className="font-mono text-sm break-all select-all">

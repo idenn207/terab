@@ -61,7 +61,9 @@ export class StorageAgentClient implements OnModuleDestroy {
       return await this.http.request({ method, url, data: body });
     } catch (err) {
       const axiosErr = err as AxiosError;
-      this.logger.error({ err: axiosErr, method, url, code: axiosErr.code }, 'storage-agent network failure');
+      // 원본 AxiosError 를 로깅하지 않는다 — config.data 가 createTarget 요청 본문(osPassword 포함) 문자열을
+      // 품고 있어 log transport 로 평문 secret 이 새어나간다. 필요한 필드만 whitelist 한다.
+      this.logger.error({ method, url, code: axiosErr.code }, 'storage-agent network failure');
       throw new ApiException('STORAGE_AGENT_UNAVAILABLE');
     }
   }
